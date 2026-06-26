@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Preise & Premium – ModForge{% endblock %}
+{% block content %}
+<div class="container" style="max-width:1100px;padding-top:40px;padding-bottom:80px">
+  <div class="sec-head reveal" style="text-align:center;margin-bottom:50px">
+    <div class="sec-badge" style="margin-bottom:12px">💎 Premium</div>
+    <h1 style="font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;margin-bottom:12px">Transparente Preise</h1>
+    <p style="color:var(--muted);max-width:620px;margin:0 auto">Wähle den passenden Plan für deinen Server. Keine versteckten Kosten.</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:24px;">
+    
+    <!-- Free Plan -->
+    <div class="glass-card reveal" style="padding:40px;border-radius:var(--radius);background:var(--card);border:1px solid var(--border);display:flex;flex-direction:column;">
+      <h3 style="font-size:1.4rem;font-weight:700;margin-bottom:8px">Standard</h3>
+      <div style="font-size:2.5rem;font-weight:900;margin-bottom:8px">0€<span style="font-size:1rem;color:var(--muted);font-weight:500"> / für immer</span></div>
+      <p style="color:var(--muted);font-size:.9rem;margin-bottom:24px">Alles, was du für eine sichere Community brauchst.</p>
+      
+      <ul style="list-style:none;margin-bottom:32px;flex-grow:1;display:flex;flex-direction:column;gap:12px;font-size:.9rem;color:var(--fg)">
+        <li style="display:flex;align-items:center;gap:8px"><span style="color:var(--ok)">✓</span> AutoMod & Anti-Spam</li>
+        <li style="display:flex;align-items:center;gap:8px"><span style="color:var(--ok)">✓</span> Basis Anti-Nuke Schutz</li>
+        <li style="display:flex;align-items:center;gap:8px"><span style="color:var(--ok)">✓</span> Web-Dashboard Zugang</li>
+        <li style="display:flex;align-items:center;gap:8px"><span style="color:var(--ok)">✓</span> Ticket-System</li>
+      </ul>
+      <a href="https://discord.com/oauth2/authorize?client_id=1491447622442160248&scope=bot+applications.commands&permissions=8" target="_blank" class="btn-glass" style="text-align:center;width:100%">Kostenlos einladen</a>
+    </div>
+
+    <!-- Premium Plan -->
+    <div class="glass-card reveal" style="padding:40px;border-radius:var(--radius);background:linear-gradient(135deg, rgba(59,130,246,0.1), rgba(139,92,246,0.05));border:1px solid var(--v);display:flex;flex-direction:column;position:relative;transform:scale(1.02);z-index:1;box-shadow:0 10px 40px rgba(0,0,0,0.5)">
+      <div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--v);color:#fff;font-size:.75rem;font-weight:700;padding:4px 12px;border-radius:999px;letter-spacing:.05em">EMPFEHLUNG</div>
+      <h3 style="font-size:1.4rem;font-weight:700;margin-bottom:8px;color:var(--v)">ModForge Premium</h3>
+      <div style="font-size:2.5rem;font-weight:900;margin-bottom:8px">4,99€<span style="font-size:1rem;color:var(--muted);font-weight:500"> / Monat</span></div>
+      <p style="color:var(--muted);font-size:.9rem;margin-bottom:24px">Maximale Sicherheit und unbegrenzte Anpassungen.</p>
+      
+      <ul style="list-style:none;margin-bottom:32px;flex-grow:1;display:flex;flex-direction:column;gap:12px;font-size:.9rem;color:var(--fg)">
+        <li style="display:flex;align-items:center;gap:8px"><span style="color:var(--v)">★</span> <b>Alles aus Standard</b></li>
+        <li style="display:flex;align-items:center;gap:8px"><span style="color:var(--v)">★</span> KI-gestützte Moderation (GPT-4)</li>
+        <li style="display:flex;align-items:center;gap:8px"><span style="color:var(--v)">★</span> Custom Branding (Dein Bot Name/Avatar)</li>
+        <li style="display:flex;align-items:center;gap:8px"><span style="color:var(--v)">★</span> Erweitertes Backup-System</li>
+        <li style="display:flex;align-items:center;gap:8px"><span style="color:var(--v)">★</span> Priority Support</li>
+      </ul>
+      <a href="https://discord.gg/CYqH8QTmR3" target="_blank" class="btn-glass btn-glass-primary" style="text-align:center;width:100%">Premium holen</a>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

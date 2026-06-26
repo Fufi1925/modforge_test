@@ -1,0 +1,5 @@
+{% extends "node/base.html" %}
+{% block content %}
+<div class="row" style="justify-content:space-between;margin-bottom:18px"><div><h1>👥 Dashboard-Logins</h1><p class="muted">Persistente Discord OAuth Sessions · mit IP und ungefährer Stadt</p></div><div class="actions"><a class="btn primary" href="/admin/pull">🧲 Pull</a><a class="btn" href="/admin/guilds">Server anzeigen</a></div></div>
+<table class="table"><tr><th>User</th><th>ID</th><th>Scopes</th><th>Server</th><th>IP</th><th>Stadt</th><th>Land</th><th>Last seen</th></tr>{% for s in rows %}<tr><td><div class="row"><img class="servericon" style="width:34px;height:34px;border-radius:50%" src="{{ s.user.avatar_url or 'https://cdn.discordapp.com/embed/avatars/0.png' }}"><b>{{ s.user.username or '?' }}</b></div></td><td class="mono">{{ s.user.id or '?' }}</td><td class="mono">{{ s.scope or '' }}</td><td>{{ s.guild_count }}</td><td class="mono">{{ s.ip or '' }}</td><td>{{ s.city or 'Unbekannt' }}</td><td>{{ s.country or '' }}</td><td class="mono">{{ s.last_seen_fmt }}</td></tr>{% else %}<tr><td colspan="8" class="muted">Keine Logins gespeichert.</td></tr>{% endfor %}</table>
+{% endblock %}

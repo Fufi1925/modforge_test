@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ server.name }} – ModForge Server-Profil{% endblock %}
+{% block content %}
+<section class="container mf-public-server" style="max-width:1050px;padding-top:60px;padding-bottom:90px">
+  <div class="db-card mf-public-hero" style="position:relative;overflow:hidden;text-align:center;padding:42px 28px">
+    <div class="mf-orb" aria-hidden="true"></div>
+    {% if server.icon %}
+      <img src="{{ server.icon }}" alt="{{ server.name }}" style="width:92px;height:92px;border-radius:28px;object-fit:cover;border:1px solid var(--border);box-shadow:0 20px 60px rgba(0,0,0,.35)">
+    {% else %}
+      <div style="width:92px;height:92px;margin:0 auto;border-radius:28px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--v),var(--p));font-size:2rem;font-weight:900">{{ server.name[0] }}</div>
+    {% endif %}
+    <div class="sec-badge" style="margin:22px auto 10px;width:max-content">🛡️ ModForge geschützt</div>
+    <h1 style="font-size:clamp(2rem,5vw,3.4rem);font-weight:900;margin:0 0 10px">{{ server.name }}</h1>
+    <p style="color:var(--muted);max-width:650px;margin:0 auto 26px;line-height:1.7">
+      Öffentliche Sicherheitsübersicht dieses Discord-Servers. Module, Schutzscore und Community-Status auf einen Blick.
+    </p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-top:26px">
+      <div class="ov-stat"><div class="ov-sv" style="color:var(--vl)">{{ server.members }}</div><div class="ov-sl">Mitglieder</div></div>
+      <div class="ov-stat"><div class="ov-sv" style="color:var(--green)">{{ server.security }}%</div><div class="ov-sl">Security Score</div></div>
+      <div class="ov-stat"><div class="ov-sv" style="color:var(--cl)">{{ server.active_modules }}</div><div class="ov-sl">Aktive Module</div></div>
+    </div>
+    {% if server.invite %}
+      <a href="{{ server.invite }}" class="btn-glass btn-glass-primary" style="margin-top:28px">Server beitreten →</a>
+    {% endif %}
+  </div>
+
+  <div class="db-card" style="margin-top:22px">
+    <div class="db-card-header"><span class="db-card-title">⚙️ Aktive Schutzmodule</span></div>
+    {% if server.modules %}
+      <div class="tag-list">
+        {% for mod in server.modules %}<span class="tag">✅ {{ mod }}</span>{% endfor %}
+      </div>
+    {% else %}
+      <p style="color:var(--muted);margin:0">Keine öffentlichen Module aktiviert.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

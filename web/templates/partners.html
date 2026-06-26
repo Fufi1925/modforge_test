@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Partner – ModForge{% endblock %}
+{% block content %}
+<div class="container" style="max-width:1100px;padding-top:60px;padding-bottom:100px">
+  
+  <!-- Hero Section -->
+  <div class="sec-head reveal" style="text-align:center;margin-bottom:60px">
+    <div class="sec-badge" style="margin-bottom:16px;background:rgba(59,130,246,0.15);color:var(--vl);border-color:rgba(59,130,246,0.3)">🤝 Werde ModForge Partner</div>
+    <h1 style="font-size:clamp(2.2rem,5vw,3.5rem);font-weight:900;margin-bottom:16px;line-height:1.1">Lass uns gemeinsam <br><span style="background:linear-gradient(135deg, var(--vl), var(--c));-webkit-background-clip:text;-webkit-text-fill-color:transparent">wachsen</span></h1>
+    <p style="color:var(--muted);max-width:700px;margin:0 auto;font-size:1.1rem">Als offizieller Partner erhältst du ModForge Premium komplett kostenlos, starke Promotion für deinen Server und exklusiven Kontakt zu den Entwicklern.</p>
+  </div>
+
+  <!-- Benefits Grid -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:24px;margin-bottom:60px">
+    
+    <div class="glass-card reveal" style="padding:32px;border-radius:1.25rem;background:var(--card);border:1px solid var(--border);transition:transform 0.3s ease" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+      <div style="width:56px;height:56px;border-radius:1rem;background:linear-gradient(135deg, rgba(245,158,11,0.2), rgba(252,211,77,0.1));display:flex;align-items:center;justify-content:center;font-size:1.8rem;margin-bottom:20px;border:1px solid rgba(245,158,11,0.3)">⭐</div>
+      <h3 style="font-size:1.2rem;font-weight:700;margin-bottom:12px;color:var(--fg)">100% Free Premium</h3>
+      <p style="color:var(--muted);font-size:.95rem;line-height:1.6">Verabschiede dich von Abos! Als offizieller Partner schaltest du <strong>alle Premium-Features</strong> von ModForge (Custom Branding, KI-AutoMod, unlimitierte Module) vollkommen gratis für deinen Server frei.</p>
+    </div>
+    
+    <div class="glass-card reveal" style="padding:32px;border-radius:1.25rem;background:var(--card);border:1px solid var(--border);transition:transform 0.3s ease" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+      <div style="width:56px;height:56px;border-radius:1rem;background:linear-gradient(135deg, rgba(59,130,246,0.2), rgba(34,211,238,0.1));display:flex;align-items:center;justify-content:center;font-size:1.8rem;margin-bottom:20px;border:1px solid rgba(59,130,246,0.3)">📢</div>
+      <h3 style="font-size:1.2rem;font-weight:700;margin-bottom:12px;color:var(--fg)">Gegenseitige Promotion</h3>
+      <p style="color:var(--muted);font-size:.95rem;line-height:1.6">Wir promoten deinen Server auf unserer Website und unserem großen Support-Discord. Im Gegenzug empfiehlst du uns deiner Community weiter. Eine perfekte Win-Win Situation.</p>
+    </div>
+    
+    <div class="glass-card reveal" style="padding:32px;border-radius:1.25rem;background:var(--card);border:1px solid var(--border);transition:transform 0.3s ease" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+      <div style="width:56px;height:56px;border-radius:1rem;background:linear-gradient(135deg, rgba(139,92,246,0.2), rgba(167,139,250,0.1));display:flex;align-items:center;justify-content:center;font-size:1.8rem;margin-bottom:20px;border:1px solid rgba(139,92,246,0.3)">👑</div>
+      <h3 style="font-size:1.2rem;font-weight:700;margin-bottom:12px;color:var(--fg)">VIP Support & Beta</h3>
+      <p style="color:var(--muted);font-size:.95rem;line-height:1.6">Erhalte eine exklusive Partner-Rolle, priorisierten 1-on-1 Support durch das Entwickler-Team und teste brandneue ModForge Features lange vor allen anderen.</p>
+    </div>
+    
+  </div>
+
+  <!-- Requirements & Application -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:stretch">
+    
+    <!-- Requirements -->
+    <div class="glass-card reveal" style="padding:40px;border-radius:1.25rem;background:rgba(255,255,255,0.02);border:1px solid var(--border)">
+      <h2 style="font-size:1.8rem;font-weight:800;margin-bottom:24px;color:var(--fg)">Anforderungen</h2>
+      <p style="color:var(--muted);font-size:1rem;margin-bottom:24px">Damit eine Partnerschaft für beide Seiten wertvoll ist, haben wir einige wenige, aber klare Grundvoraussetzungen an deinen Discord-Server:</p>
+      
+      <ul style="list-style:none;display:flex;flex-direction:column;gap:16px;font-size:1.05rem;color:var(--fg)">
+        <li style="display:flex;align-items:flex-start;gap:12px">
+          <div style="color:var(--v);font-weight:900;margin-top:2px">✓</div>
+          <div><strong>Mindestens 100 Mitglieder</strong><div style="font-size:.85rem;color:var(--muted);margin-top:2px">Dein Server muss eine aktive Base von ≥100 echten Mitgliedern haben.</div></div>
+        </li>
+        <li style="display:flex;align-items:flex-start;gap:12px">
+          <div style="color:var(--v);font-weight:900;margin-top:2px">✓</div>
+          <div><strong>Aktive Community</strong><div style="font-size:.85rem;color:var(--muted);margin-top:2px">Keine toten Server. Es sollte regelmäßige Chats und Voice-Aktivität geben.</div></div>
+        </li>
+        <li style="display:flex;align-items:flex-start;gap:12px">
+          <div style="color:var(--v);font-weight:900;margin-top:2px">✓</div>
+          <div><strong>Sauberes Umfeld</strong><div style="font-size:.85rem;color:var(--muted);margin-top:2px">Kein NSFW-Fokus, keine illegalen Inhalte und Einhaltung der Discord ToS.</div></div>
+        </li>
+      </ul>
+    </div>
+    
+    <!-- Call to Action -->
+    <div class="reveal" style="padding:40px;border-radius:1.25rem;background:linear-gradient(135deg, rgba(59,130,246,0.1), rgba(34,211,238,0.05));border:1px solid var(--v);display:flex;flex-direction:column;justify-content:center;text-align:center">
+      <div style="font-size:3rem;margin-bottom:16px">🚀</div>
+      <h2 style="font-size:2rem;font-weight:800;margin-bottom:16px;color:var(--fg)">Klingt gut?</h2>
+      <p style="color:var(--muted);font-size:1.05rem;margin-bottom:32px">Erfüllt dein Server die Kriterien? Dann trete unserem Discord bei und öffne einfach ein Partner-Ticket. Wir freuen uns auf dich!</p>
+      
+      <a href="https://discord.gg/CYqH8QTmR3" target="_blank" class="btn-glass btn-glass-primary" style="font-size:1.1rem;padding:14px 28px;display:inline-block;width:fit-content;margin:0 auto;box-shadow:0 10px 25px rgba(59,130,246,0.3)">Jetzt Partner-Ticket öffnen</a>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

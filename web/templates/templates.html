@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Server Templates – ModForge{% endblock %}
+{% block content %}
+<div class="container" style="max-width:1100px;padding-top:40px;padding-bottom:80px">
+  <div class="sec-head reveal" style="text-align:center;margin-bottom:40px">
+    <div class="sec-badge" style="margin-bottom:12px">📦 Community Templates</div>
+    <h1 style="font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;margin-bottom:12px">Server-Backups &amp; Templates</h1>
+    <p style="color:var(--muted);max-width:620px;margin:0 auto">Von der Community geteilte Server-Setups. Ein Befehl — kompletter Server konfiguriert.</p>
+  </div>
+
+  <!-- SEARCH + FILTER -->
+  <div style="display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;justify-content:center" class="reveal">
+    <input type="text" id="tSearch" placeholder="🔍 Template suchen…" style="padding:12px 20px;border-radius:999px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--fg);font-size:.88rem;outline:none;width:100%;max-width:400px;transition:all .2s" onfocus="this.style.borderColor='var(--vl)'" onblur="this.style.borderColor='var(--border)'" oninput="filterTemplates()">
+    <select id="tCat" style="padding:10px 16px;border-radius:999px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--fg);font-size:.82rem;outline:none" onchange="filterTemplates()">
+      <option value="">Alle Kategorien</option>
+      <option value="gaming">🎮 Gaming</option>
+      <option value="community">👥 Community</option>
+      <option value="business">💼 Business</option>
+      <option value="education">🎓 Education</option>
+      <option value="music">🎵 Music</option>
+      <option value="security">🛡️ Security</option>
+      <option value="general">📦 Allgemein</option>
+    </select>
+    <span style="font-size:.72rem;color:var(--muted);display:flex;align-items:center" id="tCount">{{ public_backups|length }} Templates</span>
+  </div>
+
+  <!-- STATS -->
+  {% if public_backups %}
+  <div style="display:flex;gap:16px;justify-content:center;margin-bottom:32px;flex-wrap:wrap" class="reveal">
+    <div style="text-align:center;padding:12px 24px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid var(--border)">
+      <div style="font-size:1.4rem;font-weight:900;color:var(--vl)">{{ public_backups|length }}</div>
+      <div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Templates</div>
+    </div>
+    <div style="text-align:center;padding:12px 24px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid var(--border)">
+      <div style="font-size:1.4rem;font-weight:900;color:var(--cl)">{{ categories|length }}</div>
+      <div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Kategorien</div>
+    </div>
+    <div style="text-align:center;padding:12px 24px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid var(--border)">
+      <div style="font-size:1.4rem;font-weight:900;color:var(--green)">{{ public_backups|sum(attribute='downloads') }}</div>
+      <div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Downloads</div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- TEMPLATE GRID -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px" id="tGrid">
+    {% if public_backups %}
+    {% for t in public_backups %}
+    <div class="glass-card reveal tmpl-card" data-name="{{ t.name|lower }}" data-cat="{{ t.category }}" data-desc="{{ t.description|lower }}"
+         style="padding:0;overflow:hidden;border-radius:16px;background:rgba(255,255,255,0.03);border:1px solid var(--border);transition:all .2s;cursor:default">
+      <!-- Header with icon -->
+      <div style="padding:16px 18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,0.04)">
+        {% if t.guild_icon %}
+        <img src="{{ t.guild_icon }}" style="width:40px;height:40px;border-radius:10px;object-fit:cover;flex-shrink:0">
+        {% else %}
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(59,130,246,0.1);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">📦</div>
+        {% endif %}
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.name }}</div>
+          <div style="font-size:.62rem;color:var(--muted)">von {{ t.guild_name }}{% if t.shared_at %} · <t:{{ t.shared_at }}:R>{% endif %}</div>
+        </div>
+        <span style="padding:3px 8px;border-radius:999px;font-size:.55rem;font-weight:700;background:rgba(59,130,246,0.06);color:var(--vl);border:1px solid rgba(59,130,246,0.12);text-transform:capitalize">{{ t.category }}</span>
+      </div>
+
+      <!-- Body -->
+      <div style="padding:14px 18px">
+        {% if t.description %}
+        <p style="color:var(--muted);font-size:.78rem;line-height:1.5;margin-bottom:12px">{{ t.description }}</p>
+        {% endif %}
+
+        <!-- Stats -->
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+          <span style="padding:3px 8px;border-radius:999px;font-size:.6rem;background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.1);color:var(--vl)">🏷️ {{ t.roles }} Rollen</span>
+          <span style="padding:3px 8px;border-radius:999px;font-size:.6rem;background:rgba(34,211,238,0.05);border:1px solid rgba(34,211,238,0.1);color:var(--cl)">📁 {{ t.channels }} Kanäle</span>
+          <span style="padding:3px 8px;border-radius:999px;font-size:.6rem;background:rgba(74,222,128,0.05);border:1px solid rgba(74,222,128,0.1);color:var(--green)">📂 {{ t.categories }} Kat.</span>
+          {% if t.emojis %}<span style="padding:3px 8px;border-radius:999px;font-size:.6rem;background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.1);color:var(--amberl)">😀 {{ t.emojis }}</span>{% endif %}
+          {% if t.downloads %}<span style="padding:3px 8px;border-radius:999px;font-size:.6rem;background:rgba(148,163,184,0.05);border:1px solid rgba(148,163,184,0.1);color:var(--muted)">⬇️ {{ t.downloads }}</span>{% endif %}
+        </div>
+
+        <!-- Use Button -->
+        <div style="display:flex;gap:6px">
+          <button class="btn-glass btn-sm btn-glass-primary" style="flex:1;justify-content:center" onclick="useTemplate('{{ t.id }}','{{ t.name }}')">📥 Template nutzen</button>
+          <button class="btn-glass btn-sm btn-glass-ghost" onclick="copyTemplateId('{{ t.id }}')">📋</button>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+
+    {% else %}
+    <!-- EMPTY STATE + PRESET TEMPLATES -->
+    <div style="grid-column:1/-1;text-align:center;padding:40px 20px" class="reveal">
+      <div style="font-size:3rem;margin-bottom:12px">📦</div>
+      <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:8px">Community Templates</h3>
+      <p style="color:var(--muted);font-size:.85rem;margin-bottom:24px">Noch keine geteilten Backups. Teile deins mit <code style="color:var(--vl)">/backup_share</code></p>
+    </div>
+
+    <!-- PRESET TEMPLATES (static) -->
+    {% for preset in [
+      {'name':'🎮 Gaming Community','desc':'Optimiert für Gaming-Server mit LFG, Rang-Channels und Turniere.','cat':'gaming','roles':8,'channels':15,'categories':5},
+      {'name':'💼 Business & Team','desc':'Professionelles Setup für Teams mit Projekt-Channels und Meeting-Räumen.','cat':'business','roles':6,'channels':12,'categories':4},
+      {'name':'🎓 Study Group','desc':'Für Lerngruppen mit Fach-Channels, Ressourcen und Voice-Räumen.','cat':'education','roles':5,'channels':10,'categories':3},
+      {'name':'🛡️ Maximum Security','desc':'Alle Security-Module auf Maximum. Anti-Nuke, Anti-Raid, Anti-Spam.','cat':'security','roles':4,'channels':8,'categories':3},
+      {'name':'🎵 Music & Content','desc':'Für Creator mit Fan-Engagement, Releases und Event-Channels.','cat':'music','roles':7,'channels':11,'categories':4},
+      {'name':'👥 Allgemeine Community','desc':'Ausgewogenes Setup für mittlere Communities mit allen Basics.','cat':'general','roles':6,'channels':14,'categories':4}
+    ] %}
+    <div class="glass-card reveal tmpl-card" data-name="{{ preset.name|lower }}" data-cat="{{ preset.cat }}" data-desc="{{ preset.desc|lower }}"
+         style="padding:0;overflow:hidden;border-radius:16px;background:rgba(255,255,255,0.03);border:1px solid var(--border)">
+      <div style="padding:16px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.04)">
+        <div style="font-weight:700;font-size:.9rem;flex:1">{{ preset.name }}</div>
+        <span style="padding:3px 8px;border-radius:999px;font-size:.55rem;font-weight:700;background:rgba(245,158,11,0.06);color:var(--amberl);border:1px solid rgba(245,158,11,0.12)">Preset</span>
+      </div>
+      <div style="padding:14px 18px">
+        <p style="color:var(--muted);font-size:.78rem;line-height:1.5;margin-bottom:12px">{{ preset.desc }}</p>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+          <span style="padding:3px 8px;border-radius:999px;font-size:.6rem;background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.1);color:var(--vl)">🏷️ {{ preset.roles }}</span>
+          <span style="padding:3px 8px;border-radius:999px;font-size:.6rem;background:rgba(34,211,238,0.05);border:1px solid rgba(34,211,238,0.1);color:var(--cl)">📁 {{ preset.channels }}</span>
+          <span style="padding:3px 8px;border-radius:999px;font-size:.6rem;background:rgba(74,222,128,0.05);border:1px solid rgba(74,222,128,0.1);color:var(--green)">📂 {{ preset.categories }}</span>
+        </div>
+        <a href="/login" class="btn-glass btn-sm btn-glass-primary" style="width:100%;justify-content:center">Dashboard öffnen →</a>
+      </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+  </div>
+
+  <!-- HOW TO SHARE -->
+  <div class="reveal" style="margin-top:40px;padding:24px;border-radius:16px;background:rgba(59,130,246,0.03);border:1px solid rgba(59,130,246,0.1);text-align:center">
+    <h3 style="font-size:1rem;font-weight:700;margin-bottom:8px">📤 Dein Template teilen</h3>
+    <p style="color:var(--muted);font-size:.82rem;line-height:1.6;max-width:500px;margin:0 auto">
+      1. Erstelle ein Backup: <code style="color:var(--vl)">/backup_create MeinSetup</code><br>
+      2. Teile es: <code style="color:var(--vl)">/backup_share &lt;ID&gt; "Gaming Setup" "Perfekt für Gaming Server" gaming</code><br>
+      3. Dein Template erscheint hier für alle!
+    </p>
+  </div>
+</div>
+
+<script>
+function filterTemplates() {
+  const q = document.getElementById('tSearch').value.toLowerCase();
+  const cat = document.getElementById('tCat').value;
+  let vis = 0;
+  document.querySelectorAll('.tmpl-card').forEach(card => {
+    const matchQ = !q || card.dataset.name.includes(q) || card.dataset.desc.includes(q);
+    const matchC = !cat || card.dataset.cat === cat;
+    const show = matchQ && matchC;
+    card.style.display = show ? '' : 'none';
+    if (show) vis++;
+  });
+  document.getElementById('tCount').textContent = vis + ' Templates';
+}
+
+function useTemplate(id, name) {
+  const confirmed = confirm(`Template "${name}" auf deinen Server anwenden?\n\nNutze in Discord:\n/backup_restore ${id}`);
+  if (confirmed) {
+    navigator.clipboard.writeText(`/backup_restore ${id}`);
+    alert('📋 Command kopiert!\n\nFüge ihn in Discord ein: /backup_restore ' + id);
+  }
+}
+
+function copyTemplateId(id) {
+  navigator.clipboard.writeText(id);
+  // Quick visual feedback
+  const btn = event.target;
+  const orig = btn.textContent;
+  btn.textContent = '✅';
+  setTimeout(() => btn.textContent = orig, 1000);
+}
+</script>
+{% endblock %}

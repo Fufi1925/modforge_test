@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="de" data-theme="purple">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Admin Login – ModForge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;700&family=Outfit:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    body{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;background:var(--bg);color:var(--fg)}
+    .login-card{max-width:400px;width:100%;padding:40px;border-radius:20px;background:rgba(255,255,255,0.035);backdrop-filter:blur(24px);border:1px solid var(--border);box-shadow:0 24px 80px rgba(0,0,0,0.4)}
+    .login-input{width:100%;padding:13px 18px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--fg);font-size:.88rem;outline:none;font-family:inherit;transition:all .2s}
+    .login-input:focus{border-color:rgba(59,130,246,0.5);box-shadow:0 0 0 3px rgba(59,130,246,0.1)}
+    .login-input::placeholder{color:var(--muted)}
+    .login-error{padding:12px 16px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(248,113,113,0.2);color:#fca5a5;font-size:.82rem;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+  </style>
+</head>
+<body class="page-bg">
+  <div class="login-card">
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#ef4444,#f59e0b);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:1.8rem;box-shadow:0 8px 24px rgba(239,68,68,0.3)">🔐</div>
+      <h1 style="font-size:1.4rem;font-weight:800;margin-bottom:4px">Admin Panel</h1>
+      <p style="color:var(--muted);font-size:.8rem">Zugang nur für autorisiertes Personal</p>
+    </div>
+
+    {% if error %}
+    <div class="login-error">⚠️ {{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="/admin/login" style="display:flex;flex-direction:column;gap:16px">
+      <div>
+        <label style="font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:6px;display:block">Benutzername</label>
+        <input type="text" name="username" class="login-input" placeholder="admin" required autocomplete="username">
+      </div>
+      <div>
+        <label style="font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:6px;display:block">Passwort</label>
+        <input type="password" name="password" class="login-input" placeholder="••••••••" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn-glass btn-glass-primary" style="width:100%;justify-content:center;padding:14px;margin-top:8px;font-size:.9rem">Anmelden</button>
+    </form>
+
+    <div style="text-align:center;margin-top:20px">
+      <a href="/" style="color:var(--muted);font-size:.75rem;transition:color .2s" onmouseover="this.style.color='var(--vl)'" onmouseout="this.style.color='var(--muted)'">← Zurück zur Startseite</a>
+    </div>
+  </div>
+</body>
+</html>

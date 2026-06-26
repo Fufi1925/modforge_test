@@ -1,0 +1,4 @@
+{% extends "node/base.html" %}
+{% block content %}
+<div class="card"><h1>🧲 Pull Ergebnis</h1><p class="muted">Zielserver: {{ guild.name }} ({{ guild.id }})</p><table class="table"><tr><th>User ID</th><th>Status</th><th>Info</th></tr>{% for r in results %}<tr><td class="mono">{{ r.userId }}</td><td class="{% if r.ok %}ok{% else %}danger{% endif %}">{% if r.ok %}✅ OK{% else %}❌ Fehler{% endif %}</td><td>{{ r.msg }}</td></tr>{% endfor %}</table><div class="actions"><a class="btn primary" href="/admin/pull">Zurück zu Pull</a><a class="btn" href="/admin/guilds">Server</a></div></div>
+{% endblock %}

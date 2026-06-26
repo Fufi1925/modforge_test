@@ -1,0 +1,25 @@
+{# Dashboard Navigation – included in all dashboard pages #}
+<nav class="dash-nav">
+  <a href="/dashboard" style="font-weight:800;font-size:1rem;color:var(--vl);margin-right:8px;display:flex;align-items:center;gap:6px">🛡️ ModForge</a>
+  <a href="/dashboard/{{ guild.id }}" {% if active == 'overview' %}class="active"{% endif %}>Übersicht</a>
+  <a href="/dashboard/{{ guild.id }}/security" {% if active == 'security' %}class="active"{% endif %}>Security</a>
+  <a href="/dashboard/{{ guild.id }}/automod" {% if active == 'automod' %}class="active"{% endif %}>AutoMod</a>
+  <a href="/dashboard/{{ guild.id }}/logs" {% if active == 'logs' %}class="active"{% endif %}>Logs</a>
+  <a href="/dashboard/{{ guild.id }}/cases" {% if active == 'cases' %}class="active"{% endif %}>Cases</a>
+  <a href="/dashboard/{{ guild.id }}/warns" {% if active == 'warns' %}class="active"{% endif %}>Warns</a>
+  <a href="/dashboard/{{ guild.id }}/modules" {% if active == 'modules' %}class="active"{% endif %}>Module</a>
+  <a href="/dashboard/{{ guild.id }}/welcome" {% if active == 'welcome' %}class="active"{% endif %}>Welcome</a>
+  <a href="/dashboard/{{ guild.id }}/roles" {% if active == 'roles' %}class="active"{% endif %}>Rollen</a>
+  <a href="/dashboard/{{ guild.id }}/autoresponse" {% if active == 'autoresponse' %}class="active"{% endif %}>Auto-Antworten</a>
+  <a href="/dashboard/{{ guild.id }}/tempvoice" {% if active == 'tempvoice' %}class="active"{% endif %}>🎤 Temp-Voice</a>
+  <a href="/dashboard/{{ guild.id }}/tickets" {% if active == 'tickets' %}class="active"{% endif %}>Tickets</a>
+  <a href="/dashboard/{{ guild.id }}/backup" {% if active == 'backup' %}class="active"{% endif %}>Backup</a>
+  <a href="/dashboard/{{ guild.id }}/beta" {% if active == 'beta' %}class="active"{% endif %}>🧪 Beta <span style="font-size:0.6em;color:#f59e0b">BETA</span></a>
+  <a href="/dashboard/{{ guild.id }}/staff-applications" {% if active == 'staff_applications' %}class="active"{% endif %}>Bewerbungen <span style="font-size:0.6em;color:#f59e0b;">BETA</span></a>
+  <a href="/dashboard/{{ guild.id }}/settings" {% if active == 'settings' %}class="active"{% endif %}>⚙️</a>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+    <img src="{{ user.avatar_url }}" style="width:28px;height:28px;border-radius:50%">
+    <span style="font-size:.78rem;color:var(--muted)">{{ user.username }}</span>
+    <a href="/logout" style="color:var(--redl);font-size:.72rem;margin-left:4px">Logout</a>
+  </div>
+</nav>

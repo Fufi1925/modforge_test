@@ -1,0 +1,355 @@
+{% extends "dashboard/_base.html" %}
+{% set active = 'settings' %}
+{% block title %}Einstellungen{% endblock %}
+{% block page_title %}⚙️ Server-Einstellungen{% endblock %}
+{% block page_desc %}Bot-Konfiguration · Kanal-Routing · Automatisierung{% endblock %}
+
+{% block head %}
+<style>
+.settings-section {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 14px;
+}
+.settings-section.danger {
+  border-color: rgba(239,68,68,0.2);
+  background: rgba(239,68,68,0.02);
+}
+.section-title {
+  font-weight: 700;
+  font-size: .88rem;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-desc {
+  font-size: .72rem;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+
+.prefix-preview {
+  font-family: 'Geist Mono', monospace;
+  color: var(--vl);
+  background: rgba(59,130,246,0.08);
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: .78rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── STATS ── #}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:16px">
+  <div class="ov-stat">
+    <div class="ov-sv" style="color:var(--vl);font-family:'Geist Mono',monospace">
+      {{ cfg.get('prefix', '!') }}
+    </div>
+    <div class="ov-sl">Prefix</div>
+  </div>
+  <div class="ov-stat">
+    <div class="ov-sv" style="color:var(--cl)">{{ cfg.get('security_level', 0) }}</div>
+    <div class="ov-sl">Security Level</div>
+  </div>
+  <div class="ov-stat">
+    <div class="ov-sv" style="color:{% if wl.get('enabled') %}var(--green){% else %}var(--muted){% endif %}">
+      {% if wl.get('enabled') %}AN{% else %}AUS{% endif %}
+    </div>
+    <div class="ov-sl">Webhook-Log</div>
+  </div>
+  <div class="ov-stat">
+    <div class="ov-sv" style="color:{% if ma.get('enabled') %}var(--green){% else %}var(--muted){% endif %}">
+      {% if ma.get('enabled') %}AN{% else %}AUS{% endif %}
+    </div>
+    <div class="ov-sl">Msg-Archiv</div>
+  </div>
+</div>
+
+{# ── ALLGEMEIN ── #}
+<div class="settings-section">
+  <div class="section-title">🔧 Allgemein</div>
+
+  <div class="cfg-row">
+    <div>
+      <span class="cfg-label">Bot-Prefix</span>
+      <div class="cfg-desc">
+        Text-Commands: <span class="prefix-preview" id="pfxDemo">!ban</span>
+      </div>
+    </div>
+    <input type="text" class="cfg-input" id="pfx"
+           value="{{ cfg.get('prefix', '!') }}"
+           maxlength="5"
+           style="max-width:80px;text-align:center;font-family:'Geist Mono',monospace;font-size:.9rem"
+           oninput="updatePfxDemo(); showSaveBar()">
+  </div>
+
+  <div class="cfg-row">
+    <div>
+      <span class="cfg-label">No-Prefix Modus</span>
+      <div class="cfg-desc">
+        Whitelisted Mods können Commands ohne Prefix/Slash nutzen
+      </div>
+    </div>
+    <label class="toggle">
+      <input type="checkbox" id="noPrefix"
+             {% if cfg.get('no_prefix') %}checked{% endif %}
+             onchange="showSaveBar()">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="cfg-row">
+    <div>
+      <span class="cfg-label">Security Level</span>
+      <div class="cfg-desc">
+        Auto-Konfiguration der Schutz-Module
+        (0 = manuell · 1 = Niedrig · 2 = Mittel · 3 = Lockdown)
+      </div>
+    </div>
+    <select class="cfg-select" id="secLevel" style="min-width:160px" onchange="showSaveBar()">
+      {% for i, label in [(0,'0 – Manuell'),(1,'1 – Niedrig'),(2,'2 – Mittel'),(3,'3 – Hoch')] %}
+      <option value="{{ i }}" {% if cfg.get('security_level', 0) == i %}selected{% endif %}>
+        {{ label }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+</div>
+
+{# ── KANAL-ROUTING ── #}
+<div class="settings-section">
+  <div class="section-title">📬 Kanal-Routing</div>
+  <div class="section-desc">
+    Lege fest wo bestimmte Meldungen ankommen.
+    Für detaillierte Log-Konfiguration pro Modul nutze
+    <a href="/dashboard/{{ guild.id }}/logs" style="color:var(--cl)">📢 Logs</a>.
+  </div>
+
+  {% for field_id, label, desc, cfg_key in [
+    ('logCh',  'Standard-Log-Kanal', 'Fallback wenn kein Modul-Kanal gesetzt',         'log_channel'),
+    ('repCh',  'Report-Kanal',       '/report-Meldungen landen hier',                   'report_channel'),
+    ('appCh',  'Appeal-Kanal',       'Ban-Appeals werden hierhin gesendet',              'appeal_log_channel'),
+  ] %}
+  <div class="cfg-row">
+    <div>
+      <span class="cfg-label">{{ label }}</span>
+      <div class="cfg-desc">{{ desc }}</div>
+    </div>
+    <select class="cfg-select" id="{{ field_id }}" style="min-width:210px" onchange="showSaveBar()">
+      <option value="">— Nicht gesetzt —</option>
+      {% for ch in channels %}
+      <option value="{{ ch.id }}"
+              {% if ch.id | string == (cfg.get(cfg_key, '') | string) %}selected{% endif %}>
+        #{{ ch.name }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endfor %}
+</div>
+
+{# ── AUTOMATISIERUNG ── #}
+<div class="settings-section">
+  <div class="section-title">🤖 Automatisierung</div>
+
+  {% for field_id, label, desc, enabled in [
+    ('autoAppeal',  'Auto Ban-Appeal DMs',    'Gebannte User erhalten automatisch eine DM mit Appeal-Anleitung',    ab.get('enabled')),
+    ('inviteTrack', 'Invite-Tracking',         'Loggt welcher Invite für jeden Join verwendet wurde',                it.get('enabled')),
+    ('msgArchive',  'Nachrichten-Archiv',      'Speichert Nachrichten 48h als Beweise für Cases (TTL-Index)',        ma.get('enabled')),
+    ('webhookLog',  'Webhook-Logging',         'Logs via automatische Webhooks – schneller, kein Bot-Rate-Limit',   wl.get('enabled')),
+  ] %}
+  <div class="cfg-row">
+    <div>
+      <span class="cfg-label">{{ label }}</span>
+      <div class="cfg-desc">{{ desc }}</div>
+    </div>
+    <label class="toggle">
+      <input type="checkbox" id="{{ field_id }}"
+             {% if enabled %}checked{% endif %}
+             onchange="showSaveBar()">
+      <span class="slider"></span>
+    </label>
+  </div>
+  {% endfor %}
+</div>
+
+{# ── SERVER-TAG ── #}
+<div class="settings-section">
+  <div class="section-title">🏷️ Server-Tag</div>
+  <div class="section-desc">
+    Mitglieder die einen bestimmten Tag in ihrem Namen tragen
+    erhalten automatisch eine Reward-Rolle. Groß-/Kleinschreibung wird ignoriert.
+  </div>
+
+  <div class="cfg-row">
+    <div>
+      <span class="cfg-label">Aktiv</span>
+      <div class="cfg-desc">Tag-Erkennung im Hintergrund</div>
+    </div>
+    <label class="toggle">
+      <input type="checkbox" id="stEnabled"
+             {% if st.get('enabled') %}checked{% endif %}
+             onchange="showSaveBar()">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="cfg-row">
+    <div>
+      <span class="cfg-label">Tag</span>
+      <div class="cfg-desc">Wird im Nickname gesucht</div>
+    </div>
+    <input type="text" class="cfg-input" id="stTag"
+           value="{{ st.get('tag') or '' }}"
+           placeholder="z.B. BeK"
+           maxlength="20"
+           style="max-width:150px;font-family:'Geist Mono',monospace"
+           oninput="showSaveBar()">
+  </div>
+</div>
+
+<div class="settings-section">
+  <div class="section-title">↩️ Config Rollback</div>
+  <div class="section-desc">Vor gefährlichen Änderungen legt das Dashboard automatisch Versionen an. Stelle bei Problemen die letzte Version wieder her.</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn-glass btn-sm" onclick="loadVersions()">🧾 Versionen anzeigen</button>
+    <button class="btn-glass btn-sm btn-glass-amber" onclick="rollbackLatest()">↩️ Letzte Version wiederherstellen</button>
+  </div>
+</div>
+
+{# ── DANGER ZONE ── #}
+<div class="settings-section danger">
+  <div class="section-title" style="color:#f87171">⚠️ Gefahrenzone</div>
+
+  <div class="cfg-row" style="border-color:rgba(239,68,68,0.1)">
+    <div>
+      <span class="cfg-label">Config zurücksetzen</span>
+      <div class="cfg-desc">
+        Setzt <strong>alle</strong> Bot-Einstellungen auf Standard zurück.
+        Cases, Warns und Backups bleiben erhalten.
+      </div>
+    </div>
+    <button class="btn-glass btn-sm btn-glass-danger" onclick="confirmReset()">
+      🗑️ Zurücksetzen
+    </button>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const GID = "{{ guild.id }}";
+
+function updatePfxDemo() {
+  const v = document.getElementById('pfx').value || '!';
+  document.getElementById('pfxDemo').textContent = v + 'ban';
+}
+updatePfxDemo();
+
+async function postCfg(body) {
+  try {
+    const r = await fetch(`/api/guild/${GID}/config`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+async function saveConfig() {
+  const d = await postCfg({
+    _prefix:             document.getElementById('pfx').value.trim() || '!',
+    _no_prefix:          document.getElementById('noPrefix').checked,
+    _security_level:     parseInt(document.getElementById('secLevel').value, 10),
+    _log_channel:        document.getElementById('logCh').value || null,
+    _report_channel:     document.getElementById('repCh').value || null,
+    _appeal_log_channel: document.getElementById('appCh').value || null,
+    _auto_ban_appeal:    { enabled: document.getElementById('autoAppeal').checked },
+    _invite_tracking:    { enabled: document.getElementById('inviteTrack').checked },
+    _message_archive:    { enabled: document.getElementById('msgArchive').checked },
+    _webhook_logging:    { enabled: document.getElementById('webhookLog').checked },
+    _server_tag: {
+      enabled: document.getElementById('stEnabled').checked,
+      tag:     document.getElementById('stTag').value.trim() || null,
+    },
+  });
+
+  if (d.ok) markSaved();
+  else showToast('❌ ' + (d.error || 'Fehler'), 'err');
+}
+
+function confirmReset() {
+  showModal(`
+    <div style="text-align:center;padding:10px 0 20px">
+      <div style="font-size:2.5rem;margin-bottom:12px">⚠️</div>
+      <div style="font-weight:800;font-size:1rem;margin-bottom:8px">Wirklich zurücksetzen?</div>
+      <div style="color:var(--muted);font-size:.8rem;line-height:1.6;max-width:300px;margin:0 auto">
+        Alle Module, Kanäle, Schwellen und Automatisierungen werden auf
+        <strong>Werkseinstellungen</strong> zurückgesetzt.
+        Cases, Warns und Backups bleiben erhalten.
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="closeModal()"
+              style="flex:1;padding:10px;border-radius:10px;
+                     background:rgba(255,255,255,0.05);border:1px solid var(--border);
+                     color:var(--fg);font-size:.8rem;cursor:pointer;font-family:inherit">
+        Abbrechen
+      </button>
+      <button onclick="closeModal(); doReset()"
+              style="flex:1;padding:10px;border-radius:10px;
+                     background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);
+                     color:#f87171;font-size:.8rem;cursor:pointer;font-family:inherit;font-weight:700">
+        🗑️ Zurücksetzen
+      </button>
+    </div>
+  `);
+}
+
+async function loadVersions() {
+  try {
+    const r = await fetch(`/api/guild/${GID}/config/versions`);
+    const d = await r.json();
+    const items = (d.versions || []).map(v => `<button class="mf-pal-item" onclick="rollbackVersion('${v.id}')"><span>↩️</span><b>${v.created_at || 'Version'} · ${v.source}</b></button>`).join('') || '<div class="mf-change-item">Keine Versionen vorhanden.</div>';
+    showModal(`<div style="font-weight:900;font-size:1.1rem;margin-bottom:12px">Config-Versionen</div><div style="display:grid;gap:6px">${items}</div>`);
+  } catch(e) { showToast('❌ Versionen konnten nicht geladen werden', 'err'); }
+}
+async function rollbackVersion(id) {
+  if(!confirm('Diese Config-Version wiederherstellen?')) return;
+  const r = await fetch(`/api/guild/${GID}/config/rollback`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({version_id:id})});
+  const d = await r.json();
+  if(d.ok){ showToast('✅ Config wiederhergestellt', 'ok'); setTimeout(()=>location.reload(),700); }
+  else showToast('❌ '+(d.error||'Rollback fehlgeschlagen'), 'err');
+}
+async function rollbackLatest(){
+  if(!confirm('Letzte Config-Version wiederherstellen?')) return;
+  const r = await fetch(`/api/guild/${GID}/config/rollback`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({})});
+  const d = await r.json();
+  if(d.ok){ showToast('✅ Letzte Version wiederhergestellt', 'ok'); setTimeout(()=>location.reload(),700); }
+  else showToast('❌ '+(d.error||'Rollback fehlgeschlagen'), 'err');
+}
+
+async function doReset() {
+  const d = await postCfg({ _reset: true });
+  if (d.ok) {
+    showToast('✅ Config zurückgesetzt', 'ok');
+    setTimeout(() => location.reload(), 800);
+  } else {
+    showToast('❌ ' + (d.error || 'Fehler'), 'err');
+  }
+}
+
+window._dirty = false;
+</script>
+{% endblock %}

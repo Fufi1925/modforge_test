@@ -1,0 +1,724 @@
+{% extends "dashboard/_base.html" %}
+{% set active = 'tickets' %}
+{% set ts = cfg.get('ticket_system', {}) or {} %}
+{% set te = cfg.get('ticket_extended', {}) or {} %}
+{% set cats = te.get('categories', []) or [] %}
+{% block title %}Tickets Command Center{% endblock %}
+{% block page_title %}🎫 Tickets Command Center{% endblock %}
+{% block page_desc %}Erstelle Panels, passe Kategorien wie Support oder Bewerbungen an, lies archivierte Transcripts und führe Health-Checks durch.{% endblock %}
+
+{% block head %}
+<style>
+  .tix-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media(max-width: 1024px) {
+    .tix-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .premium-card {
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+    transition: all 0.25s ease;
+  }
+  .premium-card:hover {
+    border-color: rgba(96, 165, 250, 0.25);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  }
+
+  .tix-stats-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .tix-stat-card {
+    padding: 16px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.02);
+    text-align: center;
+  }
+  .tix-stat-num {
+    font-size: 1.5rem;
+    font-weight: 800;
+    font-family: 'Geist Mono', monospace;
+    line-height: 1.2;
+  }
+  .tix-stat-lbl {
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 4px;
+  }
+
+  /* Preview mockup */
+  .discord-mockup {
+    background: #36393f;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  }
+  .discord-embed {
+    background: #2f3136;
+    border-left: 4px solid #5865f2;
+    border-radius: 4px;
+    padding: 12px 14px;
+  }
+  .discord-title {
+    font-weight: 700;
+    color: #fff;
+    font-size: 0.95rem;
+    margin-bottom: 6px;
+  }
+  .discord-desc {
+    color: #dcddde;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    white-space: pre-wrap;
+  }
+  .discord-btn {
+    background: #4f545c;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    padding: 6px 16px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-top: 10px;
+    cursor: default;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Health check lists */
+  .tix-health-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.015);
+    font-size: 0.78rem;
+    margin-bottom: 6px;
+  }
+  .tix-health-row.ok {
+    border-color: rgba(34, 197, 94, 0.18);
+    background: rgba(34, 197, 94, 0.035);
+  }
+  .tix-health-row.bad {
+    border-color: rgba(239, 68, 68, 0.18);
+    background: rgba(239, 68, 68, 0.035);
+  }
+
+  /* List tables */
+  .tix-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.015);
+    border: 1px solid var(--border);
+    margin-bottom: 8px;
+    transition: all 0.2s ease;
+  }
+  .tix-row:hover {
+    border-color: rgba(96,165,250,0.2);
+    background: rgba(255,255,255,0.03);
+  }
+
+  .cat-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 0.76rem;
+    margin: 4px;
+  }
+  .cat-pill .btn-del {
+    color: var(--redl);
+    background: none;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 0.95rem;
+    line-height: 1;
+    padding: 0 2px;
+  }
+
+  /* Discord Transcript Chat Box in Modal */
+  .chat-log-box {
+    max-height: 400px;
+    overflow-y: auto;
+    background: #36393f;
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    text-align: left;
+    margin-bottom: 16px;
+  }
+  .chat-msg {
+    display: flex;
+    gap: 12px;
+    font-size: 0.85rem;
+  }
+  .chat-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #5865f2;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+  }
+  .chat-content-wrap {
+    display: flex;
+    flex-direction: column;
+  }
+  .chat-author {
+    font-weight: 600;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chat-time {
+    font-size: 0.7rem;
+    color: #72767d;
+    font-weight: normal;
+  }
+  .chat-text {
+    color: #dcddde;
+    margin-top: 4px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="tix-stats-bar">
+  <div class="tix-stat-card">
+    <div class="tix-stat-num" style="color: {% if ts.get('enabled') %}var(--green){% else %}var(--muted){% endif %}">
+      {% if ts.get('enabled') %}AKTIV{% else %}INAKTIV{% endif %}
+    </div>
+    <div class="tix-stat-lbl">System-Status</div>
+  </div>
+  <div class="tix-stat-card">
+    <div class="tix-stat-num" style="color: var(--vl)">{{ ticket_stats.total }}</div>
+    <div class="tix-stat-lbl">Gesamt Tickets</div>
+  </div>
+  <div class="tix-stat-card">
+    <div class="tix-stat-num" style="color: var(--green)">{{ ticket_stats.open }}</div>
+    <div class="tix-stat-lbl">Offene Tickets</div>
+  </div>
+  <div class="tix-stat-card">
+    <div class="tix-stat-num" style="color: var(--amberl)">{{ ticket_stats.closed }}</div>
+    <div class="tix-stat-lbl">Geschlossen</div>
+  </div>
+  <div class="tix-stat-card">
+    <div class="tix-stat-num" style="color: var(--cl)">{{ ticket_stats.claimed }}</div>
+    <div class="tix-stat-lbl">Übernommen</div>
+  </div>
+</div>
+
+<div class="tix-grid">
+  <!-- Sektion Links: Setup, Panel, Kategorien -->
+  <section>
+    <!-- Ticket Command Center (Setup) -->
+    <div class="premium-card">
+      <div class="db-card-header">
+        <span class="db-card-title">⚙️ Ticket Command Center</span>
+        <button class="btn-glass btn-sm btn-glass-primary" onclick="saveConfig()">💾 Speichern</button>
+      </div>
+      
+      <div class="cfg-row">
+        <div>
+          <span class="cfg-label">Ticket-System aktivieren</span>
+          <div class="cfg-desc">Aktiviert das Erstellen von Support-Kanälen für User.</div>
+        </div>
+        <label class="toggle">
+          <input id="tOn" type="checkbox" {% if ts.get('enabled') %}checked{% endif %} onchange="showSaveBar()">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="cfg-row">
+        <div>
+          <span class="cfg-label">Ticket-Kategorie (Discord)</span>
+          <div class="cfg-desc">Kategorie, unter der neue Tickets erstellt werden sollen.</div>
+        </div>
+        <select id="tCat" class="cfg-select" onchange="showSaveBar()">
+          <option value="">— Keine Kategorie (Kanal-Wurzel) —</option>
+          {% for c in categories %}
+            <option value="{{ c.id }}" {% if ts.get('category_id')|string == c.id|string %}selected{% endif %}>📁 {{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="cfg-row">
+        <div>
+          <span class="cfg-label">Log-Kanal für Tickets</span>
+          <div class="cfg-desc">Kanal, in dem Ticket-Aktionen und Transcripts aufgezeichnet werden.</div>
+        </div>
+        <select id="tLog" class="cfg-select" onchange="showSaveBar()">
+          <option value="">— Kein Log-Kanal —</option>
+          {% for ch in channels %}
+            <option value="{{ ch.id }}" {% if ts.get('log_channel_id')|string == ch.id|string %}selected{% endif %}>#{{ ch.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="cfg-row">
+        <div>
+          <span class="cfg-label">Max. offene Tickets pro User</span>
+          <div class="cfg-desc">Wie viele Tickets darf ein User gleichzeitig offen haben?</div>
+        </div>
+        <input id="tMax" type="number" min="1" max="20" class="cfg-input" value="{{ te.get('max_open_per_user', 3) }}" oninput="showSaveBar()">
+      </div>
+
+      <div class="cfg-row">
+        <div>
+          <span class="cfg-label">Inaktivitäts-Auto-Close (Stunden)</span>
+          <div class="cfg-desc">Tickets nach X Stunden Inaktivität automatisch schließen (0 zum Deaktivieren).</div>
+        </div>
+        <input id="tClose" type="number" min="0" max="720" class="cfg-input" value="{{ te.get('auto_close_hours', 48) }}" oninput="showSaveBar()">
+      </div>
+    </div>
+
+    <!-- Ticket-Kategorien (Support, Report, etc.) -->
+    <div class="premium-card">
+      <div class="db-card-header">
+        <span class="db-card-title">🏷️ Ticket-Auswahlthemen / Kategorien</span>
+        <span class="tag">{{ cats|length }}</span>
+      </div>
+      <p class="cfg-desc" style="margin-bottom:12px">User wählen dieses Thema beim Erstellen eines Tickets aus. Wird im Multi-Kategorie-Modus verwendet.</p>
+      
+      <div id="catsContainer" style="margin-bottom: 12px;">
+        {% for cat in cats %}
+          <span class="cat-pill" data-id="{{ cat.id }}" data-name="{{ cat.name }}" data-emoji="{{ cat.emoji }}" data-desc="{{ cat.description }}">
+            <span>{{ cat.emoji }} <b>{{ cat.name }}</b></span>
+            <button class="btn-del" onclick="deleteCategory('{{ cat.id }}')">×</button>
+          </span>
+        {% else %}
+          <span class="cfg-desc" id="noCatsLabel">Keine benutzerdefinierten Themen vorhanden. Der Bot nutzt den Simple-Ticket-Modus.</span>
+        {% endfor %}
+      </div>
+
+      <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:12px;">
+        <b style="font-size:0.8rem; display:block; margin-bottom:8px;">Neues Ticket-Thema hinzufügen:</b>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+          <input id="newCatName" class="cfg-input ignore-dirty" placeholder="Name (z.B. Support)" style="max-width:100%">
+          <input id="newCatEmoji" class="cfg-input ignore-dirty" placeholder="Emoji (z.B. 💬)" style="max-width:100%">
+        </div>
+        <input id="newCatDesc" class="cfg-input ignore-dirty" placeholder="Kurze Beschreibung für das Dropdown" style="max-width:100%; margin-bottom:10px;">
+        <button class="btn-glass btn-sm btn-glass-primary" onclick="addCategory()">➕ Thema hinzufügen</button>
+      </div>
+    </div>
+
+    <!-- Ticket-Panel senden -->
+    <div class="premium-card">
+      <div class="db-card-header">
+        <span class="db-card-title">📨 Ticket Panel direkt senden</span>
+      </div>
+      <p class="cfg-desc" style="margin-bottom:12px;">Sendet ein schickes Embed mit einem Button / Dropdown in den gewählten Textkanal.</p>
+      
+      <div class="cfg-row">
+        <div>
+          <span class="cfg-label">Kanal zum Senden</span>
+        </div>
+        <select id="panelCh" class="cfg-select">
+          <option value="">— Kanal auswählen —</option>
+          {% for ch in channels %}
+            <option value="{{ ch.id }}">#{{ ch.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="cfg-row">
+        <div>
+          <span class="cfg-label">Panel Embed-Titel</span>
+        </div>
+        <input id="panelTitle" class="cfg-input ignore-dirty" value="🎫 Support Tickets" oninput="updatePreview()" style="max-width:250px">
+      </div>
+
+      <div class="cfg-row" style="flex-direction:column; align-items:stretch">
+        <span class="cfg-label" style="margin-bottom:6px">Panel Embed-Beschreibung</span>
+        <textarea id="panelDesc" class="cfg-input ignore-dirty" rows="3" oninput="updatePreview()" style="max-width:100%; font-family:inherit; min-height:80px">Klicke auf den Button unten, um ein privates Ticket mit dem Team zu eröffnen.</textarea>
+      </div>
+
+      <button class="btn-glass btn-glass-primary" onclick="sendPanel()" style="width:100%; justify-content:center; padding:12px;">
+        📨 Ticket Panel jetzt senden
+      </button>
+    </div>
+
+    <!-- Ticket Transcript Viewer -->
+    <div class="premium-card">
+      <div class="db-card-header" style="flex-wrap: wrap; gap:10px;">
+        <span class="db-card-title">📖 Ticket Transcript Viewer</span>
+        <input id="transcriptSearch" class="cfg-input ignore-dirty" placeholder="User ID / Ticket ID suchen …" oninput="filterTranscripts()" style="max-width:220px">
+      </div>
+      <p class="cfg-desc" style="margin-bottom:12px;">Hier findest du alle geschlossenen Tickets und archivierten Unterhaltungen.</p>
+
+      <div style="max-height: 400px; overflow-y: auto; padding-right: 4px;" id="transcriptList">
+        {% for t in ticket_docs %}
+          <div class="tix-row" data-search="{{ t.user_id }} {{ t.channel_id }} {{ t.status }}">
+            <div>
+              <b style="color:#fff;">#Ticket-{{ t.channel_id }}</b>
+              <div class="cfg-desc">
+                User: <span style="font-family:'Geist Mono',monospace">{{ t.user_id }}</span> · Status: 
+                <span style="color:{% if t.status=='open' %}var(--green){% else %}var(--muted){% endif %}; font-weight:700;">
+                  {{ t.status|upper }}
+                </span>
+                {% if t.created_at_iso %}
+                  · {{ t.created_at_iso[:10] }}
+                {% endif %}
+              </div>
+            </div>
+            
+            <div style="display:flex; gap:6px;">
+              {% if t.transcript %}
+                <button class="btn-glass btn-sm" onclick="viewTranscript('{{ t.channel_id }}')">👁️ Ansehen</button>
+                <button class="btn-glass btn-sm" onclick="downloadTranscript('{{ t.channel_id }}')">💾 Download</button>
+              {% else %}
+                <span class="cfg-desc" style="font-size:0.7rem; align-self:center;">Kein Chat</span>
+              {% endif %}
+            </div>
+          </div>
+        {% else %}
+          <p class="cfg-desc" style="padding:10px 0;">Noch keine Tickets in der Datenbank registriert.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <!-- Sektion Rechts: Preview, Health -->
+  <aside>
+    <!-- Live Preview -->
+    <div class="premium-card">
+      <div class="db-card-header">
+        <span class="db-card-title">👁️ Live Panel Preview</span>
+      </div>
+      <div class="discord-mockup">
+        <div class="discord-embed">
+          <div class="discord-title" id="prevTitle">🎫 Support Tickets</div>
+          <div class="discord-desc" id="prevDesc">Klicke auf den Button unten, um ein privates Ticket mit dem Team zu eröffnen.</div>
+          
+          <div id="previewInteraction">
+            <!-- Dynamic Category Dropdown or single button -->
+            {% if cats|length > 0 %}
+              <div style="background:#202225; border: 1px solid #040405; border-radius:4px; padding:8px 12px; margin-top:10px; display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; color:#8e9297;">
+                <span>Wähle ein Thema aus...</span>
+                <span>▼</span>
+              </div>
+            {% else %}
+              <div class="discord-btn">
+                <span>🎫</span> Ticket öffnen
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ticket Health Check -->
+    <div class="premium-card">
+      <div class="db-card-header">
+        <span class="db-card-title">🩺 Ticket System Health</span>
+        <button class="btn-glass btn-sm" onclick="runHealth()">🩺 Prüfen</button>
+      </div>
+      <p class="cfg-desc" style="margin-bottom:12px">Überprüfe, ob der Bot die nötigen Berechtigungen besitzt und die Kanäle existieren.</p>
+      
+      <div id="healthBox">
+        <div style="padding: 10px; text-align: center; color: var(--muted); font-size:0.78rem;">
+          Klicke auf "Prüfen", um Echtzeit-Schnittstellenchecks auszuführen.
+        </div>
+      </div>
+    </div>
+
+    <!-- Hilfreicher Hinweis -->
+    <div class="premium-card" style="border-left: 4px solid var(--vl)">
+      <b style="font-size:0.85rem; color:#fff; display:block; margin-bottom:6px;">💡 Multi-Themen-Modus</b>
+      <p class="cfg-desc" style="line-height:1.5; margin:0">
+        Sobald du mindestens ein <b>Ticket-Thema</b> (wie z. B. Bewerbung) hinzufügst, wechselt das gesendete Panel automatisch in den <b>Multi-Themen-Modus</b> mit einem komfortablen Dropdown. Löschst du alle Themen, wird das Standardpanel mit einem direkten Ein-Klick-Button gesendet.
+      </p>
+    </div>
+  </aside>
+</div>
+
+<!-- Transcript Modal Helper Script -->
+<script id="transcriptData" type="application/json">
+  {
+    {% for t in ticket_docs %}
+      "{{ t.channel_id }}": {
+        "user_id": "{{ t.user_id }}",
+        "transcript": {{ t.transcript|tojson if t.transcript else '""' }}
+      }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  }
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const GID = '{{ guild.id }}';
+let categoriesList = {{ cats|tojson|safe }};
+
+function updatePreview() {
+  document.getElementById('prevTitle').textContent = document.getElementById('panelTitle').value || '🎫 Support Tickets';
+  document.getElementById('prevDesc').textContent = document.getElementById('panelDesc').value || 'Klicke auf den Button unten, um ein Ticket zu öffnen.';
+  
+  // Update interaction view depending on whether categories exist
+  const previewInteraction = document.getElementById('previewInteraction');
+  if (categoriesList.length > 0) {
+    previewInteraction.innerHTML = `
+      <div style="background:#202225; border: 1px solid #040405; border-radius:4px; padding:8px 12px; margin-top:10px; display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; color:#8e9297;">
+        <span>Thema: ${categoriesList[0].emoji} ${categoriesList[0].name}...</span>
+        <span>▼</span>
+      </div>
+    `;
+  } else {
+    previewInteraction.innerHTML = `
+      <div class="discord-btn">
+        <span>🎫</span> Ticket öffnen
+      </div>
+    `;
+  }
+}
+
+function renderCategoriesUI() {
+  const container = document.getElementById('catsContainer');
+  if (categoriesList.length === 0) {
+    container.innerHTML = `<span class="cfg-desc" id="noCatsLabel">Keine benutzerdefinierten Themen vorhanden. Der Bot nutzt den Simple-Ticket-Modus.</span>`;
+    return;
+  }
+  container.innerHTML = categoriesList.map(cat => `
+    <span class="cat-pill" data-id="${cat.id}">
+      <span>${cat.emoji || '🎫'} <b>${cat.name}</b></span>
+      <button class="btn-del" onclick="deleteCategory('${cat.id}')">×</button>
+    </span>
+  `).join('');
+}
+
+function addCategory() {
+  const nameInput = document.getElementById('newCatName');
+  const emojiInput = document.getElementById('newCatEmoji');
+  const descInput = document.getElementById('newCatDesc');
+
+  if (!nameInput.value.trim()) return showToast('Themen-Name fehlt!', 'err');
+  
+  const id = nameInput.value.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Math.floor(Math.random() * 1000);
+  const newCat = {
+    id: id,
+    name: nameInput.value.trim(),
+    emoji: emojiInput.value.trim() || '🎫',
+    description: descInput.value.trim() || ''
+  };
+  
+  categoriesList.push(newCat);
+  renderCategoriesUI();
+  updatePreview();
+  
+  // Reset inputs
+  nameInput.value = '';
+  emojiInput.value = '';
+  descInput.value = '';
+  
+  showSaveBar();
+  showToast('Thema temporär hinzugefügt. Vergiss nicht zu speichern!', 'info');
+}
+
+function deleteCategory(id) {
+  categoriesList = categoriesList.filter(c => c.id !== id);
+  renderCategoriesUI();
+  updatePreview();
+  showSaveBar();
+  showToast('Thema entfernt. Speichere das Dashboard, um die Änderungen zu übernehmen!', 'info');
+}
+
+function filterTranscripts() {
+  const q = (document.getElementById('transcriptSearch').value || '').toLowerCase().trim();
+  document.querySelectorAll('#transcriptList .tix-row').forEach(row => {
+    row.style.display = !q || row.dataset.search.toLowerCase().includes(q) ? 'flex' : 'none';
+  });
+}
+
+async function saveConfig() {
+  const body = {
+    _ticket_system: {
+      enabled: document.getElementById('tOn').checked,
+      category_id: document.getElementById('tCat').value ? Number(document.getElementById('tCat').value) : null,
+      log_channel_id: document.getElementById('tLog').value ? Number(document.getElementById('tLog').value) : null
+    },
+    ticket_extended: {
+      max_open_per_user: Number(document.getElementById('tMax').value || 3),
+      auto_close_hours: Number(document.getElementById('tClose').value || 48),
+      categories: categoriesList
+    }
+  };
+  
+  const r = await fetch(`/api/guild/${GID}/config`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  });
+  const d = await r.json();
+  if (d.ok) {
+    markSaved();
+  } else {
+    markError(d.error);
+  }
+}
+
+async function sendPanel() {
+  const panelCh = document.getElementById('panelCh');
+  const panelTitle = document.getElementById('panelTitle');
+  const panelDesc = document.getElementById('panelDesc');
+
+  if (!panelCh.value) return showToast('Bitte wähle zuerst einen Kanal aus!', 'err');
+  
+  // First save config so bot is updated with categories
+  await saveConfig();
+  
+  const r = await fetch(`/api/guild/${GID}/tickets/panel`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      channel_id: panelCh.value,
+      title: panelTitle.value,
+      description: panelDesc.value
+    })
+  });
+  const d = await r.json();
+  if (d.ok) {
+    showToast('Ticket-Panel erfolgreich gesendet!', 'ok');
+    setTimeout(() => location.reload(), 600);
+  } else {
+    showToast(d.error || 'Fehler beim Senden', 'err');
+  }
+}
+
+async function runHealth() {
+  const healthBox = document.getElementById('healthBox');
+  healthBox.innerHTML = `
+    <div style="text-align: center; padding: 15px 0;">
+      <div style="width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.1); border-top-color: var(--vl); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 8px;"></div>
+      <span style="font-size:0.75rem; color:var(--muted);">Führe Health Check aus...</span>
+    </div>
+  `;
+  const r = await fetch(`/api/guild/${GID}/tickets/health`);
+  const d = await r.json();
+  if (!d.ok) return showToast(d.error || 'Fehler', 'err');
+  
+  healthBox.innerHTML = d.checks.map(c => `
+    <div class="tix-health-row ${c.ok ? 'ok' : 'bad'}">
+      <span>${c.ok ? '✅' : '❌'} ${c.label}</span>
+      <span>${c.reason}</span>
+    </div>
+  `).join('');
+}
+
+function viewTranscript(channelId) {
+  const dataEl = document.getElementById('transcriptData');
+  const data = JSON.parse(dataEl.textContent);
+  const tDoc = data[channelId];
+  if (!tDoc || !tDoc.transcript) return showToast('Kein Transcript gefunden.', 'err');
+  
+  // Parse lines of format "[time] Author: text"
+  const lines = tDoc.transcript.split('\n');
+  let chatHtml = '';
+  
+  lines.forEach(line => {
+    const match = line.match(/^\[(.*?)\] (.*?): (.*)$/);
+    if (match) {
+      const time = match[1];
+      const author = match[2];
+      const content = match[3];
+      const initials = author.slice(0, 2).toUpperCase();
+      
+      chatHtml += `
+        <div class="chat-msg">
+          <div class="chat-avatar">${initials}</div>
+          <div class="chat-content-wrap">
+            <div class="chat-author">${author} <span class="chat-time">${time}</span></div>
+            <div class="chat-text">${content}</div>
+          </div>
+        </div>
+      `;
+    } else if (line.trim()) {
+      chatHtml += `
+        <div class="chat-msg">
+          <div class="chat-avatar" style="background:#4f545c">📝</div>
+          <div class="chat-content-wrap">
+            <div class="chat-text" style="font-style: italic; color:#72767d;">${line}</div>
+          </div>
+        </div>
+      `;
+    }
+  });
+
+  showModal(`
+    <div style="max-width: 600px;">
+      <h3 style="margin: 0 0 10px; color:#fff;">🎫 Transcript #Ticket-${channelId}</h3>
+      <p style="font-size:0.78rem; color: var(--muted); margin-bottom:14px;">User-ID: ${tDoc.user_id}</p>
+      
+      <div class="chat-log-box">
+        ${chatHtml || '<p style="color:var(--muted); text-align:center;">Keine Nachrichten archiviert.</p>'}
+      </div>
+      
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn-glass" onclick="closeModal()">Schließen</button>
+        <button class="btn-glass btn-glass-primary" onclick="downloadTranscript('${channelId}')">💾 Transcript herunterladen</button>
+      </div>
+    </div>
+  `);
+}
+
+function downloadTranscript(channelId) {
+  const dataEl = document.getElementById('transcriptData');
+  const data = JSON.parse(dataEl.textContent);
+  const tDoc = data[channelId];
+  if (!tDoc || !tDoc.transcript) return showToast('Kein Transcript gefunden.', 'err');
+  
+  const blob = new Blob([tDoc.transcript], {type: 'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `transcript-ticket-${channelId}.txt`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast('Download gestartet!', 'ok');
+}
+
+// Initial update
+updatePreview();
+window._dirty = false;
+</script>
+<style>
+@keyframes spin { 100% { transform: rotate(360deg); } }
+</style>
+{% endblock %}

@@ -1,0 +1,755 @@
+{# dashboard/members.html #}
+{% extends "dashboard/_base.html" %}
+{% set active = 'members' %}
+{% block title %}Mitglieder-Zentrale{% endblock %}
+{% block page_title %}👥 Mitglieder-Zentrale{% endblock %}
+{% block page_desc %}Verwalte deine Community, analysiere Risiken und führe Moderations-Aktionen in Echtzeit aus.{% endblock %}
+
+{% block head %}
+<style>
+  .m-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+  .m-card{display:flex;align-items:center;gap:14px;padding:14px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:18px;transition:all .2s cubic-bezier(0.4,0,0.2,1);cursor:pointer;position:relative;overflow:hidden}
+  .m-card:hover{border-color:rgba(96,165,250,0.3);background:rgba(255,255,255,0.045);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.2)}
+  .m-card.sel{border-color:var(--v);background:rgba(59,130,246,0.06);box-shadow:0 0 0 1px var(--v)}
+  .m-card.has-badges{border-color:rgba(251,191,36,.16);background:linear-gradient(135deg,rgba(251,191,36,.035),rgba(255,255,255,.02))}
+  .m-card.dev-card{border-color:rgba(251,191,36,.55);background:linear-gradient(135deg,rgba(251,191,36,.13),rgba(124,58,237,.08),rgba(255,255,255,.025));box-shadow:0 0 0 1px rgba(251,191,36,.22),0 20px 60px rgba(251,191,36,.10)}
+  .m-card.dev-card::before{content:'👑 Modforge OWNER / DEV';position:absolute;top:7px;right:-34px;transform:rotate(25deg);font-size:.48rem;font-weight:900;letter-spacing:.08em;color:#111;background:linear-gradient(90deg,#fbbf24,#fde68a);padding:3px 34px;box-shadow:0 0 22px rgba(251,191,36,.35)}
+  .m-card.dev-card .m-av{box-shadow:0 0 0 2px #fbbf24,0 0 28px rgba(251,191,36,.42)}
+  .m-av-container{position:relative;flex-shrink:0}
+  .m-av{width:48px;height:48px;border-radius:16px;object-fit:cover;background:var(--border)}
+  .m-dot{position:absolute;bottom:-3px;right:-3px;width:16px;height:16px;border-radius:50%;border:3px solid #0b0b1a}
+  .m-dot.online{background:#22c55e;box-shadow:0 0 10px rgba(34,197,94,0.5)}
+  .m-dot.idle{background:#f59e0b}
+  .m-dot.dnd{background:#ef4444}
+  .m-dot.offline{background:#4b5563}
+  .m-info{flex:1;min-width:0}
+  .m-name{font-weight:800;font-size:.9rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
+  .m-sub{font-size:.7rem;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:5px}
+  .risk-badge{padding:3px 10px;border-radius:8px;font-size:.65rem;font-weight:900;font-family:'Geist Mono',monospace;white-space:nowrap}
+
+  /* SIDEBAR */
+  .mp{display:none;position:fixed;top:0;right:0;bottom:0;width:500px;background:rgba(8,8,20,0.98);backdrop-filter:blur(50px);border-left:1px solid var(--border);z-index:10001;box-shadow:-20px 0 60px rgba(0,0,0,0.5);flex-direction:column}
+  .mp.open{display:flex;animation:slideIn .3s cubic-bezier(0.16,1,0.3,1)}
+  @keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
+  .mp-banner{height:120px;background-size:cover;background-position:center;position:relative;flex-shrink:0}
+  .mp-close{position:absolute;top:15px;right:15px;width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.1);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s;z-index:10}
+  .mp-close:hover{background:rgba(239,68,68,0.8);transform:rotate(90deg)}
+  .mp-header{padding:0 24px 20px;margin-top:-40px;text-align:center;position:relative;z-index:2;flex-shrink:0}
+  .mp-av-big{width:96px;height:96px;border-radius:28px;border:5px solid #080814;background:#111;margin:0 auto 12px;display:block;object-fit:cover;box-shadow:0 8px 25px rgba(0,0,0,0.3)}
+  .mp-body{flex:1;overflow-y:auto;padding:0 24px 40px}
+  .mp-body::-webkit-scrollbar{width:4px}
+  .mp-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
+  .mp-section{margin-top:24px}
+  .mp-section-title{font-size:.7rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .mp-section-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+  .mp-grid-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .mp-stat-card{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:12px;text-align:center;transition:.2s}
+  .mp-stat-card:hover{background:rgba(255,255,255,0.05);border-color:rgba(59,130,246,0.3)}
+  .mp-stat-v{font-size:1.2rem;font-weight:900;font-family:'Geist Mono',monospace;color:#fff}
+  .mp-stat-l{font-size:.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+  .mp-data-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.03);font-size:.82rem;gap:10px}
+  .mp-data-l{color:var(--muted);display:flex;align-items:center;gap:6px;flex-shrink:0}
+  .mp-data-v{color:#fff;font-weight:600;text-align:right;word-break:break-all}
+  .role-badge{padding:4px 10px;border-radius:8px;font-size:.7rem;font-weight:700;background:rgba(255,255,255,0.04);border:1px solid var(--border);display:inline-flex;align-items:center;gap:6px;margin:2px}
+  .action-btn{width:100%;padding:12px;border-radius:12px;font-weight:800;font-size:.8rem;cursor:pointer;border:1px solid transparent;transition:.2s;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit}
+  .action-btn.warn{background:rgba(245,158,11,0.1);color:#fbbf24;border-color:rgba(245,158,11,0.2)}
+  .action-btn.warn:hover{background:rgba(245,158,11,0.2)}
+  .action-btn.kick{background:rgba(249,115,22,0.1);color:#fb923c;border-color:rgba(249,115,22,0.2)}
+  .action-btn.kick:hover{background:rgba(249,115,22,0.2)}
+  .action-btn.ban{background:rgba(239,68,68,0.15);color:#f87171;border-color:rgba(239,68,68,0.25)}
+  .action-btn.ban:hover{background:rgba(239,68,68,0.25)}
+  .action-btn.neutral{background:rgba(255,255,255,0.05);border-color:var(--border);color:var(--fg)}
+  .action-btn.neutral:hover{background:rgba(255,255,255,0.1)}
+  .timeout-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+  .to-btn{padding:8px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--fg);font-size:.7rem;font-weight:700;cursor:pointer;transition:.15s;font-family:inherit}
+  .to-btn:hover{background:var(--v);color:#fff;border-color:transparent}
+  .mp-tabs{display:flex;gap:4px;margin-bottom:15px;border-bottom:1px solid var(--border);padding-bottom:10px;flex-wrap:wrap}
+  .mp-tab{padding:8px 12px;border-radius:10px;font-size:.75rem;font-weight:700;color:var(--muted);cursor:pointer;border:none;background:none;font-family:inherit;transition:.15s}
+  .mp-tab:hover{color:#fff;background:rgba(255,255,255,0.03)}
+  .mp-tab.a{color:var(--vl);background:rgba(59,130,246,0.08)}
+  .mp-tp{display:none}
+  .mp-tp.a{display:block}
+
+  /* Perm badges */
+  .mp-p{display:inline-block;padding:3px 8px;border-radius:6px;font-size:.6rem;font-weight:700;margin:2px;font-family:'Geist Mono',monospace}
+  .mp-p.y{background:rgba(34,197,94,0.1);color:#4ade80;border:1px solid rgba(34,197,94,0.2)}
+  .mp-p.n{background:rgba(255,255,255,0.03);color:var(--muted);border:1px solid var(--border);text-decoration:line-through;opacity:.5}
+
+  /* Overlay */
+  .mp-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:10000;backdrop-filter:blur(2px)}
+  .mp-overlay.open{display:block}
+
+  @media(max-width:1000px){
+    .mp{width:100%;max-width:100%}
+  }
+  @media(max-width:600px){
+    .mp-grid-stats{grid-template-columns:repeat(2,1fr)}
+    .timeout-grid{grid-template-columns:repeat(4,1fr)}
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{# ── SEARCH & FILTER BAR ── #}
+<div class="db-card" style="margin-bottom:20px;padding:16px">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+
+    <div style="position:relative;flex:1;min-width:220px">
+      <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none">🔍</span>
+      <input
+        type="text"
+        id="mSearch"
+        class="cfg-input ignore-dirty"
+        placeholder="Name, ID oder Rolle suchen…"
+        style="width:100%;padding-left:42px;border-radius:14px;box-sizing:border-box"
+        oninput="filt()"
+      >
+    </div>
+
+    <select class="cfg-select ignore-dirty" id="mFilter" onchange="filt()" style="border-radius:14px">
+      <option value="">✨ Alle</option>
+      <option value="humans">👤 Menschen</option>
+      <option value="bots">🤖 Bots</option>
+      <option value="admins">👑 Admins</option>
+      <option value="highrisk">🔴 Hohes Risiko</option>
+      <option value="timeout">⏳ Im Timeout</option>
+      <option value="voice">🎤 Im Voice</option>
+      <option value="online">🟢 Online</option>
+    </select>
+
+    <select class="cfg-select ignore-dirty" id="badgeFilter" onchange="filt()" style="border-radius:14px;min-width:170px">
+      <option value="">🏅 Alle Badges</option>
+      <option value="__has">✅ Hat Badges</option>
+      <option value="__none">○ Ohne Badges</option>
+      {% for b in badge_catalog %}<option value="{{ b.id }}">{{ b.emoji }} {{ b.name }}</option>{% endfor %}
+    </select>
+
+    <div style="background:rgba(59,130,246,0.1);color:var(--vl);padding:10px 18px;border-radius:14px;font-weight:800;font-size:.85rem;border:1px solid rgba(59,130,246,0.2);white-space:nowrap;flex-shrink:0">
+      <span id="mVisible">{{ members | length }}</span>
+      <span style="font-weight:500;opacity:.7"> / {{ members | length }}</span>
+    </div>
+
+  </div>
+</div>
+
+{# ── MEMBER GRID ── #}
+{% if members %}
+<div class="m-list" id="mList">
+  {% for m in members %}
+  <div class="m-card {% if m.id == '1303627964734246944' %}dev-card{% elif m.badges %}has-badges{% endif %}"
+       onclick="openProfile({{ loop.index0 }})"
+       data-idx="{{ loop.index0 }}"
+       data-search="{{ (m.name ~ ' ' ~ m.display_name ~ ' ' ~ m.id ~ ' ' ~ m.roles_str ~ ' ' ~ ((m.badges|map(attribute='name')|join(' ')) if m.badges else '')) | lower }}"
+       data-bot="{{ m.bot | int }}"
+       data-admin="{{ m.is_admin | int }}"
+       data-timeout="{{ (m.timeout != '') | int }}"
+       data-voice="{{ (m.voice_ch != '') | int }}"
+       data-risk="{{ m.risk }}"
+       data-badges="{{ (m.badges|map(attribute='id')|join(',')) if m.badges else '' }}"
+       data-status="{{ m.status }}">
+
+    <div class="m-av-container">
+      <img src="{{ m.avatar }}" class="m-av" loading="lazy" alt="{{ m.display_name }}">
+      <div class="m-dot {{ m.status }}"></div>
+    </div>
+
+    <div class="m-info">
+      <div class="m-name">
+        {{ m.display_name }}
+        {% if m.tag %}
+        <span style="font-size:.5rem;padding:2px 6px;border-radius:6px;background:{{ m.tag_color }}20;color:{{ m.tag_color }};border:1px solid {{ m.tag_color }}40">{{ m.tag }}</span>
+        {% endif %}
+        {% if m.badges %}
+        <span style="display:flex;gap:3px;flex-wrap:wrap;margin-top:3px">
+          {% for b in m.badges[:4] %}
+          <span class="mf-user-badge mf-badge-{{ b.style|default('solid') }} mf-rarity-{{ b.rarity|default('common') }}" title="{{ b.name }} – {{ b.desc }}" style="--bc:{{ b.color }};font-size:.58rem;padding:1px 5px">{{ b.emoji }} {{ b.name }}</span>
+          {% endfor %}
+          {% if m.badges|length > 4 %}
+          <span style="font-size:.55rem;color:var(--muted)">+{{ m.badges|length - 4 }}</span>
+          {% endif %}
+        </span>
+        {% endif %}
+      </div>
+      <div class="m-sub">
+        {% if m.bot %}<span>🤖 Bot</span>{% else %}<span>👤 Mensch</span>{% endif %}
+        <span>•</span>
+        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">{{ m.top_role if m.top_role else 'Keine Rollen' }}</span>
+      </div>
+    </div>
+
+    {# Risk badge color #}
+    {% if m.risk < 25 %}
+      {% set rbg = 'rgba(34,197,94,0.1)' %}{% set rcl = '#4ade80' %}
+    {% elif m.risk < 50 %}
+      {% set rbg = 'rgba(234,179,8,0.1)' %}{% set rcl = '#fcd34d' %}
+    {% elif m.risk < 75 %}
+      {% set rbg = 'rgba(249,115,22,0.1)' %}{% set rcl = '#fb923c' %}
+    {% else %}
+      {% set rbg = 'rgba(239,68,68,0.1)' %}{% set rcl = '#f87171' %}
+    {% endif %}
+    <div class="risk-badge" style="background:{{ rbg }};color:{{ rcl }}">{{ m.risk }}%</div>
+
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="db-card" style="text-align:center;padding:60px">
+  <div style="font-size:3.5rem;margin-bottom:20px">📡</div>
+  <h3 style="margin-bottom:10px">Keine Daten verfügbar</h3>
+  <p style="color:var(--muted);max-width:400px;margin:0 auto">
+    Der Bot muss online sein und den Server-Cache geladen haben,
+    um die Mitgliederliste anzuzeigen.
+  </p>
+</div>
+{% endif %}
+
+{# ── OVERLAY ── #}
+<div class="mp-overlay" id="mpOverlay" onclick="closeProfile()"></div>
+
+{# ── MEMBER PROFILE SIDEBAR ── #}
+<div class="mp" id="memberProfile">
+  <div class="mp-banner" id="pBanner">
+    <button class="mp-close" onclick="closeProfile()" aria-label="Schließen">✕</button>
+  </div>
+  <div class="mp-header">
+    <img id="pAvatar" src="" class="mp-av-big" alt="">
+    <div id="pDisplayName" style="font-weight:900;font-size:1.3rem;color:#fff;word-break:break-word"></div>
+    <div id="pFullTag" style="font-size:.82rem;color:var(--muted);margin-top:2px"></div>
+    <div id="pId" style="font-family:'Geist Mono',monospace;font-size:.65rem;color:var(--vl);margin-top:6px;cursor:pointer;user-select:all" onclick="copyId()" title="Klicken zum Kopieren"></div>
+  </div>
+  <div class="mp-body" id="mpBodyContent"></div>
+</div>
+{% endblock %}
+
+{# ── Scripts OUTSIDE content block ── #}
+{% block scripts %}
+<script>
+// ─── Data ────────────────────────────────────────────────────────────────────
+const MEMBERS   = {{ members | tojson | safe }};
+const GUILD_ID  = "{{ guild.id }}";
+const USER_ID   = "{{ user.id }}";
+let currentMember = null;
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
+function fmtDate(ts) {
+  if (!ts) return '—';
+  return new Date(Number(ts) * 1000).toLocaleDateString('de-DE');
+}
+
+function fmtRelative(ts) {
+  if (!ts) return '—';
+  const diff = Math.floor((new Date(Number(ts) * 1000) - Date.now()) / 1000);
+  if (diff <= 0) return 'abgelaufen';
+  if (diff < 60)   return 'weniger als 1 min';
+  if (diff < 3600) return Math.floor(diff / 60) + ' min';
+  return Math.floor(diff / 3600) + ' h';
+}
+
+// ─── Filter ──────────────────────────────────────────────────────────────────
+function filt() {
+  const q = document.getElementById('mSearch').value.toLowerCase().trim();
+  const f = document.getElementById('mFilter').value;
+  const bf = document.getElementById('badgeFilter')?.value || '';
+  let count = 0;
+
+  document.querySelectorAll('.m-card').forEach(card => {
+    const matchSearch = !q || card.dataset.search.includes(q);
+    const risk  = parseInt(card.dataset.risk, 10);
+    let matchFilter = true;
+    let matchBadge = true;
+    const badgeIds = (card.dataset.badges || '').split(',').filter(Boolean);
+    if (bf === '__has') matchBadge = badgeIds.length > 0;
+    else if (bf === '__none') matchBadge = badgeIds.length === 0;
+    else if (bf) matchBadge = badgeIds.includes(bf);
+
+    switch (f) {
+      case 'humans':   matchFilter = card.dataset.bot     === '0'; break;
+      case 'bots':     matchFilter = card.dataset.bot     === '1'; break;
+      case 'admins':   matchFilter = card.dataset.admin   === '1'; break;
+      case 'highrisk': matchFilter = risk >= 50;                   break;
+      case 'timeout':  matchFilter = card.dataset.timeout === '1'; break;
+      case 'voice':    matchFilter = card.dataset.voice   === '1'; break;
+      case 'online':   matchFilter = card.dataset.status  !== 'offline'; break;
+    }
+
+    const show = matchSearch && matchFilter && matchBadge;
+    card.style.display = show ? 'flex' : 'none';
+    if (show) count++;
+  });
+
+  document.getElementById('mVisible').textContent = count;
+}
+
+// ─── Profile open/close ───────────────────────────────────────────────────────
+function openProfile(idx) {
+  const m = MEMBERS[idx];
+  if (!m) return;
+  currentMember = m;
+
+  // highlight card
+  document.querySelectorAll('.m-card').forEach(c => c.classList.remove('sel'));
+  document.querySelector(`[data-idx="${idx}"]`)?.classList.add('sel');
+
+  // header
+  document.getElementById('pDisplayName').textContent = m.display_name ?? m.name;
+  document.getElementById('pFullTag').textContent     = m.name;
+  document.getElementById('pId').textContent          = (m.id ?? '') + ' 📋';
+  document.getElementById('pAvatar').src              = m.avatar ?? '';
+  document.getElementById('pBanner').style.backgroundImage =
+    m.banner_url ? `url('${m.banner_url}')` : 'linear-gradient(135deg,#1a1a2e,#16213e)';
+
+  // risk color
+  const risk = m.risk ?? 0;
+  const rc = risk < 25 ? '#4ade80' : risk < 50 ? '#fcd34d' : risk < 75 ? '#fb923c' : '#f87171';
+
+  const statusMap = { online:'🟢 Online', idle:'🟡 Abwesend', dnd:'🔴 Nicht stören', offline:'⚫ Offline' };
+  const st = statusMap[m.status] || m.status || '—';
+
+  const rolesHTML = Array.isArray(m.roles) && m.roles.length
+    ? m.roles.map(r => `<span class="role-badge" style="${r.color ? `border-color:${r.color}40;color:${r.color}` : ''}">${escapeHtml(r.name)}</span>`).join('')
+    : '<span style="color:var(--muted);font-size:.75rem">Keine Rollen</span>';
+
+  // permissions
+  const badgesHTML = Array.isArray(m.badges) && m.badges.length
+    ? m.badges.map(b => `<span class="mf-user-badge mf-badge-${escapeHtml(b.style || 'solid')} mf-rarity-${escapeHtml(b.rarity || 'common')}" title="${escapeHtml(b.desc || b.id)}" style="--bc:${escapeHtml(b.color || '#94a3b8')}">${escapeHtml(b.emoji || '🏷️')} ${escapeHtml(b.name || b.id)}</span>`).join('')
+    : '<span style="color:var(--muted);font-size:.75rem">Keine Badges</span>';
+
+  const permsObj = m.all_perms ?? {};
+  const permsHTML = Object.entries(permsObj)
+    .map(([k, v]) => `<span class="mp-p ${v ? 'y' : 'n'}">${escapeHtml(k.replace(/_/g,' '))}</span>`)
+    .join('') || '<span style="color:var(--muted);font-size:.75rem">Keine Daten</span>';
+
+  const modTab = !m.bot ? `<button class="mp-tab" onclick="switchTab(event,'mod')">⚡ Mod</button>` : '';
+
+  document.getElementById('mpBodyContent').innerHTML = `
+    <div class="mp-grid-stats">
+      <div class="mp-stat-card">
+        <div class="mp-stat-v" style="color:${rc}">${risk}%</div>
+        <div class="mp-stat-l">Risiko</div>
+      </div>
+      <div class="mp-stat-card">
+        <div class="mp-stat-v">${m.warns ?? 0}</div>
+        <div class="mp-stat-l">Warns</div>
+      </div>
+      <div class="mp-stat-card">
+        <div class="mp-stat-v">${m.cases ?? 0}</div>
+        <div class="mp-stat-l">Cases</div>
+      </div>
+      <div class="mp-stat-card">
+        <div class="mp-stat-v" style="color:var(--amberl)">${m.badge_score ?? 0}</div>
+        <div class="mp-stat-l">Badge Trust</div>
+      </div>
+    </div>
+
+    <div class="mp-tabs" id="mpTabs">
+      <button class="mp-tab a" onclick="switchTab(event,'info')">📋 Info</button>
+      <button class="mp-tab"   onclick="switchTab(event,'perms')">🔐 Rechte</button>
+      <button class="mp-tab"   onclick="switchTab(event,'history')">📜 Verlauf</button>
+      ${modTab}
+      ${typeof USER_ID !== "undefined" && USER_ID === "1442114722253242510" ? `<button class="mp-tab" onclick="switchTab(event,'badges')">🏷️ Badges</button>` : ""}
+    </div>
+
+    <!-- INFO -->
+    <div class="mp-tp a" id="tp-info">
+      <div class="mp-data-row">
+        <div class="mp-data-l">📱 Status</div>
+        <div class="mp-data-v">${st}</div>
+      </div>
+      <div style="margin:10px 0;display:flex;gap:8px;flex-wrap:wrap"><a class="btn-glass btn-sm" href="/server/${GUILD_ID}/user/${m.id}" target="_blank">🌐 Öffentliches Badge-Profil</a><span class="tag">🧠 Trust ${Math.min(100, Math.max(0, 100 - risk + Math.floor((m.badge_score || 0)/2)))}%</span></div>
+      <div class="mp-data-row">
+        <div class="mp-data-l">📥 Beigetreten</div>
+        <div class="mp-data-v">${fmtDate(m.joined)}</div>
+      </div>
+      <div class="mp-data-row">
+        <div class="mp-data-l">📅 Erstellt</div>
+        <div class="mp-data-v">${fmtDate(m.created)}</div>
+      </div>
+      ${m.voice_ch ? `
+      <div class="mp-data-row">
+        <div class="mp-data-l">🎤 Voice</div>
+        <div class="mp-data-v" style="color:var(--green)">${escapeHtml(m.voice_ch)}${m.voice_mute ? ' 🔇' : ''}</div>
+      </div>` : ''}
+      ${m.timeout ? `
+      <div class="mp-data-row">
+        <div class="mp-data-l">⏳ Timeout bis</div>
+        <div class="mp-data-v" style="color:#f87171">${fmtRelative(m.timeout)}</div>
+      </div>` : ''}
+      <div class="mp-section">
+        <div class="mp-section-title">🏅 Badges</div>
+        <div id="pPublicBadgeList" style="display:flex;flex-wrap:wrap;gap:5px">${badgesHTML}</div>
+      </div>
+      <div class="mp-section">
+        <div class="mp-section-title">🏷️ Rollen</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">${rolesHTML}</div>
+      </div>
+    </div>
+
+    <!-- PERMS -->
+    <div class="mp-tp" id="tp-perms">
+      <div class="mp-section-title">🔐 Berechtigungen</div>
+      <div style="display:flex;flex-wrap:wrap;gap:2px">${permsHTML}</div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="mp-tp" id="tp-history">
+      <div class="mp-section-title">📝 Notizen</div>
+      <div id="pNotesList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+        <span style="color:var(--muted);font-size:.7rem">Lädt…</span>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <input type="text" id="newNote" class="cfg-input ignore-dirty" placeholder="Neue Notiz…" style="flex:1;min-width:180px;font-size:.75rem">
+        <select id="newNotePrio" class="cfg-select ignore-dirty" style="font-size:.75rem"><option value="low">low</option><option value="medium" selected>medium</option><option value="high">high</option></select>
+        <label class="tag" style="cursor:pointer"><input type="checkbox" id="newNotePinned" class="ignore-dirty"> 📌 Pin</label>
+        <button class="action-btn neutral" style="width:auto;padding:10px 14px" onclick="addNote()">＋</button>
+      </div>
+      <div class="mp-section-title" style="margin-top:20px">📋 Fälle</div>
+      <div id="pDetailedCases" style="display:flex;flex-direction:column;gap:8px">
+        <span style="color:var(--muted);font-size:.7rem">Lädt…</span>
+      </div>
+    </div>
+
+    <!-- MOD -->
+    <div class="mp-tp" id="tp-mod">
+      <div class="mp-section-title">⚡ Moderation</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <button class="action-btn warn" onclick="modAction('warn')">⚠️ Verwarnen</button>
+        <button class="action-btn kick" onclick="modAction('kick')">👢 Kicken</button>
+        <button class="action-btn ban" style="grid-column:span 2" onclick="modAction('ban')">🔨 Permanent Bannen</button>
+      </div>
+      <div class="mp-section-title" style="margin-top:20px">⏱️ Schnell-Timeout</div>
+      <div class="timeout-grid">
+        <button class="to-btn" onclick="quickTimeout(60)">1 min</button>
+        <button class="to-btn" onclick="quickTimeout(600)">10 min</button>
+        <button class="to-btn" onclick="quickTimeout(3600)">1 h</button>
+        <button class="to-btn" onclick="quickTimeout(86400)">24 h</button>
+      </div>
+      <div class="mp-section-title" style="margin-top:20px">✏️ Verwaltung</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <button class="action-btn neutral" onclick="changeNick()">✏️ Nickname</button>
+        <button class="action-btn neutral" onclick="manageRoles()">🏷️ Rollen</button>
+      </div>
+    </div>
+
+    <!-- BADGES (nur Bot-Developer) -->
+    ${typeof USER_ID !== "undefined" && USER_ID === "1303627964734246944" ? `
+    <div class="mp-tp" id="tp-badges">
+      <div class="mp-section-title">🏷️ Badges verwalten</div>
+      <div id="pBadgeList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+        <span style="color:var(--muted);font-size:.7rem">Lädt…</span>
+      </div>
+      <div class="mp-section-title">➕ Badge vergeben</div>
+      <select id="newBadgeSelect" class="cfg-select ignore-dirty" style="width:100%;margin-bottom:8px;font-size:.75rem">
+        <option value="">-- Badge wählen --</option>
+      </select>
+      <button class="action-btn neutral" style="width:100%;padding:10px" onclick="addBadge()">🏷️ Badge vergeben</button>
+      <div class="mp-section-title" style="margin-top:18px">✨ Custom Badge erstellen</div>
+      <div style="display:grid;grid-template-columns:70px 1fr;gap:6px">
+        <input id="bdEmoji" class="cfg-input ignore-dirty" placeholder="🏆" maxlength="8" style="max-width:100%;font-size:.75rem">
+        <input id="bdId" class="cfg-input ignore-dirty" placeholder="badge_id" maxlength="48" style="max-width:100%;font-size:.75rem">
+        <input id="bdColor" type="color" value="#94a3b8" style="height:35px;border:0;border-radius:8px;background:transparent">
+        <input id="bdName" class="cfg-input ignore-dirty" placeholder="Name" maxlength="64" style="max-width:100%;font-size:.75rem">
+        <input id="bdDesc" class="cfg-input ignore-dirty" placeholder="Beschreibung" maxlength="256" style="grid-column:span 2;max-width:100%;font-size:.75rem">
+      </div>
+      <button class="action-btn neutral" style="width:100%;padding:10px;margin-top:8px" onclick="createBadgeDef()">✨ Custom Badge speichern</button>
+    </div>
+    ` : ""}
+  `;
+
+  // show overlay + panel
+  document.getElementById('mpOverlay').classList.add('open');
+  document.getElementById('memberProfile').classList.add('open');
+
+  // async details fetch
+  loadMemberDetails(m.id);
+  loadBadges();
+}
+
+function closeProfile() {
+  document.getElementById('memberProfile').classList.remove('open');
+  document.getElementById('mpOverlay').classList.remove('open');
+  document.querySelectorAll('.m-card').forEach(c => c.classList.remove('sel'));
+  currentMember = null;
+}
+
+// ─── Tab switch ───────────────────────────────────────────────────────────────
+function switchTab(e, name) {
+  const tabs = e.currentTarget.closest('.mp-tabs');
+  if (!tabs) return;
+  tabs.querySelectorAll('.mp-tab').forEach(t => t.classList.remove('a'));
+  e.currentTarget.classList.add('a');
+  document.querySelectorAll('.mp-tp').forEach(p => p.classList.remove('a'));
+  document.getElementById('tp-' + name)?.classList.add('a');
+}
+
+// ─── Load details via API ─────────────────────────────────────────────────────
+async function loadMemberDetails(memberId) {
+  try {
+    const r = await fetch(`/api/guild/${GUILD_ID}/member/${memberId}/details`);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'API error');
+
+    // notes
+    const notesList = document.getElementById('pNotesList');
+    if (notesList) {
+      notesList.innerHTML = Array.isArray(d.notes) && d.notes.length
+        ? d.notes.map(n => `
+            <div style="padding:10px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid var(--border)">
+              <div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:5px"><span class="tag">${n.pinned ? '📌 ' : ''}${escapeHtml(n.priority || 'medium')}</span><span style="font-size:.55rem;color:var(--muted)">${new Date(n.timestamp || n.created_at).toLocaleDateString('de-DE')}</span></div>
+              <div style="font-size:.75rem;color:#fff">${escapeHtml(n.text)}</div>
+              <div style="font-size:.55rem;color:var(--muted);margin-top:5px">Mod: ${escapeHtml(n.mod_id ?? '?')}</div>
+            </div>`).join('')
+        : '<span style="color:var(--muted);font-size:.7rem">Keine Notizen</span>';
+    }
+
+    // cases
+    const casesList = document.getElementById('pDetailedCases');
+    if (casesList) {
+      casesList.innerHTML = Array.isArray(d.cases) && d.cases.length
+        ? d.cases.map(c => {
+            const isBan = c.action === 'ban';
+            return `
+              <div style="padding:10px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-left:3px solid var(--v)">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                  <span style="font-weight:800;font-size:.7rem;color:var(--vl)">#${escapeHtml(String(c.case_id))}</span>
+                  <span style="font-size:.55rem;font-weight:800;padding:2px 7px;border-radius:6px;background:${isBan?'rgba(239,68,68,0.15)':'rgba(6,182,212,0.1)'};color:${isBan?'#f87171':'#67e8f9'}">
+                    ${escapeHtml((c.action ?? '').toUpperCase())}
+                  </span>
+                </div>
+                <div style="font-size:.72rem;color:var(--fg)">${escapeHtml(c.reason || 'Kein Grund angegeben')}</div>
+                <div style="font-size:.55rem;color:var(--muted);margin-top:5px">${new Date(c.created_at || c.timestamp).toLocaleString('de-DE')}</div>
+              </div>`;
+          }).join('')
+        : '<span style="color:var(--muted);font-size:.7rem">Keine Fälle</span>';
+    }
+
+  } catch (err) {
+    console.warn('loadMemberDetails:', err);
+    const notesList = document.getElementById('pNotesList');
+    const casesList = document.getElementById('pDetailedCases');
+    if (notesList) notesList.innerHTML = '<span style="color:#f87171;font-size:.7rem">Fehler beim Laden</span>';
+    if (casesList) casesList.innerHTML = '<span style="color:#f87171;font-size:.7rem">Fehler beim Laden</span>';
+  }
+}
+
+
+// ─── Badge Management ──────────────────────────────────────────────────────────
+let MEMBER_BADGES = [];
+let ALL_BADGES = [];
+
+async function loadBadges() {
+  if (!currentMember) return;
+  try {
+    const r = await fetch(`/api/guild/${GUILD_ID}/member/${currentMember.id}/badges`);
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error);
+    MEMBER_BADGES = d.badges || [];
+    ALL_BADGES = d.all_badges || [];
+
+    if (currentMember) currentMember.badges = MEMBER_BADGES;
+    const publicEl = document.getElementById('pPublicBadgeList');
+    if (publicEl) {
+      publicEl.innerHTML = MEMBER_BADGES.length
+        ? MEMBER_BADGES.map(b => `<span class="mf-user-badge mf-badge-${escapeHtml(b.style || 'solid')} mf-rarity-${escapeHtml(b.rarity || 'common')}" title="${escapeHtml(b.desc || b.id)}" style="--bc:${escapeHtml(b.color || '#94a3b8')}">${escapeHtml(b.emoji || '🏷️')} ${escapeHtml(b.name || b.id)}</span>`).join('')
+        : '<span style="color:var(--muted);font-size:.75rem">Keine Badges</span>';
+    }
+
+    // Render current badges
+    const listEl = document.getElementById('pBadgeList');
+    if (listEl) {
+      if (MEMBER_BADGES.length === 0) {
+        listEl.innerHTML = '<span style="color:var(--muted);font-size:.7rem">Keine Badges</span>';
+      } else {
+        listEl.innerHTML = MEMBER_BADGES.map((b, i) =>
+          `<span class="mf-user-badge mf-badge-${escapeHtml(b.style || 'solid')} mf-rarity-${escapeHtml(b.rarity || 'common')}" title="${escapeHtml(b.desc || '')}" style="--bc:${escapeHtml(b.color || '#94a3b8')};cursor:default">
+            ${escapeHtml(b.emoji || '🏷️')} ${escapeHtml(b.name || b.id)}
+            <button class="mini-badge-btn" onclick="moveBadge(${i}, -1)" title="nach links">‹</button>
+            <button class="mini-badge-btn" onclick="moveBadge(${i}, 1)" title="nach rechts">›</button>
+            <button class="mini-badge-btn danger" onclick="removeBadge('${b.id}')" title="entfernen">×</button>
+          </span>`
+        ).join('');
+      }
+    }
+
+    // Render available badges dropdown
+    const sel = document.getElementById('newBadgeSelect');
+    if (sel) {
+      const existingIds = new Set(MEMBER_BADGES.map(b => b.id));
+      sel.innerHTML = '<option value="">-- Badge wählen --</option>' +
+        ALL_BADGES.filter(b => !existingIds.has(b.id))
+          .map(b => `<option value="${b.id}">${b.emoji} ${b.name}</option>`).join('');
+    }
+  } catch (e) {
+    console.warn('loadBadges:', e);
+  }
+}
+
+async function createBadgeDef() {
+  const id = document.getElementById('bdId')?.value.trim();
+  const name = document.getElementById('bdName')?.value.trim();
+  if (!id || !name) return showToast('Badge-ID und Name eingeben', 'err');
+  try {
+    const r = await fetch(`/api/guild/${GUILD_ID}/badges/definitions`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({id, name, emoji: document.getElementById('bdEmoji')?.value || '🏷️', color: document.getElementById('bdColor')?.value || '#94a3b8', desc: document.getElementById('bdDesc')?.value || '', style:'glow', rarity:'rare', category:'custom', level:1})
+    });
+    const d = await r.json();
+    if (d.ok) { showToast('Custom Badge gespeichert', 'ok'); await loadBadges(); }
+    else showToast(d.error || 'Fehler', 'err');
+  } catch(e) { showToast('Netzwerkfehler', 'err'); }
+}
+
+async function moveBadge(index, dir) {
+  const next = index + dir;
+  if (next < 0 || next >= MEMBER_BADGES.length) return;
+  const tmp = MEMBER_BADGES[index];
+  MEMBER_BADGES[index] = MEMBER_BADGES[next];
+  MEMBER_BADGES[next] = tmp;
+  const listEl = document.getElementById('pBadgeList');
+  if (listEl) {
+    listEl.innerHTML = MEMBER_BADGES.map((b, i) =>
+      `<span class="mf-user-badge mf-badge-${escapeHtml(b.style || 'solid')} mf-rarity-${escapeHtml(b.rarity || 'common')}" style="--bc:${escapeHtml(b.color || '#94a3b8')}">${escapeHtml(b.emoji || '🏷️')} ${escapeHtml(b.name || b.id)} <button class="mini-badge-btn" onclick="moveBadge(${i}, -1)">‹</button><button class="mini-badge-btn" onclick="moveBadge(${i}, 1)">›</button><button class="mini-badge-btn danger" onclick="removeBadge('${b.id}')">×</button></span>`
+    ).join('');
+  }
+  try {
+    const r = await fetch(`/api/guild/${GUILD_ID}/member/${currentMember.id}/badges/order`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({badge_ids: MEMBER_BADGES.map(b => b.id)})});
+    const d = await r.json();
+    if (!d.ok) showToast(d.error || 'Reihenfolge nicht gespeichert', 'err');
+    else showToast('Badge-Reihenfolge gespeichert', 'ok');
+  } catch(e) { showToast('Netzwerkfehler', 'err'); }
+}
+
+async function addBadge() {
+  if (!currentMember) return;
+  const sel = document.getElementById('newBadgeSelect');
+  const badgeId = sel?.value;
+  if (!badgeId) return showToast('Bitte ein Badge wählen', 'err');
+  try {
+    const r = await fetch(`/api/guild/${GUILD_ID}/member/${currentMember.id}/badges`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({badge_id: badgeId})
+    });
+    const d = await r.json();
+    if (d.ok) { showToast('Badge hinzugefügt', 'ok'); await loadBadges(); }
+    else if (d.duplicate) showToast('Badge bereits vorhanden', 'err');
+    else showToast(d.error || 'Fehler', 'err');
+  } catch (e) { showToast('Netzwerkfehler', 'err'); }
+}
+
+async function removeBadge(badgeId) {
+  if (!currentMember || !confirm('Badge wirklich entfernen?')) return;
+  try {
+    const r = await fetch(`/api/guild/${GUILD_ID}/member/${currentMember.id}/badges/${badgeId}`, {method:'DELETE'});
+    const d = await r.json();
+    if (d.ok) { showToast('Badge entfernt', 'ok'); await loadBadges(); }
+    else showToast(d.error || 'Fehler', 'err');
+  } catch (e) { showToast('Netzwerkfehler', 'err'); }
+}
+
+// ─── Copy ID ──────────────────────────────────────────────────────────────────
+function copyId() {
+  if (!currentMember) return;
+  navigator.clipboard.writeText(currentMember.id).then(() => {
+    showToast('ID kopiert: ' + currentMember.id, 'info');
+  }).catch(() => showToast('Kopieren fehlgeschlagen', 'err'));
+}
+
+// ─── Note ─────────────────────────────────────────────────────────────────────
+async function addNote() {
+  const input = document.getElementById('newNote');
+  const txt = input?.value.trim();
+  if (!txt || !currentMember) return;
+  try {
+    const r = await fetch(`/api/guild/${GUILD_ID}/member/${currentMember.id}/note`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: txt, priority: document.getElementById('newNotePrio')?.value || 'medium', pinned: document.getElementById('newNotePinned')?.checked || false })
+    });
+    if ((await r.json()).ok) {
+      showToast('Notiz hinzugefügt', 'ok');
+      input.value = '';
+      await loadMemberDetails(currentMember.id);
+    } else {
+      showToast('Fehler beim Speichern', 'err');
+    }
+  } catch (e) {
+    showToast('Netzwerkfehler', 'err');
+  }
+}
+
+// ─── Mod actions ──────────────────────────────────────────────────────────────
+async function modAction(action) {
+  if (!currentMember) return;
+  let reason = 'Aktion via Web-Dashboard';
+  const input = prompt(`Grund für ${action.toUpperCase()}:`, reason);
+  if (input === null) return; // cancelled
+  reason = input.trim() || reason;
+
+  try {
+    const r = await fetch(`/api/guild/${GUILD_ID}/member/${currentMember.id}/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, reason })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      showToast(`Erfolgreich: ${action}`, 'ok');
+      setTimeout(() => location.reload(), 900);
+    } else {
+      showToast('Fehler: ' + (d.error || 'Unbekannt'), 'err');
+    }
+  } catch (e) {
+    showToast('Netzwerkfehler', 'err');
+  }
+}
+
+async function quickTimeout(seconds) {
+  if (!currentMember) return;
+  try {
+    const r = await fetch(`/api/guild/${GUILD_ID}/member/${currentMember.id}/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'timeout', duration: seconds, reason: 'Quick-Timeout Dashboard' })
+    });
+    const d = await r.json();
+    if (d.ok) { showToast('Timeout gesetzt (' + seconds + 's)', 'ok'); setTimeout(() => location.reload(), 900); }
+    else showToast('Fehler: ' + (d.error || '?'), 'err');
+  } catch (e) {
+    showToast('Netzwerkfehler', 'err');
+  }
+}
+
+async function changeNick() {
+  if (!currentMember) return;
+  const newNick = prompt('Neuer Nickname (leer = zurücksetzen):', currentMember.nick || currentMember.display_name || '');
+  if (newNick === null) return;
+  try {
+    const r = await fetch(`/api/guild/${GUILD_ID}/member/${currentMember.id}/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'nick', nick: newNick.trim() })
+    });
+    if ((await r.json()).ok) { showToast('Nickname geändert', 'ok'); setTimeout(() => location.reload(), 900); }
+    else showToast('Fehler beim Ändern', 'err');
+  } catch (e) {
+    showToast('Netzwerkfehler', 'err');
+  }
+}
+
+function manageRoles() {
+  showToast('Rollen-Verwaltung folgt demnächst', 'info');
+}
+
+// ─── Keyboard ─────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeProfile();
+});
+</script>
+{% endblock %}

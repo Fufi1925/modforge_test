@@ -1,0 +1,199 @@
+{% extends "dashboard/_base.html" %}
+{% set active = 'embed' %}
+{% block title %}Embed Builder{% endblock %}
+{% block page_title %}🎨 Embed Builder{% endblock %}
+{% block page_desc %}Erstelle Custom-Embeds mit Live-Vorschau{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+  <!-- EDITOR -->
+  <div class="db-card">
+    <div class="db-card-header"><span class="db-card-title">✏️ Editor</span></div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div><label style="font-size:.75rem;color:var(--muted)">Kanal</label>
+        <select class="cfg-select" id="embedChannel" style="width:100%">
+          {% for ch in channels %}<option value="{{ ch.id }}">#{{ ch.name }}</option>{% endfor %}
+        </select></div>
+      <div><label style="font-size:.75rem;color:var(--muted)">Autor Name</label><input class="cfg-input" id="eAuthor" style="max-width:100%;width:100%" placeholder="ModForge" oninput="updatePreview()"></div>
+      <div><label style="font-size:.75rem;color:var(--muted)">Autor Icon URL</label><input class="cfg-input" id="eAuthorIcon" style="max-width:100%;width:100%" placeholder="https://..." oninput="updatePreview()"></div>
+      <div><label style="font-size:.75rem;color:var(--muted)">Titel</label><input class="cfg-input" id="eTitle" style="max-width:100%;width:100%" placeholder="📢 Ankündigung" oninput="updatePreview()"></div>
+      <div><label style="font-size:.75rem;color:var(--muted)">URL (Titel-Link)</label><input class="cfg-input" id="eTitleUrl" style="max-width:100%;width:100%" placeholder="https://..." oninput="updatePreview()"></div>
+      <div><label style="font-size:.75rem;color:var(--muted)">Beschreibung</label><textarea id="eDesc" rows="4" style="width:100%;padding:10px 14px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--fg);font-family:inherit;font-size:.82rem;resize:vertical;outline:none" placeholder="Unterstützt **Markdown**, *kursiv*, `code` und [Links](url)" oninput="updatePreview()"></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-size:.75rem;color:var(--muted)">Farbe</label><input type="color" id="eColor" value="#7c3aed" style="width:100%;height:38px;border:none;border-radius:8px;cursor:pointer;background:none" oninput="updatePreview()"></div>
+        <div><label style="font-size:.75rem;color:var(--muted)">Thumbnail URL</label><input class="cfg-input" id="eThumb" style="max-width:100%;width:100%" placeholder="https://..." oninput="updatePreview()"></div>
+      </div>
+      <div><label style="font-size:.75rem;color:var(--muted)">Bild URL</label><input class="cfg-input" id="eImage" style="max-width:100%;width:100%" placeholder="https://..." oninput="updatePreview()"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-size:.75rem;color:var(--muted)">Footer Text</label><input class="cfg-input" id="eFooter" style="max-width:100%;width:100%" placeholder="ModForge" oninput="updatePreview()"></div>
+        <div><label style="font-size:.75rem;color:var(--muted)">Footer Icon URL</label><input class="cfg-input" id="eFooterIcon" style="max-width:100%;width:100%" placeholder="https://..." oninput="updatePreview()"></div>
+      </div>
+      <div><label style="font-size:.75rem;color:var(--muted)">Timestamp</label><label class="toggle"><input type="checkbox" id="eTimestamp" onchange="updatePreview()"><span class="slider"></span></label></div>
+      <h3 style="font-size:.85rem;font-weight:700;margin-top:8px">Fields</h3>
+      <div id="fieldList"></div>
+      <button class="btn-glass btn-sm btn-glass-ghost" onclick="addField()" type="button">+ Field hinzufügen</button>
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button class="btn-glass btn-glass-primary" onclick="sendEmbed()" type="button">📨 Senden</button>
+        <button class="btn-glass btn-glass-ghost" onclick="copyJSON()" type="button">📋 JSON kopieren</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREVIEW -->
+  <div>
+    <div class="db-card" style="position:sticky;top:20px">
+      <div class="db-card-header"><span class="db-card-title">👁️ Live-Vorschau</span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+        <button class="btn-glass btn-sm" onclick="loadPreset('welcome')">Welcome</button>
+        <button class="btn-glass btn-sm" onclick="loadPreset('leave')">Leave</button>
+        <button class="btn-glass btn-sm" onclick="loadPreset('log')">Log</button>
+        <button class="btn-glass btn-sm" onclick="loadPreset('verify')">Verify</button>
+        <button class="btn-glass btn-sm" onclick="loadPreset('ticket')">Ticket</button>
+      </div>
+      <div style="background:#36393f;border-radius:8px;padding:16px 12px">
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <div style="width:40px;height:40px;border-radius:50%;background:var(--v);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.9rem">🛡️</div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <span style="font-weight:700;font-size:.88rem;color:#fff">ModForge</span>
+              <span style="padding:1px 5px;border-radius:3px;background:#5865f2;color:#fff;font-size:.55rem;font-weight:700">BOT</span>
+              <span style="font-size:.68rem;color:#72767d">Heute um <span id="epTime">12:00</span></span>
+            </div>
+            <div class="embed-preview" id="embedPreview" style="border-left-color:#7c3aed">
+              <div class="ep-author" id="epAuthor" style="display:none"><img id="epAuthorIcon" src="" style="display:none"><span id="epAuthorName"></span></div>
+              <div class="ep-title" id="epTitle">📢 Ankündigung</div>
+              <img id="epThumb" class="ep-thumb" style="display:none" src="">
+              <div class="ep-desc" id="epDesc">Schreibe etwas in den Editor…</div>
+              <div id="epFields" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px"></div>
+              <img id="epImage" class="ep-image" style="display:none" src="">
+              <div class="ep-footer" id="epFooter" style="display:none"><img id="epFooterIcon" src="" style="display:none"><span id="epFooterText"></span><span id="epFooterTime"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+let fieldCount=0;
+const GID = "{{ guild.id }}";
+
+function addField(){
+  const id=fieldCount++;
+  const d=document.createElement('div');
+  d.className='cfg-row';d.style.flexDirection='column';d.style.alignItems='stretch';d.style.gap='8px';d.id='field_'+id;
+  d.innerHTML=`<div style="display:flex;gap:8px;align-items:center"><input class="cfg-input" placeholder="Name" style="max-width:100%;flex:1" oninput="updatePreview()" data-fn="${id}"><label class="toggle" style="width:auto;display:flex;align-items:center;gap:4px"><input type="checkbox" data-fi="${id}" onchange="updatePreview()"><span style="font-size:.7rem;color:var(--muted)">Inline</span></label><button class="btn-glass btn-glass-danger btn-sm" onclick="document.getElementById('field_${id}').remove();updatePreview()" type="button">×</button></div><input class="cfg-input" placeholder="Value" style="max-width:100%;width:100%" oninput="updatePreview()" data-fv="${id}">`;
+  document.getElementById('fieldList').appendChild(d);
+}
+
+function updatePreview(){
+  const title=document.getElementById('eTitle').value||'';
+  const desc=document.getElementById('eDesc').value||'';
+  const color=document.getElementById('eColor').value;
+  const thumb=document.getElementById('eThumb').value;
+  const img=document.getElementById('eImage').value;
+  const author=document.getElementById('eAuthor').value;
+  const authorIcon=document.getElementById('eAuthorIcon').value;
+  const footer=document.getElementById('eFooter').value;
+  const footerIcon=document.getElementById('eFooterIcon').value;
+  const timestamp=document.getElementById('eTimestamp').checked;
+  
+  document.getElementById('embedPreview').style.borderLeftColor=color;
+  document.getElementById('epTitle').textContent=title;
+  document.getElementById('epTitle').style.display=title?'':'none';
+  document.getElementById('epDesc').innerHTML=desc.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>').replace(/`(.+?)`/g,'<code style="background:#2f3136;padding:1px 4px;border-radius:3px">$1</code>').replace(/\n/g,'<br>');
+  const thumbEl=document.getElementById('epThumb');thumbEl.src=thumb;thumbEl.style.display=thumb?'':'none';
+  const imgEl=document.getElementById('epImage');imgEl.src=img;imgEl.style.display=img?'':'none';
+  const authorEl=document.getElementById('epAuthor');
+  if(author){
+    authorEl.style.display='flex';
+    document.getElementById('epAuthorName').textContent=author;
+    const ai=document.getElementById('epAuthorIcon');
+    if(authorIcon){ai.src=authorIcon;ai.style.display=''}else ai.style.display='none'
+  }else authorEl.style.display='none';
+  
+  const footerEl=document.getElementById('epFooter');
+  if(footer || timestamp){
+    footerEl.style.display='flex';
+    document.getElementById('epFooterText').textContent=footer;
+    const fi=document.getElementById('epFooterIcon');
+    if(footerIcon){fi.src=footerIcon;fi.style.display=''}else fi.style.display='none';
+    document.getElementById('epFooterTime').textContent = timestamp ? ' • Heute um ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
+  }else footerEl.style.display='none';
+  
+  const now = new Date();
+  document.getElementById('epTime').textContent = now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+
+  const fc=document.getElementById('epFields');fc.innerHTML='';
+  document.querySelectorAll('[data-fn]').forEach(el=>{
+    const id=el.dataset.fn;
+    const name=el.value;
+    const val=document.querySelector(`[data-fv="${id}"]`);
+    const inl=document.querySelector(`[data-fi="${id}"]`);
+    if(name&&val&&val.value){
+      const fd=document.createElement('div');fd.style.cssText=inl&&inl.checked?'':'grid-column:span 2';
+      fd.innerHTML=`<div style="font-size:.72rem;font-weight:700;color:#fff;margin-bottom:2px">${name}</div><div style="font-size:.72rem;color:#dcddde">${val.value}</div>`;
+      fc.appendChild(fd);
+    }
+  });
+}
+
+function loadPreset(type){
+  const presets = {
+    welcome:['👋 Willkommen auf {server}!','Hallo {mention}! Schön, dass du da bist.','#22c55e'],
+    leave:['👋 Auf Wiedersehen','{user} hat den Server verlassen.','#ef4444'],
+    log:['🛡️ Moderation Log','**Beschreibung**\nUser wurde verwarnt.\n**User**\nUsername\n`(123456789)`','#3b82f6'],
+    verify:['✅ Verifizierung','Klicke auf den Button, um dich zu verifizieren.','#22c55e'],
+    ticket:['🎫 Support Ticket','Beschreibe dein Anliegen so genau wie möglich.','#f59e0b']
+  };
+  const p=presets[type]; if(!p) return;
+  document.getElementById('eTitle').value=p[0];
+  document.getElementById('eDesc').value=p[1];
+  document.getElementById('eColor').value=p[2];
+  updatePreview();
+}
+
+function buildJSON(){
+  const embed={};
+  const t=document.getElementById('eTitle').value;if(t)embed.title=t;
+  const u=document.getElementById('eTitleUrl').value;if(u)embed.url=u;
+  const d=document.getElementById('eDesc').value;if(d)embed.description=d;
+  embed.color=parseInt(document.getElementById('eColor').value.replace('#',''),16);
+  const th=document.getElementById('eThumb').value;if(th)embed.thumbnail={url:th};
+  const im=document.getElementById('eImage').value;if(im)embed.image={url:im};
+  const a=document.getElementById('eAuthor').value;if(a){embed.author={name:a};const ai=document.getElementById('eAuthorIcon').value;if(ai)embed.author.icon_url=ai}
+  const f=document.getElementById('eFooter').value;if(f){embed.footer={text:f};const fi=document.getElementById('eFooterIcon').value;if(fi)embed.footer.icon_url=fi}
+  if(document.getElementById('eTimestamp').checked)embed.timestamp=new Date().toISOString();
+  const fields=[];
+  document.querySelectorAll('[data-fn]').forEach(el=>{
+    const id=el.dataset.fn,name=el.value,val=document.querySelector(`[data-fv="${id}"]`),inl=document.querySelector(`[data-fi="${id}"]`);
+    if(name&&val&&val.value)fields.push({name,value:val.value,inline:inl?inl.checked:false});
+  });
+  if(fields.length)embed.fields=fields;
+  return embed;
+}
+
+async function sendEmbed(){
+  const ch=document.getElementById('embedChannel').value;
+  const embed=buildJSON();
+  try {
+    const r=await fetch('/api/guild/'+GID+'/embed',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({channel_id:ch,embed})
+    });
+    const d=await r.json();
+    if(d.ok) showToast('✅ Embed gesendet!', 'ok');
+    else showToast('❌ Fehler: '+(d.error||'Unbekannt'), 'err');
+  } catch(e) { showToast('❌ Netzwerk-Fehler', 'err'); }
+}
+
+function copyJSON(){
+  navigator.clipboard.writeText(JSON.stringify(buildJSON(),null,2));
+  showToast('📋 JSON kopiert!', 'info');
+}
+updatePreview();
+</script>
+{% endblock %}
+{% endblock %}

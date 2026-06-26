@@ -1,0 +1,16 @@
+{% extends "node/base.html" %}
+{% block content %}
+<div class="row" style="justify-content:space-between;margin-bottom:20px;align-items:flex-start"><div><h1>🔐 Admin Dashboard</h1><p class="muted">Live-Überblick, Logins, IPs, Pull und Systemdaten</p></div><div class="actions"><a class="btn primary" href="/admin/pull">🧲 Pull</a><a class="btn" href="/admin/users">👥 User Logins</a><a class="btn" href="/admin/guilds">🏠 Server</a></div></div>
+<div class="grid" style="margin-bottom:18px">
+  <div class="card"><div class="muted">Bot Server</div><div style="font-size:2rem;font-weight:900">{{ guild_count }}</div><div class="muted">{{ known_guilds }} bekannte Server</div></div>
+  <div class="card"><div class="muted">Member</div><div style="font-size:2rem;font-weight:900">{{ member_count }}</div><div class="muted">über alle aktiven Server</div></div>
+  <div class="card"><div class="muted">Dashboard User</div><div style="font-size:2rem;font-weight:900">{{ unique_users }}</div><div class="muted">{{ session_count }} Sessions gespeichert</div></div>
+  <div class="card"><div class="muted">Pull Autorisiert</div><div style="font-size:2rem;font-weight:900">{{ pull_users }}</div><div class="muted">Scope guilds.join vorhanden</div></div>
+  <div class="card"><div class="muted">Latenz</div><div style="font-size:2rem;font-weight:900">{{ latency }}ms</div><div class="muted">Discord Gateway</div></div>
+  <div class="card"><div class="muted">Uptime</div><div style="font-size:2rem;font-weight:900">{{ uptime }}s</div><div class="muted">RAM {{ ram_mb }} MB</div></div>
+</div>
+<div class="grid" style="grid-template-columns:1.2fr .8fr">
+  <div class="card"><h2>🧾 Admin / Login Events</h2><table class="table"><tr><th>Zeit</th><th>Event</th><th>IP</th><th>Ort</th><th>Daten</th></tr>{% for e in events %}<tr><td class="mono">{{ e.time }}</td><td><span class="badge">{{ e.type }}</span></td><td class="mono">{{ e.ip }}</td><td>{{ e.city }}{% if e.country %}, {{ e.country }}{% endif %}</td><td class="mono">{{ e.data }}</td></tr>{% else %}<tr><td colspan="5" class="muted">Noch keine Events.</td></tr>{% endfor %}</table></div>
+  <div class="card"><h2>⚡ Schnellaktionen</h2><div class="actions"><a class="btn primary" href="/admin/pull">User pullen</a><a class="btn" href="/admin/users">Logins + IP ansehen</a><a class="btn" href="/admin/guilds">Server verwalten</a><a class="btn" href="/health">Health JSON</a></div><h2 style="margin-top:20px">💡 Hinweise</h2><p class="muted">Wenn Pull-User fehlen: User müssen sich über <span class="mono">/dashboard/login?force=1</span> neu mit <span class="mono">guilds.join</span> anmelden.</p></div>
+</div>
+{% endblock %}

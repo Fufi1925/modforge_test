@@ -1,0 +1,136 @@
+{% extends "dashboard/_base.html" %}
+{% set active = 'welcome' %}
+{% block title %}Welcome & Leave{% endblock %}
+{% block page_title %}👋 Welcome Studio{% endblock %}
+{% block page_desc %}Live-Vorschau · Presets · Test senden · Placeholder-Check · Auto-Roles-Health{% endblock %}
+
+{% block head %}
+<style>
+.wc-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:18px;align-items:start}.wc-card{padding:18px;border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.028);margin-bottom:14px}.wc-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px;margin-bottom:16px}.wc-stat{padding:16px;border-radius:16px;border:1px solid var(--border);background:rgba(255,255,255,.03);text-align:center}.wc-stat-v{font-size:1.15rem;font-weight:900;font-family:'Geist Mono',monospace}.wc-preset-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}.wc-preset{padding:12px;border-radius:14px;border:1px solid var(--border);background:rgba(255,255,255,.035);cursor:pointer;text-align:left;transition:.18s}.wc-preset:hover{border-color:rgba(96,165,250,.3);transform:translateY(-2px)}.wc-preview-switch{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.wc-preview-switch button{padding:7px 11px;border-radius:999px;border:1px solid var(--border);background:rgba(255,255,255,.035);color:var(--muted);font-size:.72rem;font-weight:800;cursor:pointer}.wc-preview-switch button.active{background:rgba(59,130,246,.12);color:var(--vl);border-color:rgba(59,130,246,.28)}.discord-frame{background:#36393f;border-radius:12px;padding:14px}.discord-msg{display:flex;gap:10px;align-items:flex-start}.discord-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--v),var(--p));display:grid;place-items:center;flex-shrink:0}.discord-name{font-weight:700;color:#fff;font-size:.88rem}.discord-bot{font-size:.55rem;background:#5865f2;color:#fff;border-radius:3px;padding:1px 5px;margin-left:4px}.discord-time{font-size:.68rem;color:#72767d;margin-left:4px}.discord-embed{margin-top:6px;max-width:520px;background:#2f3136;border-left:4px solid var(--wc-color,#22c55e);border-radius:0 6px 6px 0;padding:12px 14px}.discord-title{font-weight:700;color:#fff;font-size:.92rem;margin-bottom:5px}.discord-desc{color:#dcddde;font-size:.82rem;line-height:1.5;white-space:pre-wrap}.discord-img{display:none;max-width:100%;border-radius:8px;margin-top:10px}.role-health{display:grid;gap:7px}.role-health-row{padding:9px 11px;border-radius:12px;border:1px solid var(--border);background:rgba(255,255,255,.03);display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.76rem}.role-health-row.ok{border-color:rgba(34,197,94,.2);background:rgba(34,197,94,.055)}.role-health-row.bad{border-color:rgba(239,68,68,.22);background:rgba(239,68,68,.055)}.ph-chip{display:inline-flex;gap:4px;align-items:center;padding:4px 8px;border-radius:999px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.16);color:var(--vl);font-size:.68rem;font-weight:800;margin:2px}.ph-warn{padding:10px 12px;border-radius:12px;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);color:#fcd34d;font-size:.78rem;margin-bottom:12px}.wc-textarea{width:100%;box-sizing:border-box;padding:10px 14px;border-radius:12px;background:rgba(255,255,255,.045);border:1px solid var(--border);color:var(--fg);font-family:inherit;font-size:.82rem;resize:vertical;outline:none}@media(max-width:980px){.wc-grid{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+
+{% block content %}
+{% set wc = cfg.get('welcome', {}) or {} %}
+{% set lv = cfg.get('leave', {}) or {} %}
+{% set wc_col = wc.get('embed_color', '#22c55e') if wc.get('embed_color', '#22c55e').startswith('#') else '#22c55e' %}
+{% set lv_col = lv.get('embed_color', '#ef4444') if lv.get('embed_color', '#ef4444').startswith('#') else '#ef4444' %}
+
+<div class="wc-stats">
+  <div class="wc-stat"><div class="wc-stat-v" style="color:{% if wc.get('enabled') %}var(--green){% else %}var(--muted){% endif %}">{% if wc.get('enabled') %}AN{% else %}AUS{% endif %}</div><div class="ov-sl">Welcome</div></div>
+  <div class="wc-stat"><div class="wc-stat-v" style="color:{% if lv.get('enabled') %}#f87171{% else %}var(--muted){% endif %}">{% if lv.get('enabled') %}AN{% else %}AUS{% endif %}</div><div class="ov-sl">Leave</div></div>
+  <div class="wc-stat"><div class="wc-stat-v" style="color:{% if wc.get('dm_enabled') %}var(--cl){% else %}var(--muted){% endif %}">{% if wc.get('dm_enabled') %}AN{% else %}AUS{% endif %}</div><div class="ov-sl">DM</div></div>
+  <div class="wc-stat"><div class="wc-stat-v" style="color:var(--vl)">{{ (wc.get('add_roles') or [])|length }}</div><div class="ov-sl">Auto-Rollen</div></div>
+  <div class="wc-stat"><div class="wc-stat-v" style="color:{% if placeholder_warnings %}var(--amberl){% else %}var(--green){% endif %}">{{ placeholder_warnings|length }}</div><div class="ov-sl">Placeholder-Fehler</div></div>
+</div>
+
+{% if placeholder_warnings %}
+<div class="ph-warn">⚠️ Unbekannte Platzhalter gefunden: {% for p in placeholder_warnings %}<code>{ {{ p }} }</code>{% if not loop.last %}, {% endif %}{% endfor %}</div>
+{% endif %}
+
+<div class="wc-grid">
+  <section>
+    <div class="wc-card">
+      <div class="db-card-header"><span class="db-card-title">🎨 Template Presets</span></div>
+      <div class="wc-preset-grid">
+        <button class="wc-preset" onclick="applyPreset('minimal')"><b>Minimal</b><div class="cfg-desc">kurz & clean</div></button>
+        <button class="wc-preset" onclick="applyPreset('community')"><b>Community</b><div class="cfg-desc">freundlich</div></button>
+        <button class="wc-preset" onclick="applyPreset('gaming')"><b>Gaming</b><div class="cfg-desc">energiegeladen</div></button>
+        <button class="wc-preset" onclick="applyPreset('security')"><b>Security</b><div class="cfg-desc">Regeln & Verify</div></button>
+        <button class="wc-preset" onclick="applyPreset('premium')"><b>Premium</b><div class="cfg-desc">edles Design</div></button>
+      </div>
+    </div>
+
+    <div class="wc-card">
+      <div class="db-card-header"><span class="db-card-title">👋 Welcome Nachricht</span></div>
+      <div class="cfg-row"><div><span class="cfg-label">Aktiviert</span><div class="cfg-desc">Nachricht im Welcome-Kanal posten</div></div><label class="toggle"><input type="checkbox" id="wc-en" {% if wc.get('enabled') %}checked{% endif %} onchange="showSaveBar()"><span class="slider"></span></label></div>
+      <div class="cfg-row"><div><span class="cfg-label">Welcome-Kanal</span></div><select class="cfg-select" id="wc-ch" onchange="showSaveBar()"><option value="">— Kein Kanal —</option>{% for ch in channels %}<option value="{{ ch.id }}" {% if wc.get('channel_id')|string == ch.id|string %}selected{% endif %}>#{{ ch.name }}</option>{% endfor %}</select></div>
+      <div class="cfg-row"><div><span class="cfg-label">Titel</span></div><input class="cfg-input" id="wc-title" value="{{ wc.get('embed_title','👋 Willkommen auf {server}!') }}" maxlength="256" style="min-width:280px" oninput="updatePreview();showSaveBar()"></div>
+      <div class="cfg-row" style="flex-direction:column;align-items:stretch;gap:6px"><div style="display:flex;justify-content:space-between"><span class="cfg-label">Beschreibung</span><span id="wc-len" style="font-size:.65rem;color:var(--muted)">0/2000</span></div><textarea id="wc-desc" class="wc-textarea" rows="4" maxlength="2000" oninput="updatePreview();showSaveBar()">{{ wc.get('embed_description','Hallo {mention}! Willkommen auf **{server}** – du bist Mitglied #{count}.') }}</textarea></div>
+      <div class="cfg-row"><div><span class="cfg-label">Farbe</span></div><input type="color" id="wc-col" value="{{ wc_col }}" oninput="updatePreview();showSaveBar()" style="width:48px;height:34px;border:0;border-radius:8px;background:transparent"></div>
+      <div class="cfg-row"><div><span class="cfg-label">User mit @ erwähnen</span></div><label class="toggle"><input type="checkbox" id="wc-ment" {% if wc.get('mention', True) %}checked{% endif %} onchange="showSaveBar()"><span class="slider"></span></label></div>
+      <div class="cfg-row"><div><span class="cfg-label">Avatar als Thumbnail</span></div><label class="toggle"><input type="checkbox" id="wc-thumb" {% if wc.get('embed_thumbnail', True) %}checked{% endif %} onchange="showSaveBar()"><span class="slider"></span></label></div>
+      <div class="cfg-row"><div><span class="cfg-label">Bild-URL</span></div><input class="cfg-input" id="wc-img" value="{{ wc.get('embed_image','') }}" placeholder="https://…" style="min-width:280px" oninput="updatePreview();showSaveBar()"></div>
+    </div>
+
+    <div class="wc-card">
+      <div class="db-card-header"><span class="db-card-title">📩 Welcome DM</span></div>
+      <div class="cfg-row"><div><span class="cfg-label">DM senden</span><div class="cfg-desc">Privatnachricht an neue User</div></div><label class="toggle"><input type="checkbox" id="wc-dm" {% if wc.get('dm_enabled') %}checked{% endif %} onchange="showSaveBar()"><span class="slider"></span></label></div>
+      <textarea id="wc-dm-text" class="wc-textarea" rows="3" placeholder="DM Text…" oninput="updatePreview();showSaveBar()">{{ wc.get('dm_description','') }}</textarea>
+    </div>
+
+    <div class="wc-card">
+      <div class="db-card-header"><span class="db-card-title">🏷️ Auto-Rollen</span></div>
+      <div id="wc-role-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">{% for rid in (wc.get('add_roles') or []) %}{% set rname = (guild_roles|selectattr('id','equalto',rid|string)|first or {}).get('name') or rid %}<span class="tag" data-rid="{{ rid }}">@{{ rname }} <b style="cursor:pointer;color:var(--redl)" onclick="rmRole({{ rid }})">×</b></span>{% else %}<span style="color:var(--muted);font-size:.75rem">Noch keine Auto-Rollen</span>{% endfor %}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><select class="cfg-select" id="wc-role-sel" style="flex:1;min-width:220px"><option value="">— Rolle wählen —</option>{% for r in guild_roles %}<option value="{{ r.id }}">@{{ r.name }}</option>{% endfor %}</select><button class="btn-glass btn-sm btn-glass-primary" onclick="addRole()">➕ Hinzufügen</button></div>
+      <div class="role-health" style="margin-top:12px">{% for r in role_health %}<div class="role-health-row {% if r.ok %}ok{% else %}bad{% endif %}"><span>{% if r.ok %}✅{% else %}❌{% endif %} @{{ r.name }}</span><span>{{ r.reason }}</span></div>{% else %}<div class="cfg-desc">Keine Auto-Rollen konfiguriert.</div>{% endfor %}</div>
+    </div>
+
+    <div class="wc-card">
+      <div class="db-card-header"><span class="db-card-title">🚪 Leave Nachricht</span></div>
+      <div class="cfg-row"><div><span class="cfg-label">Aktiviert</span></div><label class="toggle"><input type="checkbox" id="lv-en" {% if lv.get('enabled') %}checked{% endif %} onchange="showSaveBar()"><span class="slider"></span></label></div>
+      <div class="cfg-row"><div><span class="cfg-label">Leave-Kanal</span></div><select class="cfg-select" id="lv-ch" onchange="showSaveBar()"><option value="">— Kein Kanal —</option>{% for ch in channels %}<option value="{{ ch.id }}" {% if lv.get('channel_id')|string == ch.id|string %}selected{% endif %}>#{{ ch.name }}</option>{% endfor %}</select></div>
+      <div class="cfg-row"><div><span class="cfg-label">Titel</span></div><input class="cfg-input" id="lv-title" value="{{ lv.get('embed_title','👋 Auf Wiedersehen!') }}" maxlength="256" style="min-width:280px" oninput="updatePreview();showSaveBar()"></div>
+      <div class="cfg-row" style="flex-direction:column;align-items:stretch;gap:6px"><span class="cfg-label">Beschreibung</span><textarea id="lv-desc" class="wc-textarea" rows="3" maxlength="2000" oninput="updatePreview();showSaveBar()">{{ lv.get('embed_description','**{user}** hat den Server verlassen. Wir sind jetzt noch {count}.') }}</textarea></div>
+      <div class="cfg-row"><div><span class="cfg-label">Farbe</span></div><input type="color" id="lv-col" value="{{ lv_col }}" oninput="updatePreview();showSaveBar()" style="width:48px;height:34px;border:0;border-radius:8px;background:transparent"></div>
+    </div>
+  </section>
+
+  <aside>
+    <div class="wc-card" style="position:sticky;top:20px">
+      <div class="db-card-header"><span class="db-card-title">👁️ Live Preview</span></div>
+      <div class="wc-preview-switch"><button class="active" data-p="welcome" onclick="switchPreview('welcome')">Welcome</button><button data-p="leave" onclick="switchPreview('leave')">Leave</button><button data-p="dm" onclick="switchPreview('dm')">DM</button><button data-p="roles" onclick="switchPreview('roles')">Auto-Roles</button></div>
+      <div class="discord-frame" id="discordPreview"><div class="discord-msg"><div class="discord-avatar">🛡️</div><div style="flex:1"><div><span class="discord-name">ModForge</span><span class="discord-bot">BOT</span><span class="discord-time">Heute</span></div><div class="discord-embed" id="prevEmbed"><div class="discord-title" id="prevTitle"></div><div class="discord-desc" id="prevDesc"></div><img class="discord-img" id="prevImg"></div></div></div></div>
+      <div class="am-actions" style="margin-top:12px"><button class="btn-glass btn-sm btn-glass-primary" onclick="testSend('channel')">📨 Test in Kanal</button><button class="btn-glass btn-sm" onclick="testSend('dm')">📩 Test-DM an mich</button></div>
+      <div style="margin-top:14px"><div style="font-weight:800;font-size:.78rem;margin-bottom:6px">Placeholder</div>{% for p in ['{mention}','{user}','{username}','{server}','{count}'] %}<span class="ph-chip" onclick="copyPlaceholder('{{ p }}')">{{ p }}</span>{% endfor %}</div>
+      <div id="placeholderCheck" style="margin-top:12px"></div>
+    </div>
+  </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const GID = "{{ guild.id }}";
+let previewMode = 'welcome';
+function esc(s){return String(s||'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]));}
+function applyPH(text){return String(text||'').replaceAll('{mention}','@TestUser').replaceAll('{user}','TestUser').replaceAll('{username}','TestUser').replaceAll('{server}','{{ guild.name|e }}').replaceAll('{count}','{{ guild.member_count or 0 }}');}
+function md(text){return esc(applyPH(text)).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\*(.+?)\*/g,'<i>$1</i>').replace(/`(.+?)`/g,'<code>$1</code>').replace(/\n/g,'<br>');}
+function switchPreview(mode){previewMode=mode;document.querySelectorAll('.wc-preview-switch button').forEach(b=>b.classList.toggle('active',b.dataset.p===mode));updatePreview();}
+function currentPreview(){
+  if(previewMode==='leave') return {title:lvTitle.value,desc:lvDesc.value,color:lvCol.value,img:''};
+  if(previewMode==='dm') return {title:'👋 Willkommen auf {{ guild.name|e }}!',desc:wcDmText.value||wcDesc.value,color:wcCol.value,img:''};
+  if(previewMode==='roles') return {title:'🏷️ Auto-Rollen',desc:Array.from(document.querySelectorAll('#wc-role-tags [data-rid]')).map(x=>'@'+x.textContent.replace('×','').trim()).join('\n')||'Keine Auto-Rollen',color:'#60a5fa',img:''};
+  return {title:wcTitle.value,desc:wcDesc.value,color:wcCol.value,img:wcImg.value};
+}
+function updatePreview(){
+  const p=currentPreview(); prevEmbed.style.setProperty('--wc-color',p.color); prevTitle.innerHTML=md(p.title); prevDesc.innerHTML=md(p.desc); prevImg.src=p.img||''; prevImg.style.display=p.img?'block':'none'; wcLen.textContent=wcDesc.value.length+'/2000'; checkPlaceholders();
+}
+function checkPlaceholders(){
+  const allowed=['mention','user','username','server','count']; const all=[wcTitle.value,wcDesc.value,wcDmText.value,lvTitle.value,lvDesc.value].join(' '); const found=[...all.matchAll(/\{([a-zA-Z0-9_]+)\}/g)].map(m=>m[1]); const bad=[...new Set(found.filter(x=>!allowed.includes(x)))]; placeholderCheck.innerHTML=bad.length?`<div class="ph-warn">⚠️ Unbekannt: ${bad.map(x=>'{'+x+'}').join(', ')}</div>`:'<div style="color:var(--green);font-size:.78rem">✅ Placeholder OK</div>';
+}
+function copyPlaceholder(p){navigator.clipboard.writeText(p);showToast('Kopiert: '+p,'info')}
+const presets={
+ minimal:['👋 Willkommen!','Willkommen {mention} auf **{server}**!','#22c55e'],
+ community:['🌟 Schön, dass du da bist!','Hey {mention}, willkommen in **{server}**! Stell dich gerne vor – du bist Mitglied #{count}.','#60a5fa'],
+ gaming:['🎮 Willkommen im Squad!','GG {mention}! Willkommen auf **{server}**. Schnapp dir Rollen und leg los.','#a78bfa'],
+ security:['✅ Verifizierung erforderlich','Willkommen {mention}! Bitte lies die Regeln und verifiziere dich, bevor du loslegst.','#22c55e'],
+ premium:['💎 Willkommen auf {server}','Hallo {mention}, schön dich hier zu haben. Genieße die Community!','#c084fc']
+};
+function applyPreset(k){const p=presets[k]; if(!p)return; wcTitle.value=p[0]; wcDesc.value=p[1]; wcCol.value=p[2]; updatePreview(); showSaveBar(); showToast('Preset geladen: '+k,'ok')}
+function addRole(){const sel=wcRoleSel;if(!sel.value)return showToast('Rolle wählen','err'); const box=wcRoleTags; if(box.textContent.includes('Noch keine')) box.innerHTML=''; const tag=document.createElement('span'); tag.className='tag'; tag.dataset.rid=sel.value; tag.innerHTML='@'+sel.options[sel.selectedIndex].text.replace(/^@/,'')+' <b style="cursor:pointer;color:var(--redl)" onclick="rmRole('+sel.value+')">×</b>'; box.appendChild(tag); sel.value=''; showSaveBar();}
+function rmRole(rid){document.querySelector(`#wc-role-tags [data-rid="${rid}"]`)?.remove(); showSaveBar();}
+async function testSend(target){
+  const mode=previewMode==='roles'?'welcome':previewMode; const channel_id = mode==='leave' ? lvCh.value : wcCh.value;
+  try{const r=await fetch(`/api/guild/${GID}/welcome/test`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode,target,channel_id})}); const d=await r.json(); if(d.ok)showToast(target==='dm'?'Test-DM gesendet':'Test gesendet','ok'); else showToast(d.error||'Fehler','err');}catch(e){showToast('Netzwerkfehler','err')}
+}
+async function saveConfig(){
+  const wc={enabled:wcEn.checked,channel_id:wcCh.value?Number(wcCh.value):null,embed_title:wcTitle.value,embed_description:wcDesc.value,embed_color:wcCol.value,embed_image:wcImg.value,embed_thumbnail:wcThumb.checked,mention:wcMent.checked,dm_enabled:wcDm.checked,dm_description:wcDmText.value,add_roles:Array.from(document.querySelectorAll('#wc-role-tags [data-rid]')).map(x=>Number(x.dataset.rid))};
+  const lv={enabled:lvEn.checked,channel_id:lvCh.value?Number(lvCh.value):null,embed_title:lvTitle.value,embed_description:lvDesc.value,embed_color:lvCol.value};
+  const r=await fetch(`/api/guild/${GID}/config`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({_welcome:wc,_leave:lv})}); const d=await r.json(); if(d.ok){markSaved();setTimeout(()=>location.reload(),700)}else markError(d.error);
+}
+const wcEn=document.getElementById('wc-en'),wcCh=document.getElementById('wc-ch'),wcTitle=document.getElementById('wc-title'),wcDesc=document.getElementById('wc-desc'),wcCol=document.getElementById('wc-col'),wcImg=document.getElementById('wc-img'),wcThumb=document.getElementById('wc-thumb'),wcMent=document.getElementById('wc-ment'),wcDm=document.getElementById('wc-dm'),wcDmText=document.getElementById('wc-dm-text'),wcLen=document.getElementById('wc-len'),wcRoleSel=document.getElementById('wc-role-sel'),wcRoleTags=document.getElementById('wc-role-tags');
+const lvEn=document.getElementById('lv-en'),lvCh=document.getElementById('lv-ch'),lvTitle=document.getElementById('lv-title'),lvDesc=document.getElementById('lv-desc'),lvCol=document.getElementById('lv-col');
+updatePreview(); window._dirty=false;
+</script>
+{% endblock %}

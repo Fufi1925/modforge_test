@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard Login – ModForge</title>
+  <link rel="stylesheet" href="/static/style.css">
+
+  <style>
+    :root{
+      --p:#5b6eff;
+      --p2:#9b59b6;
+      --card:#161827;
+      --border:rgba(255,255,255,.08);
+      --grad:linear-gradient(135deg,#5b6eff 0%,#9b59b6 100%);
+      --green:#22c55e;
+      --muted:#94a3b8;
+      --text:#e2e8f0;
+    }
+
+    *{
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+    }
+
+    body{
+      font-family:'Inter',system-ui,-apple-system,sans-serif;
+      background:#0b0c14;
+      color:var(--text);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+      overflow-x:hidden;
+      position:relative;
+      perspective:1200px;
+    }
+
+    /* Background Glow */
+
+    .bg-orb{
+      position:fixed;
+      border-radius:50%;
+      filter:blur(120px);
+      opacity:.18;
+      z-index:0;
+      pointer-events:none;
+    }
+
+    .orb1{
+      width:420px;
+      height:420px;
+      background:#5b6eff;
+      top:-140px;
+      left:-140px;
+    }
+
+    .orb2{
+      width:360px;
+      height:360px;
+      background:#9b59b6;
+      bottom:-140px;
+      right:-120px;
+    }
+
+    /* Particles */
+
+    .particles{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      z-index:0;
+    }
+
+    .particle{
+      position:absolute;
+      border-radius:50%;
+      background:rgba(91,110,255,.22);
+      animation:float linear infinite;
+    }
+
+    @keyframes float{
+      0%{
+        transform:translateY(100vh) rotate(0);
+        opacity:0;
+      }
+
+      10%{
+        opacity:1;
+      }
+
+      90%{
+        opacity:1;
+      }
+
+      100%{
+        transform:translateY(-100px) rotate(720deg);
+        opacity:0;
+      }
+    }
+
+    /* Wrapper */
+
+    .login-wrapper{
+      position:relative;
+      z-index:10;
+      width:100%;
+      max-width:540px;
+
+      background:rgba(22,24,39,.72);
+      backdrop-filter:blur(20px);
+
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:28px;
+
+      padding:42px 36px;
+
+      box-shadow:
+        0 30px 60px rgba(0,0,0,.6),
+        0 0 0 1px rgba(91,110,255,.15) inset;
+
+      animation:fadeInUp .7s ease;
+
+      transform-style:preserve-3d;
+      transition:transform .15s linear;
+      overflow:hidden;
+    }
+
+    .login-wrapper::before{
+      content:"";
+      position:absolute;
+      inset:-1px;
+      border-radius:28px;
+      padding:1px;
+
+      background:linear-gradient(
+        135deg,
+        rgba(91,110,255,.8),
+        rgba(155,89,182,.8),
+        rgba(91,110,255,.8)
+      );
+
+      background-size:300% 300%;
+      animation:borderMove 8s linear infinite;
+
+      -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+
+      -webkit-mask-composite:xor;
+      mask-composite:exclude;
+
+      pointer-events:none;
+    }
+
+    @keyframes borderMove{
+      0%{
+        background-position:0% 50%;
+      }
+
+      100%{
+        background-position:100% 50%;
+      }
+    }
+
+    @keyframes fadeInUp{
+      from{
+        opacity:0;
+        transform:translateY(35px);
+      }
+
+      to{
+        opacity:1;
+        transform:translateY(0);
+      }
+    }
+
+    /* Brand */
+
+    .brand{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:14px;
+      margin-bottom:26px;
+    }
+
+    .brand-icon{
+      font-size:2.8rem;
+      filter:drop-shadow(0 0 16px rgba(91,110,255,.45));
+    }
+
+    .brand-text{
+      font-size:1.9rem;
+      font-weight:800;
+
+      background:var(--grad);
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      background-clip:text;
+    }
+
+    h1{
+      text-align:center;
+      color:#fff;
+      font-size:1.55rem;
+      margin-bottom:10px;
+    }
+
+    .subtitle{
+      text-align:center;
+      color:var(--muted);
+      line-height:1.7;
+      font-size:.96rem;
+      margin-bottom:28px;
+    }
+
+    /* Features */
+
+    .features{
+      display:grid;
+      gap:14px;
+      margin-bottom:30px;
+    }
+
+    .feature-item{
+      display:flex;
+      gap:14px;
+      align-items:flex-start;
+
+      padding:15px 16px;
+
+      border-radius:16px;
+
+      background:rgba(255,255,255,.025);
+
+      border:1px solid rgba(255,255,255,.06);
+
+      transition:.25s;
+    }
+
+    .feature-item:hover{
+      transform:translateX(4px);
+      border-color:rgba(91,110,255,.28);
+      background:rgba(91,110,255,.05);
+      box-shadow:0 0 24px rgba(91,110,255,.08);
+    }
+
+    .feature-icon{
+      width:30px;
+      font-size:1.35rem;
+      flex-shrink:0;
+      text-align:center;
+    }
+
+    .feature-text strong{
+      display:block;
+      margin-bottom:5px;
+      color:#fff;
+      font-size:.92rem;
+    }
+
+    .feature-text span{
+      color:var(--muted);
+      font-size:.82rem;
+      line-height:1.6;
+    }
+
+    /* Alerts */
+
+    .alert{
+      border-radius:14px;
+      padding:14px 16px;
+      margin-bottom:22px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-size:.88rem;
+    }
+
+    .alert-error{
+      background:rgba(239,68,68,.12);
+      border:1px solid rgba(239,68,68,.22);
+      color:#fecaca;
+    }
+
+    .alert-info{
+      background:rgba(59,130,246,.12);
+      border:1px solid rgba(59,130,246,.22);
+      color:#bfdbfe;
+    }
+
+    /* Button */
+
+    .discord-btn{
+      position:relative;
+      overflow:hidden;
+
+      width:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:12px;
+
+      padding:16px 24px;
+
+      border:none;
+      border-radius:18px;
+
+      text-decoration:none;
+
+      background:linear-gradient(
+        135deg,
+        #5865f2 0%,
+        #4752c4 100%
+      );
+
+      color:white;
+      font-size:1rem;
+      font-weight:700;
+
+      box-shadow:
+        0 8px 24px rgba(88,101,242,.35),
+        0 0 30px rgba(88,101,242,.15);
+
+      transition:.28s;
+    }
+
+    .discord-btn:hover{
+      transform:translateY(-3px) scale(1.015);
+
+      box-shadow:
+        0 14px 38px rgba(88,101,242,.5),
+        0 0 50px rgba(88,101,242,.3);
+
+      background:linear-gradient(
+        135deg,
+        #6b75f5 0%,
+        #5865f2 100%
+      );
+    }
+
+    .discord-btn::before{
+      content:"";
+      position:absolute;
+
+      width:0;
+      height:0;
+
+      border-radius:50%;
+      background:rgba(255,255,255,.14);
+
+      top:50%;
+      left:50%;
+
+      transform:translate(-50%,-50%);
+      transition:.55s;
+    }
+
+    .discord-btn:hover::before{
+      width:420px;
+      height:420px;
+    }
+
+    .discord-btn svg{
+      width:22px;
+      height:22px;
+      flex-shrink:0;
+      z-index:1;
+    }
+
+    .discord-btn span{
+      position:relative;
+      z-index:1;
+    }
+
+    /* Security */
+
+    .security-badges{
+      display:flex;
+      flex-wrap:wrap;
+      justify-content:center;
+      gap:10px;
+
+      margin-top:18px;
+    }
+
+    .security-badges span{
+      font-size:.72rem;
+      color:#cbd5e1;
+
+      padding:8px 12px;
+
+      border-radius:999px;
+
+      background:rgba(255,255,255,.03);
+
+      border:1px solid rgba(255,255,255,.06);
+    }
+
+    /* Footer */
+
+    .privacy-note{
+      margin-top:24px;
+
+      text-align:center;
+      color:var(--muted);
+
+      font-size:.74rem;
+      line-height:1.7;
+    }
+
+    .privacy-note a{
+      color:var(--p);
+      text-decoration:none;
+      font-weight:600;
+    }
+
+    .privacy-note a:hover{
+      text-decoration:underline;
+    }
+
+    @media(max-width:600px){
+
+      .login-wrapper{
+        padding:32px 22px;
+      }
+
+      .brand-text{
+        font-size:1.7rem;
+      }
+
+      h1{
+        font-size:1.35rem;
+      }
+
+      .discord-btn{
+        padding:15px 18px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Background -->
+  <div class="bg-orb orb1"></div>
+  <div class="bg-orb orb2"></div>
+
+  <!-- Particles -->
+  <div class="particles" id="particles"></div>
+
+  <div class="login-wrapper">
+
+    <!-- Brand -->
+    <div class="brand">
+      <span class="brand-icon">🛡️</span>
+      <span class="brand-text">ModForge</span>
+    </div>
+
+    <h1>Dashboard Login</h1>
+
+    <p class="subtitle">
+      Melde dich mit deinem Discord-Account an,
+      um deine Server zentral zu verwalten —
+      sicher, schnell und modern.
+    </p>
+
+    <!-- Alerts -->
+    {% if error %}
+    <div class="alert alert-error">
+      <span>⚠️</span>
+      {{ error }}
+    </div>
+    {% endif %}
+
+    {% if info %}
+    <div class="alert alert-info">
+      <span>ℹ️</span>
+      {{ info }}
+    </div>
+    {% endif %}
+
+    <!-- Features -->
+    <div class="features">
+
+      <div class="feature-item">
+        <span class="feature-icon">📊</span>
+
+        <div class="feature-text">
+          <strong>Alle Server zentral verwalten</strong>
+
+          <span>
+            Verwalte sämtliche ModForge-Server
+            über eine einzige Oberfläche.
+          </span>
+        </div>
+      </div>
+
+      <div class="feature-item">
+        <span class="feature-icon">⚙️</span>
+
+        <div class="feature-text">
+          <strong>Module konfigurieren</strong>
+
+          <span>
+            Anti-Nuke, AutoMod, Logging
+            und Security direkt im Browser einstellen.
+          </span>
+        </div>
+      </div>
+
+      <div class="feature-item">
+        <span class="feature-icon">🔒</span>
+
+        <div class="feature-text">
+          <strong>Sicher & geschützt</strong>
+
+          <span>
+            Discord OAuth2 wird ausschließlich
+            zur sicheren Authentifizierung verwendet.
+          </span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Login -->
+    <a href="/dashboard/login" class="discord-btn" id="loginBtn">
+
+      <svg viewBox="0 0 71 55" fill="currentColor">
+        <path d="M60.1 4.9A58.5 58.5 0 0 0 45.6.4a40 40 0 0 0-1.8 3.6 54.1 54.1 0 0 0-16.2 0 36.5 36.5 0 0 0-1.8-3.6A58.4 58.4 0 0 0 10.9 4.9C1.6 18.6-.9 31.9.3 45a58.8 58.8 0 0 0 17.9 9 43 43 0 0 0 3.7-6 38.3 38.3 0 0 1-6-2.8l1.5-1.1a41.8 41.8 0 0 0 35.6 0l1.5 1.1a38 38 0 0 1-6 2.9 43 43 0 0 0 3.6 6 58.6 58.6 0 0 0 17.9-9C71.7 29.7 68.4 16.5 60.1 4.9ZM23.7 37c-3.5 0-6.4-3.2-6.4-7.1s2.8-7.1 6.4-7.1c3.6 0 6.5 3.2 6.4 7.1 0 3.9-2.8 7.1-6.4 7.1Zm23.6 0c-3.5 0-6.4-3.2-6.4-7.1s2.9-7.1 6.4-7.1c3.6 0 6.5 3.2 6.4 7.1 0 3.9-2.8 7.1-6.4 7.1Z"/>
+      </svg>
+
+      <span>Mit Discord anmelden</span>
+
+    </a>
+
+    <!-- Security -->
+    <div class="security-badges">
+      <span>🔐 OAuth2 Secure</span>
+      <span>🛡️ Encrypted</span>
+      <span>⚡ Real-Time Sync</span>
+    </div>
+
+    <!-- Footer -->
+    <p class="privacy-note">
+      Mit dem Login akzeptierst du unsere
+      <a href="/terms">Nutzungsbedingungen</a>
+      und die
+      <a href="/privacy">Datenschutzerklärung</a>.
+      <br><br>
+
+      Wir verwenden Discord OAuth2 ausschließlich
+      zur Authentifizierung und zur Anzeige deiner Server.
+    </p>
+
+  </div>
+
+  <script>
+
+    // Particles
+
+    (() => {
+
+      const container = document.getElementById('particles');
+
+      for(let i = 0; i < 35; i++){
+
+        const p = document.createElement('div');
+
+        p.className = 'particle';
+
+        const size = Math.random() * 4 + 2;
+
+        p.style.width = size + 'px';
+        p.style.height = size + 'px';
+
+        p.style.left = Math.random() * 100 + '%';
+
+        p.style.animationDuration =
+          (Math.random() * 15 + 10) + 's';
+
+        p.style.animationDelay =
+          (Math.random() * 8) + 's';
+
+        container.appendChild(p);
+      }
+
+    })();
+
+    // 3D Mouse Effect
+
+    const wrapper = document.querySelector('.login-wrapper');
+
+    document.addEventListener('mousemove', e => {
+
+      const x =
+        (window.innerWidth / 2 - e.clientX) / 38;
+
+      const y =
+        (window.innerHeight / 2 - e.clientY) / 38;
+
+      wrapper.style.transform =
+        `rotateY(${x}deg) rotateX(${-y}deg)`;
+
+    });
+
+    // Reset on leave
+
+    document.addEventListener('mouseleave', () => {
+
+      wrapper.style.transform =
+        'rotateY(0deg) rotateX(0deg)';
+
+    });
+
+    // Loading State
+
+    const btn = document.getElementById('loginBtn');
+
+    btn.addEventListener('click', () => {
+
+      btn.style.opacity = '.85';
+
+      btn.innerHTML = `
+        <span style="position:relative;z-index:1">
+          Weiterleitung...
+        </span>
+      `;
+    });
+
+  </script>
+
+</body>
+</html>

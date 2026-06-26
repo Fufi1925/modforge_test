@@ -1,0 +1,127 @@
+{% extends "dashboard/_base.html" %}
+{% set active = 'automod' %}
+{% set am = cfg.get('automod', {}) or {} %}
+{% set anti_scam = cfg.get('anti_scam', {}) or {} %}
+{% set shortener = cfg.get('anti_url_shortener', {}) or {} %}
+{% block title %}AutoMod Command Center{% endblock %}
+{% block page_title %}🤖 AutoMod Command Center{% endblock %}
+{% block page_desc %}{{ stats.bad_words }} Wörter · {{ stats.regex }} Regex · {{ stats.domains }} erlaubte Domains{% endblock %}
+
+{% block head %}
+<style>
+.am-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:18px;align-items:start}.am-card{padding:18px;border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.028);margin-bottom:14px}.am-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px;margin-bottom:16px}.am-stat{padding:16px;border-radius:16px;border:1px solid var(--border);background:rgba(255,255,255,.03);text-align:center}.am-stat-v{font-size:1.35rem;font-weight:900;font-family:'Geist Mono',monospace}.am-rule-list{display:flex;flex-wrap:wrap;gap:6px}.am-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font-size:.72rem;font-weight:750;border:1px solid var(--border);background:rgba(255,255,255,.035)}.am-chip.bad{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.18);color:#fca5a5}.am-chip.good{background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.18);color:#86efac}.am-chip .x{cursor:pointer;font-weight:900;opacity:.75}.am-chip .x:hover{opacity:1;color:#fff}.am-suggest{padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:rgba(255,255,255,.03);font-size:.78rem;color:var(--muted);display:flex;gap:8px;align-items:flex-start}.am-suggest.warn{border-color:rgba(245,158,11,.22);background:rgba(245,158,11,.06)}.am-suggest.danger{border-color:rgba(239,68,68,.25);background:rgba(239,68,68,.07)}.am-regex-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:rgba(255,255,255,.025);margin-bottom:8px}.am-regex-row.error{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.06)}.am-regex-row.warn{border-color:rgba(245,158,11,.28);background:rgba(245,158,11,.05)}.am-test-box{background:#2f3136;border-left:4px solid var(--v);border-radius:8px;padding:14px;color:#dcddde}.am-hit{padding:9px 10px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid var(--border);margin-top:7px;font-size:.75rem}.am-hit.critical{border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.08)}.am-hit.high{border-color:rgba(249,115,22,.28);background:rgba(249,115,22,.06)}.am-hit.medium{border-color:rgba(245,158,11,.25);background:rgba(245,158,11,.055)}.am-hit.low{border-color:rgba(34,211,238,.22);background:rgba(34,211,238,.045)}.am-actions{display:flex;gap:8px;flex-wrap:wrap}.am-textarea{width:100%;box-sizing:border-box;min-height:110px;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.045);border:1px solid var(--border);color:var(--fg);font-family:inherit;resize:vertical;outline:none}.am-danger-note{display:none;margin-top:10px;padding:10px;border-radius:12px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#fca5a5;font-size:.76rem;line-height:1.5}@media(max-width:980px){.am-grid{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="am-stats">
+  <div class="am-stat"><div class="am-stat-v" style="color:var(--green)">{% if am.get('enabled', True) %}AN{% else %}AUS{% endif %}</div><div class="ov-sl">AutoMod</div></div>
+  <div class="am-stat"><div class="am-stat-v" style="color:#fca5a5">{{ stats.bad_words }}</div><div class="ov-sl">BadWords</div></div>
+  <div class="am-stat"><div class="am-stat-v" style="color:var(--cl)">{{ stats.regex }}</div><div class="ov-sl">Regex</div></div>
+  <div class="am-stat"><div class="am-stat-v" style="color:{% if stats.regex_bad %}#f87171{% elif stats.regex_warn %}var(--amberl){% else %}var(--green){% endif %}">{{ stats.regex_bad + stats.regex_warn }}</div><div class="ov-sl">Regex Hinweise</div></div>
+  <div class="am-stat"><div class="am-stat-v" style="color:var(--vl)">{{ stats.domains }}</div><div class="ov-sl">Domains</div></div>
+</div>
+
+<div class="am-grid">
+  <section>
+    <div class="am-card">
+      <div class="db-card-header"><span class="db-card-title">🧭 AutoMod Status & Filter</span><button class="btn-glass btn-sm" onclick="loadSafePreset()">✨ Sicheres Preset</button></div>
+      <div class="cfg-row"><div><span class="cfg-label">AutoMod aktiviert</span><div class="cfg-desc">Zentraler Filter für Wörter, Regex, Invites und Links</div></div><label class="toggle"><input type="checkbox" id="am_enabled" {% if am.get('enabled', True) %}checked{% endif %} onchange="showSaveBar()"><span class="slider"></span></label></div>
+      <div class="cfg-row"><div><span class="cfg-label">Invite-Filter</span><div class="cfg-desc">Discord-Einladungen blockieren</div></div><label class="toggle"><input type="checkbox" id="inv_f" {% if am.get('invite_filter') %}checked{% endif %} onchange="showSaveBar()"><span class="slider"></span></label></div>
+      <div class="cfg-row"><div><span class="cfg-label">Link-Filter</span><div class="cfg-desc">Nur erlaubte Domains dürfen gepostet werden</div></div><label class="toggle"><input type="checkbox" id="link_f" {% if am.get('link_filter') %}checked{% endif %} onchange="showSaveBar();showDangerNote()"><span class="slider"></span></label></div>
+      <div class="cfg-row"><div><span class="cfg-label">Zalgo-Filter</span><div class="cfg-desc">Manipulierte/überladene Unicode-Zeichen erkennen</div></div><label class="toggle"><input type="checkbox" id="zalgo_f" {% if am.get('zalgo_filter') %}checked{% endif %} onchange="showSaveBar()"><span class="slider"></span></label></div>
+      <div class="cfg-row"><div><span class="cfg-label">Unicode-Abuse</span><div class="cfg-desc">Umgehungsversuche mit Sonderzeichen reduzieren</div></div><label class="toggle"><input type="checkbox" id="unicode_f" {% if am.get('unicode_abuse') %}checked{% endif %} onchange="showSaveBar()"><span class="slider"></span></label></div>
+      <div class="cfg-row"><div><span class="cfg-label">Phishing-Check</span><div class="cfg-desc">Scam-/Fake-Nitro-Links erkennen</div></div><label class="toggle"><input type="checkbox" id="phish_f" {% if am.get('phishing_check') %}checked{% endif %} onchange="showSaveBar()"><span class="slider"></span></label></div>
+      <div class="cfg-row"><div><span class="cfg-label">Bestrafung</span><div class="cfg-desc">Aktion bei Treffer</div></div><select id="punishment" class="cfg-select" onchange="showSaveBar()">{% for p in ['warn','timeout','kick','ban'] %}<option value="{{ p }}" {% if am.get('punishment','warn') == p %}selected{% endif %}>{{ p }}</option>{% endfor %}</select></div>
+      <div class="am-danger-note" id="dangerNote">⚠️ Link-Filter ohne erlaubte Domains blockiert fast alle URLs. Füge zuerst Domains wie <code>youtube.com</code> oder <code>discord.com</code> hinzu.</div>
+    </div>
+
+    <div class="am-card">
+      <div class="db-card-header"><span class="db-card-title">🚫 BadWords Rule Builder</span><span class="tag">{{ stats.bad_words }}</span></div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap"><input type="text" id="nw" class="cfg-input" placeholder="Neues Wort…" style="flex:1;min-width:190px;max-width:100%"><button class="btn-glass btn-sm btn-glass-primary" onclick="addW()">+ Wort</button><button class="btn-glass btn-sm" onclick="openBulk('words')">Bulk</button></div>
+      <div class="am-rule-list" id="wordList">{% for w in am.get('bad_words',[]) %}<span class="am-chip bad">{{ w }} <span class="x" onclick="delW('{{ w }}')">×</span></span>{% else %}<span style="color:var(--muted);font-size:.78rem">Noch keine Wörter.</span>{% endfor %}</div>
+    </div>
+
+    <div class="am-card">
+      <div class="db-card-header"><span class="db-card-title">📏 Regex Safety Center</span><span class="tag">{{ stats.regex }}</span></div>
+      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap"><input type="text" id="nr" class="cfg-input" placeholder="(?i)free.*nitro" style="flex:1;min-width:220px;max-width:100%"><button class="btn-glass btn-sm btn-glass-primary" onclick="addR()">+ Regex</button></div>
+      {% for r in regex_report %}<div class="am-regex-row {% if not r.ok %}error{% elif r.danger %}warn{% endif %}"><span>{% if not r.ok %}❌{% elif r.danger %}⚠️{% else %}✅{% endif %}</span><code style="color:var(--cl);font-size:.78rem;flex:1;word-break:break-all">{{ r.pattern }}</code><span style="font-size:.62rem;color:var(--muted)">{{ r.message }}</span><button class="btn-glass btn-sm btn-glass-danger" onclick="delR({{ r.index }})">🗑️</button></div>{% else %}<p style="color:var(--muted);font-size:.78rem">Keine Regex-Regeln.</p>{% endfor %}
+    </div>
+
+    <div class="am-card">
+      <div class="db-card-header"><span class="db-card-title">✅ Erlaubte Domains</span><span class="tag">{{ stats.domains }}</span></div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap"><input type="text" id="nd" class="cfg-input" placeholder="youtube.com" style="flex:1;min-width:190px;max-width:100%"><button class="btn-glass btn-sm btn-glass-primary" onclick="addD()">+ Domain</button><button class="btn-glass btn-sm" onclick="openBulk('domains')">Bulk</button></div>
+      <div class="am-rule-list">{% for d in am.get('allowed_domains',[]) %}<span class="am-chip good">{{ d }} <span class="x" onclick="delD('{{ d }}')">×</span></span>{% else %}<span style="color:var(--muted);font-size:.78rem">Keine Domains erlaubt.</span>{% endfor %}</div>
+    </div>
+  </section>
+
+  <aside>
+    <div class="am-card">
+      <div class="db-card-header"><span class="db-card-title">🧪 Live Test</span></div>
+      <textarea id="testText" class="am-textarea ignore-dirty" placeholder="Schreibe hier eine Beispiel-Nachricht, z.B. free nitro https://discord-nitro.example"></textarea>
+      <div class="am-actions" style="margin-top:10px"><button class="btn-glass btn-sm btn-glass-primary" onclick="testMessage()">Nachricht testen</button><button class="btn-glass btn-sm" onclick="fillScamExample()">Scam Beispiel</button></div>
+      <div id="testResult" class="am-test-box" style="margin-top:12px">Noch kein Test ausgeführt.</div>
+    </div>
+
+    <div class="am-card">
+      <div class="db-card-header"><span class="db-card-title">💡 Smart Suggestions</span></div>
+      <div style="display:grid;gap:8px">{% for s in suggestions %}<div class="am-suggest {{ s.level }}"><span>{% if s.level == 'danger' %}🚨{% elif s.level == 'warn' %}⚠️{% else %}ℹ️{% endif %}</span><span>{{ s.text }}</span></div>{% else %}<div class="am-suggest"><span>✅</span><span>AutoMod sieht gut aus.</span></div>{% endfor %}</div>
+    </div>
+
+    <div class="am-card">
+      <div class="db-card-header"><span class="db-card-title">📦 Import / Export</span></div>
+      <div class="am-actions"><a class="btn-glass btn-sm" href="/api/guild/{{ guild.id }}/automod/export">⬇ Export JSON</a><button class="btn-glass btn-sm btn-glass-amber" onclick="openImport()">⬆ Import</button></div>
+      <p style="color:var(--muted);font-size:.72rem;line-height:1.6;margin-top:10px">Import kann Regeln mergen oder ersetzen. Bei Ersetzen gibt es eine Bestätigung.</p>
+    </div>
+  </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const GID = "{{ guild.id }}";
+const api = async (d) => {
+  const r = await fetch('/api/guild/' + GID + '/automod', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
+  const data = await r.json();
+  if(!r.ok || !data.ok) throw new Error(data.error || 'Fehler');
+  return data;
+};
+function reloadSoon(){ setTimeout(()=>location.reload(), 550); }
+async function addW(){ const v=nw.value.trim(); if(!v)return; try{await api({action:'add_word',value:v}); showToast('Wort hinzugefügt','ok'); reloadSoon()}catch(e){showToast(e.message,'err')} }
+async function delW(w){ try{await api({action:'del_word',value:w}); showToast('Wort entfernt','ok'); reloadSoon()}catch(e){showToast(e.message,'err')} }
+async function addR(){ const v=nr.value.trim(); if(!v)return; try{const d=await api({action:'add_regex',value:v}); showToast((d.regex_report||[]).some(x=>x.danger)?'Regex gespeichert, bitte Hinweis prüfen':'Regex hinzugefügt','ok'); reloadSoon()}catch(e){showToast(e.message,'err')} }
+async function delR(i){ try{await api({action:'del_regex',index:i}); showToast('Regex entfernt','ok'); reloadSoon()}catch(e){showToast(e.message,'err')} }
+async function addD(){ const v=nd.value.trim(); if(!v)return; try{await api({action:'add_domain',value:v}); showToast('Domain erlaubt','ok'); reloadSoon()}catch(e){showToast(e.message,'err')} }
+async function delD(d){ try{await api({action:'del_domain',value:d}); showToast('Domain entfernt','ok'); reloadSoon()}catch(e){showToast(e.message,'err')} }
+function showDangerNote(){ dangerNote.style.display = (link_f.checked && {{ stats.domains }} === 0) ? 'block' : 'none'; }
+showDangerNote();
+function fillScamExample(){ testText.value='Free Nitro claim now https://discord-nitro.example discord.gg/spam'; testMessage(); }
+async function testMessage(){
+  const text=testText.value.trim(); if(!text)return showToast('Test-Nachricht eingeben','err');
+  testResult.innerHTML='⏳ Prüfe…';
+  try{ const r=await fetch(`/api/guild/${GID}/automod/test`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})}); const d=await r.json(); if(!d.ok) throw new Error(d.error||'Test Fehler'); const res=d.result; if(!res.hits.length){testResult.innerHTML='<b style="color:var(--green)">✅ Kein Treffer</b><br><span style="color:var(--muted)">Diese Nachricht würde aktuell nicht gelöscht.</span>'; return;} testResult.innerHTML=`<b style="color:#fca5a5">🚫 ${res.count} Treffer · würde ${res.would_delete?'gelöscht':'nur geloggt'}</b>` + res.hits.map(h=>`<div class="am-hit ${h.severity}"><b>${h.label}</b><br><span>Aktion: ${h.action} · Severity: ${h.severity}</span></div>`).join('') + (res.warnings||[]).map(w=>`<div class="am-hit medium">⚠️ ${w}</div>`).join(''); }catch(e){testResult.innerHTML='❌ '+e.message;}
+}
+function openBulk(type){
+  const label=type==='words'?'BadWords':'Domains';
+  showModal(`<div style="font-weight:900;font-size:1.1rem;margin-bottom:8px">Bulk ${label}</div><p style="color:var(--muted);font-size:.82rem">Eine Regel pro Zeile oder per Komma getrennt.</p><textarea id="bulkText" class="am-textarea ignore-dirty" style="min-height:180px"></textarea><div style="display:flex;gap:8px;margin-top:10px"><button class="btn-glass btn-glass-primary" onclick="bulkSave('${type}','append')">Anhängen</button><button class="btn-glass btn-glass-danger" onclick="bulkSave('${type}','replace')">Ersetzen</button></div>`);
+}
+async function bulkSave(type, mode){ if(mode==='replace' && !confirm('Bestehende Liste wirklich ersetzen?'))return; const value=document.getElementById('bulkText').value; try{await api({action:type==='words'?'bulk_words':'bulk_domains',mode,value}); closeModal(); showToast('Bulk gespeichert','ok'); reloadSoon()}catch(e){showToast(e.message,'err')} }
+function openImport(){
+  showModal(`<div style="font-weight:900;font-size:1.1rem;margin-bottom:8px">AutoMod Import</div><p style="color:var(--muted);font-size:.82rem">JSON aus einem Export einfügen.</p><textarea id="importJson" class="am-textarea ignore-dirty" style="min-height:220px" placeholder='{"automod":{"bad_words":["spam"]}}'></textarea><div style="display:flex;gap:8px;margin-top:10px"><button class="btn-glass btn-glass-primary" onclick="doImport('merge')">Mergen</button><button class="btn-glass btn-glass-danger" onclick="doImport('replace')">Ersetzen</button></div>`);
+}
+async function doImport(mode){ if(mode==='replace' && !confirm('AutoMod-Regeln wirklich ersetzen?'))return; try{const raw=JSON.parse(document.getElementById('importJson').value); const payload=raw.automod?raw.automod:raw; const r=await fetch(`/api/guild/${GID}/automod/import`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode,automod:payload})}); const d=await r.json(); if(!d.ok) throw new Error(d.error||'Import Fehler'); closeModal(); showToast('Import gespeichert','ok'); reloadSoon()}catch(e){showToast(e.message,'err')} }
+function loadSafePreset(){
+  showModal(`<div style="font-weight:900;font-size:1.1rem;margin-bottom:8px">Sicheres Preset</div><p style="color:var(--muted);font-size:.85rem;line-height:1.6">Setzt empfohlene Filter: Invite an, Phishing an, Zalgo an, Link-Filter bleibt aus damit normale Links nicht kaputt gehen.</p><button class="btn-glass btn-glass-primary" onclick="applySafePreset()">Preset anwenden</button>`);
+}
+async function applySafePreset(){
+  const body={automod:{enabled:true,invite_filter:true,phishing_check:true,zalgo_filter:true,unicode_abuse:true,link_filter:false,punishment:'warn'}};
+  const r=await fetch(`/api/guild/${GID}/config`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); const d=await r.json(); if(d.ok){closeModal();showToast('Sicheres Preset gespeichert','ok');reloadSoon()}else showToast(d.error||'Fehler','err');
+}
+async function saveConfig(){
+  if(link_f.checked && {{ stats.domains }} === 0 && !confirm('Link-Filter ohne erlaubte Domains blockiert fast alle Links. Trotzdem speichern?')) return;
+  const r=await fetch('/api/guild/'+GID+'/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({automod:{enabled:am_enabled.checked,invite_filter:inv_f.checked,link_filter:link_f.checked,zalgo_filter:zalgo_f.checked,unicode_abuse:unicode_f.checked,phishing_check:phish_f.checked,punishment:punishment.value}})});
+  const d=await r.json(); if(d.ok)markSaved(); else markError(d.error);
+}
+window._dirty=false;
+</script>
+{% endblock %}

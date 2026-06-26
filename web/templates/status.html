@@ -1,0 +1,2062 @@
+{% extends "base.html" %}
+{% block title %}ModForge Ultimate Live Status{% endblock %}
+
+{% block content %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ═══════════════════════════════════════════════
+   ROOT VARIABLES
+═══════════════════════════════════════════════ */
+:root {
+  --bg:       #030712;
+  --bg2:      #080f1e;
+  --surface:  rgba(12,18,35,.85);
+  --surface2: rgba(18,28,50,.7);
+  --border:   rgba(91,110,255,.18);
+  --border2:  rgba(255,255,255,.06);
+
+  --primary:  #5b6eff;
+  --primary2: #8b9fff;
+  --purple:   #a855f7;
+  --cyan:     #06b6d4;
+  --green:    #22c55e;
+  --green2:   #4ade80;
+  --red:      #ef4444;
+  --orange:   #f59e0b;
+  --pink:     #ec4899;
+  --text:     #f1f5f9;
+  --muted:    #94a3b8;
+  --dim:      #475569;
+
+  --font-display: 'Orbitron', monospace;
+  --font-body:    'Rajdhani', sans-serif;
+  --font-mono:    'JetBrains Mono', monospace;
+
+  --r-card: 24px;
+  --shadow: 0 25px 80px rgba(0,0,0,.6);
+}
+
+/* ═══════════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  overflow-x: hidden;
+}
+
+a { color: inherit; text-decoration: none; }
+strong { color: #fff; }
+
+/* ═══════════════════════════════════════════════
+   BACKGROUND LAYERS
+═══════════════════════════════════════════════ */
+.bg-layers {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(91,110,255,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(91,110,255,.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+.bg-dots {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px);
+  background-size: 20px 20px;
+  opacity: .5;
+}
+
+.bg-scanlines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,.08) 2px,
+    rgba(0,0,0,.08) 4px
+  );
+}
+
+.glow-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(130px);
+  opacity: .22;
+}
+.glow-orb.a { width: 700px; height: 700px; background: #5b6eff; top: -300px; left: -200px; }
+.glow-orb.b { width: 600px; height: 600px; background: #a855f7; bottom: -250px; right: -200px; }
+.glow-orb.c { width: 400px; height: 400px; background: #06b6d4; top: 40%; left: 30%; animation: driftOrb 12s ease-in-out infinite alternate; }
+.glow-orb.d { width: 300px; height: 300px; background: #22c55e; top: 60%; right: 20%; animation: driftOrb 9s ease-in-out infinite alternate-reverse; }
+
+@keyframes driftOrb {
+  from { transform: translate(0, 0); }
+  to   { transform: translate(80px, -60px); }
+}
+
+/* ═══════════════════════════════════════════════
+   PARTICLES
+═══════════════════════════════════════════════ */
+#particles {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  animation: floatUp linear infinite;
+}
+@keyframes floatUp {
+  0%   { transform: translateY(110vh) scale(1); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: .8; }
+  100% { transform: translateY(-120px) scale(0.5); opacity: 0; }
+}
+
+/* ═══════════════════════════════════════════════
+   LAYOUT WRAP
+═══════════════════════════════════════════════ */
+.status-root {
+  position: relative;
+  z-index: 2;
+  width: min(1800px, 96%);
+  margin: auto;
+  padding: 48px 0 140px;
+}
+
+/* ═══════════════════════════════════════════════
+   TOP BANNER — ALERT BAR
+═══════════════════════════════════════════════ */
+.alert-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 24px;
+  border-radius: 14px;
+  background: rgba(34,197,94,.08);
+  border: 1px solid rgba(34,197,94,.25);
+  margin-bottom: 32px;
+  font-family: var(--font-mono);
+  font-size: .82rem;
+  color: #86efac;
+  overflow: hidden;
+  position: relative;
+}
+.alert-bar::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: linear-gradient(to bottom, #22c55e, #4ade80);
+  border-radius: 4px 0 0 4px;
+}
+.alert-ticker {
+  flex: 1;
+  white-space: nowrap;
+  animation: ticker 30s linear infinite;
+}
+@keyframes ticker {
+  0%   { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+.alert-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 14px #22c55e;
+  animation: blink 1.4s infinite;
+  flex-shrink: 0;
+}
+@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:.2;} }
+
+/* ═══════════════════════════════════════════════
+   HERO
+═══════════════════════════════════════════════ */
+.hero {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 28px;
+  margin-bottom: 28px;
+  align-items: start;
+}
+@media(max-width:1100px) { .hero { grid-template-columns: 1fr; } }
+
+/* ── CARD BASE ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(20px);
+  position: relative;
+  overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--r-card);
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(91,110,255,.45), rgba(168,85,247,.3), rgba(6,182,212,.2), transparent 60%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.hero-main {
+  padding: 44px 48px;
+}
+
+/* BADGE */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  background: rgba(34,197,94,.1);
+  border: 1px solid rgba(34,197,94,.3);
+  color: #86efac;
+  font-family: var(--font-mono);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  margin-bottom: 28px;
+  text-transform: uppercase;
+}
+.pulse-ring {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 0 rgba(34,197,94,.6);
+  animation: pulseRing 2s infinite;
+}
+@keyframes pulseRing {
+  0%   { box-shadow: 0 0 0 0 rgba(34,197,94,.6); }
+  70%  { box-shadow: 0 0 0 14px rgba(34,197,94,0); }
+  100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+}
+
+/* GLITCH TITLE */
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3.6rem);
+  font-weight: 900;
+  color: #fff;
+  line-height: 1.1;
+  margin-bottom: 10px;
+  position: relative;
+}
+.hero-title .glitch {
+  position: relative;
+  display: inline-block;
+}
+.hero-title .glitch::before,
+.hero-title .glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  opacity: .8;
+}
+.hero-title .glitch::before {
+  color: #06b6d4;
+  animation: glitchA 4s infinite;
+  clip-path: polygon(0 0, 100% 0, 100% 35%, 0 35%);
+}
+.hero-title .glitch::after {
+  color: #a855f7;
+  animation: glitchB 4s infinite;
+  clip-path: polygon(0 65%, 100% 65%, 100% 100%, 0 100%);
+}
+@keyframes glitchA {
+  0%,95%,100% { transform: translate(0); }
+  96%  { transform: translate(-3px, 1px); }
+  97%  { transform: translate(3px, -1px); }
+  98%  { transform: translate(-2px, 2px); }
+}
+@keyframes glitchB {
+  0%,95%,100% { transform: translate(0); }
+  96%  { transform: translate(3px, -1px); }
+  97%  { transform: translate(-3px, 1px); }
+  98%  { transform: translate(2px, -2px); }
+}
+
+.hero-subtitle {
+  font-family: var(--font-mono);
+  font-size: .82rem;
+  color: var(--primary2);
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  margin-bottom: 28px;
+}
+
+.hero-text {
+  color: var(--muted);
+  line-height: 2;
+  font-size: 1.05rem;
+  border-left: 2px solid rgba(91,110,255,.3);
+  padding-left: 20px;
+  margin-bottom: 32px;
+}
+
+/* HERO STAT ROW */
+.hero-stats {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.hstat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 22px;
+  border-radius: 16px;
+  background: rgba(91,110,255,.08);
+  border: 1px solid rgba(91,110,255,.2);
+}
+.hstat-num {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1;
+}
+.hstat-num span { color: var(--primary2); font-size: .9rem; }
+.hstat-label {
+  font-size: .75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+/* HERO RIGHT — BIG METRICS */
+.metric-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.mcard {
+  padding: 28px 22px;
+  border-radius: 22px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(14px);
+  transition: transform .35s, box-shadow .35s;
+  position: relative;
+  overflow: hidden;
+}
+.mcard::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--accent, linear-gradient(90deg,#5b6eff,#a855f7));
+  border-radius: 0 0 22px 22px;
+}
+.mcard:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 30px 80px rgba(0,0,0,.5);
+}
+.mcard-icon {
+  font-size: 2.2rem;
+  margin-bottom: 14px;
+  display: block;
+  filter: drop-shadow(0 0 12px currentColor);
+}
+.mcard-val {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+.mcard-label {
+  font-size: .78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  line-height: 1.6;
+}
+.mcard-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: .72rem;
+  font-family: var(--font-mono);
+  margin-top: 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(34,197,94,.1);
+  color: #86efac;
+  border: 1px solid rgba(34,197,94,.2);
+}
+
+/* ═══════════════════════════════════════════════
+   OVERALL STATUS BANNER
+═══════════════════════════════════════════════ */
+.status-banner {
+  padding: 26px 36px;
+  border-radius: var(--r-card);
+  background: linear-gradient(135deg, rgba(34,197,94,.12), rgba(74,222,128,.06));
+  border: 1px solid rgba(34,197,94,.3);
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 28px;
+  position: relative;
+  overflow: hidden;
+}
+.status-banner::after {
+  content: '✓ ALL SYSTEMS OPERATIONAL';
+  position: absolute;
+  right: 36px;
+  font-family: var(--font-display);
+  font-size: .7rem;
+  letter-spacing: .2em;
+  color: rgba(34,197,94,.4);
+}
+.status-banner-icon {
+  font-size: 2.5rem;
+  filter: drop-shadow(0 0 18px #22c55e);
+}
+.status-banner-text h2 {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  color: #86efac;
+  margin-bottom: 4px;
+}
+.status-banner-text p { color: var(--muted); font-size: .88rem; }
+
+/* ═══════════════════════════════════════════════
+   MAIN CONTENT GRID
+═══════════════════════════════════════════════ */
+.content-grid {
+  display: grid;
+  grid-template-columns: 1.3fr .9fr;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+@media(max-width:1200px) { .content-grid { grid-template-columns: 1fr; } }
+
+/* PANEL */
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); backdrop-filter: blur(20px); overflow: hidden; position: relative; }
+.panel::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--r-card);
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(91,110,255,.35), rgba(168,85,247,.2), transparent);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.panel-head {
+  padding: 28px 30px;
+  border-bottom: 1px solid var(--border2);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+.panel-head-left h2 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: #fff;
+  margin-bottom: 6px;
+}
+.panel-head-left p { color: var(--muted); font-size: .88rem; line-height: 1.7; }
+.panel-badge {
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-family: var(--font-mono);
+  font-size: .7rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.pb-green { background: rgba(34,197,94,.12); color: #86efac; border: 1px solid rgba(34,197,94,.25); }
+.pb-blue  { background: rgba(91,110,255,.12); color: #93c5fd; border: 1px solid rgba(91,110,255,.25); }
+.pb-purple{ background: rgba(168,85,247,.12); color: #d8b4fe; border: 1px solid rgba(168,85,247,.25); }
+.pb-red   { background: rgba(239,68,68,.12);  color: #fca5a5; border: 1px solid rgba(239,68,68,.25); }
+
+/* ── UPTIME CHART ── */
+.chart-wrap { padding: 28px 30px; }
+
+.uptime-months {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 22px;
+}
+.umonth {
+  flex: 1;
+  text-align: center;
+}
+.umonth-label {
+  font-size: .65rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+  font-family: var(--font-mono);
+}
+.umonth-pct {
+  font-size: .7rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  margin-top: 6px;
+}
+.umonth-bar-wrap {
+  height: 72px;
+  background: rgba(255,255,255,.04);
+  border-radius: 6px;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+.umonth-bar {
+  width: 100%;
+  border-radius: 6px;
+  animation: growBar .9s ease forwards;
+  transform-origin: bottom;
+}
+@keyframes growBar {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
+}
+
+.chart-svg-wrap {
+  width: 100%;
+  height: 260px;
+  border-radius: 18px;
+  background: rgba(0,0,0,.25);
+  border: 1px solid var(--border2);
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 20px;
+}
+.chart-svg-wrap svg { width: 100%; height: 100%; }
+
+.chart-legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.cl-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border2);
+  background: rgba(255,255,255,.03);
+  font-size: .78rem;
+  color: var(--muted);
+}
+.cl-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── UPTIME HISTORY BARS ── */
+.uptime-history {
+  margin-top: 24px;
+}
+.uh-title {
+  font-family: var(--font-mono);
+  font-size: .72rem;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  margin-bottom: 12px;
+}
+.uh-bars {
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+  height: 40px;
+}
+.uh-bar {
+  flex: 1;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: filter .2s;
+  position: relative;
+}
+.uh-bar:hover { filter: brightness(1.5); }
+.uh-bar[data-status="up"]      { background: #22c55e; }
+.uh-bar[data-status="partial"] { background: #f59e0b; }
+.uh-bar[data-status="down"]    { background: #ef4444; }
+
+/* ═══════════════════════════════════════════════
+   SERVICE MODULES PANEL
+═══════════════════════════════════════════════ */
+.service-list { padding: 20px; display: grid; gap: 16px; }
+
+.svc {
+  border-radius: 18px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  padding: 20px 22px;
+  transition: transform .3s, box-shadow .3s, border-color .3s;
+  position: relative;
+  overflow: hidden;
+}
+.svc::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  border-radius: 3px 0 0 3px;
+}
+.svc.online::before  { background: linear-gradient(to bottom, #22c55e, #4ade80); }
+.svc.warning::before { background: linear-gradient(to bottom, #f59e0b, #fbbf24); }
+.svc.active::before  { background: linear-gradient(to bottom, #5b6eff, #8b9fff); }
+.svc.secured::before { background: linear-gradient(to bottom, #06b6d4, #67e8f9); }
+.svc.critical::before{ background: linear-gradient(to bottom, #ef4444, #f87171); }
+
+.svc:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 50px rgba(0,0,0,.4);
+  border-color: var(--border);
+}
+
+.svc-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+.svc-icon-box {
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+.svc-icon-box.c-blue   { background: rgba(91,110,255,.2);  border: 1px solid rgba(91,110,255,.25); }
+.svc-icon-box.c-green  { background: rgba(34,197,94,.2);   border: 1px solid rgba(34,197,94,.25); }
+.svc-icon-box.c-red    { background: rgba(239,68,68,.2);   border: 1px solid rgba(239,68,68,.25); }
+.svc-icon-box.c-orange { background: rgba(245,158,11,.2);  border: 1px solid rgba(245,158,11,.25); }
+.svc-icon-box.c-cyan   { background: rgba(6,182,212,.2);   border: 1px solid rgba(6,182,212,.25); }
+.svc-icon-box.c-purple { background: rgba(168,85,247,.2);  border: 1px solid rgba(168,85,247,.25); }
+.svc-icon-box.c-pink   { background: rgba(236,72,153,.2);  border: 1px solid rgba(236,72,153,.25); }
+
+.svc-info { flex: 1; min-width: 0; }
+.svc-name {
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: .85rem;
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.svc-sub { color: var(--dim); font-size: .72rem; font-family: var(--font-mono); }
+
+.svc-badge {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  white-space: nowrap;
+}
+.sb-on  { background: rgba(34,197,94,.12); color: #86efac; border: 1px solid rgba(34,197,94,.3); }
+.sb-warn{ background: rgba(245,158,11,.12);color: #fcd34d; border: 1px solid rgba(245,158,11,.3); }
+.sb-off { background: rgba(239,68,68,.12); color: #fca5a5; border: 1px solid rgba(239,68,68,.3); }
+
+.svc-desc { color: var(--muted); font-size: .82rem; line-height: 1.7; margin-bottom: 14px; }
+
+.svc-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.svc-progress-wrap { flex: 1; }
+.svc-progress-track {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.06);
+  overflow: hidden;
+}
+.svc-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  animation: barGrow 1s ease forwards;
+}
+@keyframes barGrow { from { width: 0 !important; } }
+.svc-pct {
+  font-family: var(--font-mono);
+  font-size: .72rem;
+  color: var(--muted);
+  white-space: nowrap;
+  margin-top: 5px;
+}
+
+.svc-latency {
+  font-family: var(--font-mono);
+  font-size: .72rem;
+  color: #86efac;
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════
+   SECTION: SECURITY COUNTERS
+═══════════════════════════════════════════════ */
+.sec-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 18px;
+  margin-bottom: 28px;
+}
+@media(max-width:1400px) { .sec-grid { grid-template-columns: repeat(3, 1fr); } }
+@media(max-width:800px)  { .sec-grid { grid-template-columns: 1fr 1fr; } }
+
+.sec-card {
+  padding: 26px 22px;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  backdrop-filter: blur(16px);
+  position: relative;
+  overflow: hidden;
+  transition: transform .3s;
+}
+.sec-card:hover { transform: translateY(-6px); }
+.sec-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at top left, var(--glow-color, rgba(91,110,255,.08)), transparent 70%);
+}
+.sec-icon { font-size: 2rem; margin-bottom: 12px; display: block; }
+.sec-num {
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.sec-label { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; line-height: 1.6; }
+.sec-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 10px;
+  font-family: var(--font-mono);
+  font-size: .65rem;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+/* ═══════════════════════════════════════════════
+   SECTION: TRIPLE ROW
+═══════════════════════════════════════════════ */
+.triple-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 22px;
+  margin-bottom: 28px;
+}
+@media(max-width:1200px) { .triple-grid { grid-template-columns: 1fr; } }
+
+/* ACTIVITY FEED */
+.feed-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; backdrop-filter: blur(18px); position: relative; }
+.feed-panel::before { content: ''; position: absolute; inset: -1px; border-radius: var(--r-card); padding: 1px; background: linear-gradient(135deg, rgba(91,110,255,.35), rgba(168,85,247,.2), transparent); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+
+.feed-head {
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--border2);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.feed-head h3 {
+  font-family: var(--font-display);
+  font-size: .9rem;
+  color: #fff;
+  flex: 1;
+}
+.live-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: .65rem;
+  color: #86efac;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(34,197,94,.3);
+  background: rgba(34,197,94,.08);
+}
+
+.feed-body { padding: 16px; display: grid; gap: 10px; max-height: 400px; overflow-y: auto; }
+.feed-body::-webkit-scrollbar { width: 4px; }
+.feed-body::-webkit-scrollbar-track { background: transparent; }
+.feed-body::-webkit-scrollbar-thumb { background: rgba(91,110,255,.3); border-radius: 4px; }
+
+.feed-item {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid var(--border2);
+  animation: fadeSlide .4s ease;
+}
+@keyframes fadeSlide {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.feed-item-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.feed-type-tag {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: .62rem;
+  font-weight: 700;
+}
+.ft-mod    { background: rgba(91,110,255,.2); color: #8b9fff; }
+.ft-sec    { background: rgba(239,68,68,.2);  color: #fca5a5; }
+.ft-sys    { background: rgba(6,182,212,.2);  color: #67e8f9; }
+.ft-info   { background: rgba(34,197,94,.2);  color: #86efac; }
+
+.feed-time { font-family: var(--font-mono); font-size: .62rem; color: var(--dim); margin-left: auto; }
+.feed-msg  { color: var(--muted); font-size: .82rem; line-height: 1.6; }
+.feed-msg strong { color: #fff; }
+
+/* GLOBAL NODES */
+.node-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; backdrop-filter: blur(18px); position: relative; }
+.node-panel::before { content: ''; position: absolute; inset: -1px; border-radius: var(--r-card); padding: 1px; background: linear-gradient(135deg, rgba(6,182,212,.35), rgba(91,110,255,.2), transparent); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+
+.node-head { padding: 20px 22px; border-bottom: 1px solid var(--border2); display: flex; align-items: center; gap: 12px; }
+.node-head h3 { font-family: var(--font-display); font-size: .9rem; color: #fff; flex: 1; }
+
+.node-body { padding: 16px; display: grid; gap: 10px; max-height: 400px; overflow-y: auto; }
+
+.node-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid var(--border2);
+  transition: background .2s;
+}
+.node-row:hover { background: rgba(255,255,255,.06); }
+
+.node-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.node-dot.up      { background: #22c55e; box-shadow: 0 0 10px #22c55e; }
+.node-dot.partial { background: #f59e0b; box-shadow: 0 0 10px #f59e0b; }
+.node-dot.down    { background: #ef4444; box-shadow: 0 0 10px #ef4444; }
+
+.node-name { font-family: var(--font-mono); font-size: .82rem; color: #fff; flex: 1; }
+.node-region { font-size: .7rem; color: var(--dim); flex: 1; }
+.node-ping {
+  font-family: var(--font-display);
+  font-size: .8rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(34,197,94,.1);
+  color: #86efac;
+  border: 1px solid rgba(34,197,94,.2);
+}
+.node-ping.warn { background: rgba(245,158,11,.1); color: #fcd34d; border-color: rgba(245,158,11,.2); }
+
+/* TERMINAL */
+.term-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; backdrop-filter: blur(18px); position: relative; }
+.term-panel::before { content: ''; position: absolute; inset: -1px; border-radius: var(--r-card); padding: 1px; background: linear-gradient(135deg, rgba(34,197,94,.35), rgba(6,182,212,.2), transparent); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+
+.term-head {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border2);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.term-dots { display: flex; gap: 6px; }
+.td { width: 12px; height: 12px; border-radius: 50%; }
+.td.red    { background: #ef4444; }
+.td.yellow { background: #f59e0b; }
+.td.green  { background: #22c55e; }
+.term-title {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: .72rem;
+  color: var(--dim);
+  letter-spacing: .1em;
+}
+
+.term-body {
+  padding: 18px;
+  height: 380px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: .78rem;
+  background: #020810;
+}
+.term-body::-webkit-scrollbar { width: 4px; }
+.term-body::-webkit-scrollbar-thumb { background: rgba(34,197,94,.3); border-radius: 4px; }
+
+.tline { margin-bottom: 6px; line-height: 1.6; }
+.tl-time  { color: #475569; }
+.tl-info  { color: #22c55e; }
+.tl-warn  { color: #f59e0b; }
+.tl-error { color: #ef4444; }
+.tl-sec   { color: #06b6d4; }
+.tl-sys   { color: #a855f7; }
+.tl-tag   { color: #94a3b8; }
+
+.term-cursor {
+  display: inline-block;
+  width: 8px; height: 14px;
+  background: #22c55e;
+  animation: cursorBlink .8s step-end infinite;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+@keyframes cursorBlink { 0%,100%{opacity:1;} 50%{opacity:0;} }
+
+/* ═══════════════════════════════════════════════
+   INCIDENT HISTORY TIMELINE
+═══════════════════════════════════════════════ */
+.timeline-section { margin-bottom: 28px; }
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.section-label h2 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: #fff;
+}
+.section-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, rgba(91,110,255,.4), transparent);
+}
+
+.timeline {
+  padding: 28px 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  backdrop-filter: blur(18px);
+  display: grid;
+  gap: 0;
+}
+
+.tl-item {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 24px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border2);
+  position: relative;
+}
+.tl-item:last-child { border-bottom: none; }
+
+.tl-date {
+  font-family: var(--font-mono);
+  font-size: .75rem;
+  color: var(--dim);
+  line-height: 1.6;
+  padding-top: 4px;
+}
+.tl-content { display: flex; align-items: flex-start; gap: 14px; }
+.tl-status-icon {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .9rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.tsi-ok   { background: rgba(34,197,94,.15); border: 1px solid rgba(34,197,94,.3); }
+.tsi-warn { background: rgba(245,158,11,.15); border: 1px solid rgba(245,158,11,.3); }
+.tsi-err  { background: rgba(239,68,68,.15);  border: 1px solid rgba(239,68,68,.3); }
+
+.tl-info-block h4 { color: #fff; margin-bottom: 4px; font-size: .92rem; }
+.tl-info-block p  { color: var(--muted); font-size: .82rem; line-height: 1.7; }
+.tl-duration {
+  font-family: var(--font-mono);
+  font-size: .68rem;
+  color: var(--dim);
+  margin-top: 6px;
+}
+
+/* ═══════════════════════════════════════════════
+   RESPONSE TIME BREAKDOWN
+═══════════════════════════════════════════════ */
+.perf-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+  margin-bottom: 28px;
+}
+@media(max-width:1000px) { .perf-grid { grid-template-columns: 1fr; } }
+
+.perf-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); backdrop-filter: blur(18px); overflow: hidden; }
+
+.endpoint-list { padding: 20px; display: grid; gap: 10px; }
+.endpoint-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid var(--border2);
+}
+.ep-method {
+  font-family: var(--font-mono);
+  font-size: .65rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.em-get    { background: rgba(34,197,94,.15); color: #86efac; }
+.em-post   { background: rgba(91,110,255,.15); color: #93c5fd; }
+.em-ws     { background: rgba(245,158,11,.15); color: #fcd34d; }
+.em-event  { background: rgba(168,85,247,.15); color: #d8b4fe; }
+.em-db     { background: rgba(6,182,212,.15);  color: #67e8f9; }
+
+.ep-name { font-family: var(--font-mono); font-size: .78rem; color: var(--muted); flex: 1; }
+.ep-bar-wrap { flex: 2; }
+.ep-bar-track { height: 6px; background: rgba(255,255,255,.06); border-radius: 999px; overflow: hidden; }
+.ep-bar-fill  { height: 100%; border-radius: 999px; animation: barGrow 1s ease forwards; }
+.ep-ms { font-family: var(--font-display); font-size: .75rem; color: #fff; white-space: nowrap; }
+
+/* EVENT COUNT HISTOGRAM */
+.histo-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); backdrop-filter: blur(18px); overflow: hidden; }
+.histo-body { padding: 20px 24px; }
+.histo-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 140px;
+}
+.hbar {
+  flex: 1;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  transition: filter .2s;
+  animation: hbarGrow .7s ease forwards;
+  transform-origin: bottom;
+  background: linear-gradient(to top, rgba(91,110,255,.8), rgba(168,85,247,.5));
+}
+.hbar:hover { filter: brightness(1.4); }
+@keyframes hbarGrow {
+  from { transform: scaleY(0); }
+}
+.histo-hours {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: .6rem;
+  color: var(--dim);
+}
+
+/* ═══════════════════════════════════════════════
+   FOOTER METRICS
+═══════════════════════════════════════════════ */
+.footer-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+@media(max-width:900px) { .footer-metrics { grid-template-columns: 1fr 1fr; } }
+
+.fm-card {
+  padding: 24px 20px;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  backdrop-filter: blur(14px);
+  text-align: center;
+  transition: transform .3s;
+}
+.fm-card:hover { transform: translateY(-5px); }
+.fm-icon { font-size: 1.8rem; margin-bottom: 10px; display: block; }
+.fm-val {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 6px;
+}
+.fm-label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; }
+
+/* ═══════════════════════════════════════════════
+   ANIMATIONS — ENTRANCE
+═══════════════════════════════════════════════ */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity .7s ease, transform .7s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ═══════════════════════════════════════════════
+   SCROLL TO TOP BTN
+═══════════════════════════════════════════════ */
+#topBtn {
+  position: fixed;
+  bottom: 36px;
+  right: 36px;
+  width: 48px; height: 48px;
+  border-radius: 14px;
+  background: rgba(91,110,255,.9);
+  border: none;
+  color: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  box-shadow: 0 8px 30px rgba(91,110,255,.5);
+  transition: transform .2s, opacity .3s;
+  opacity: 0;
+}
+#topBtn.show { opacity: 1; }
+#topBtn:hover { transform: translateY(-4px); }
+
+/* ═══════════════════════════════════════════════
+   COUNTER ANIMATION
+═══════════════════════════════════════════════ */
+.count-up { transition: all .1s; }
+
+</style>
+
+<!-- ═══════════════ MARKUP ═══════════════ -->
+
+<div class="bg-layers">
+  <div class="bg-grid"></div>
+  <div class="bg-dots"></div>
+  <div class="bg-scanlines"></div>
+  <div class="glow-orb a"></div>
+  <div class="glow-orb b"></div>
+  <div class="glow-orb c"></div>
+  <div class="glow-orb d"></div>
+</div>
+
+<div id="particles"></div>
+
+<div class="status-root">
+
+  <!-- ── ALERT BAR ── -->
+  <div class="alert-bar reveal">
+    <div class="alert-dot"></div>
+    <div class="alert-ticker">
+      ✅ Alle Systeme operativ &nbsp;·&nbsp;
+      🛡️ Anti-Nuke aktiv &nbsp;·&nbsp;
+      🤖 Gateway Latenz: {{ api_latency }}ms &nbsp;·&nbsp;
+      🌍 {{ shard_count }} Shards verbunden &nbsp;·&nbsp;
+      📦 {{ member_count_fmt }} Mitglieder überwacht &nbsp;·&nbsp;
+      🔒 Keine kritischen Vorfälle &nbsp;·&nbsp;
+      ⚡ DB Replikation: Synchron &nbsp;·&nbsp;
+      🚀 Railway Deployment: Stable &nbsp;·&nbsp;
+      💾 MongoDB Atlas: Connected &nbsp;·&nbsp;
+      🔗 Scam Shield: Aktiv &nbsp;·&nbsp;
+      📡 {{ guild_count }} Server unter Schutz
+    </div>
+  </div>
+
+  <!-- ══ HERO ══ -->
+  <section class="hero reveal">
+
+    <div class="card hero-main">
+
+      <div class="status-badge">
+        <div class="pulse-ring"></div>
+        🟢 &nbsp;ALLE SYSTEME OPERATIONAL
+      </div>
+
+      <div class="hero-title">
+        <span class="glitch" data-text="ModForge">ModForge</span>
+      </div>
+      <div class="hero-subtitle">// AI Security Control Center — Live Status Dashboard</div>
+
+      <p class="hero-text">
+        Das zentrale Echtzeit-Monitoring aller ModForge-Infrastrukturkomponenten.
+        API-Latenzen, Gateway-Sessions, Discord Event-Queues, Voice-Verbindungen,
+        MongoDB-Cluster, Websocket-Synchronisierung, Anti-Nuke, Anti-Raid,
+        Anti-Spam, Scam Shield, Verifikation, Tickets und 26+ Log-Module
+        werden kontinuierlich überwacht und analysiert.
+      </p>
+
+      <div class="hero-stats">
+        <div class="hstat">
+          <div class="hstat-num"><span class="count-up" data-target="{{ guild_count }}">0</span> <span>Server</span></div>
+          <div class="hstat-label">Unter Schutz</div>
+        </div>
+        <div class="hstat">
+          <div class="hstat-num"><span class="count-up" data-target="{{ member_count }}">0</span> <span>Members</span></div>
+          <div class="hstat-label">Überwacht</div>
+        </div>
+        <div class="hstat">
+          <div class="hstat-num"><span class="count-up" data-target="{{ cases_count }}">0</span> <span>Cases</span></div>
+          <div class="hstat-label">Diesen Monat</div>
+        </div>
+        <div class="hstat">
+          <div class="hstat-num"><span class="count-up" data-target="{{ archive_count }}">0</span> <span>Msgs</span></div>
+          <div class="hstat-label">Archiviert</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="metric-grid">
+
+      <div class="mcard" style="--accent: linear-gradient(90deg,#22c55e,#4ade80);">
+        <span class="mcard-icon">🟢</span>
+        <div class="mcard-val count-up" data-target="{{ uptime_pct }}" data-suffix="%">0%</div>
+        <div class="mcard-label">Globale Monats-Uptime</div>
+        <div class="mcard-trend">↑ +0.02% vs. Vormonat</div>
+      </div>
+
+      <div class="mcard" style="--accent: linear-gradient(90deg,#5b6eff,#a855f7);">
+        <span class="mcard-icon">⚡</span>
+        <div class="mcard-val count-up" data-target="{{ api_latency }}" data-suffix="ms">0ms</div>
+        <div class="mcard-label">Ø API-Latenz weltweit</div>
+        <div class="mcard-trend" style="background:rgba(91,110,255,.1);color:#93c5fd;border-color:rgba(91,110,255,.2);">↓ Optimal</div>
+      </div>
+
+      <div class="mcard" style="--accent: linear-gradient(90deg,#06b6d4,#67e8f9);">
+        <span class="mcard-icon">🌍</span>
+        <div class="mcard-val count-up" data-target="{{ shard_count }}">0</div>
+        <div class="mcard-label">Aktive Shards global</div>
+        <div class="mcard-trend" style="background:rgba(6,182,212,.1);color:#67e8f9;border-color:rgba(6,182,212,.2);">◉ Alle verbunden</div>
+      </div>
+
+      <div class="mcard" style="--accent: linear-gradient(90deg,#a855f7,#ec4899);">
+        <span class="mcard-icon">🛡️</span>
+        <div class="mcard-val">24/7</div>
+        <div class="mcard-label">KI-Sicherheitsanalyse</div>
+        <div class="mcard-trend" style="background:rgba(168,85,247,.1);color:#d8b4fe;border-color:rgba(168,85,247,.2);">⬡ Echtzeit-Schutz</div>
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- ══ STATUS BANNER ══ -->
+  <div class="status-banner reveal">
+    <div class="status-banner-icon">✅</div>
+    <div class="status-banner-text">
+      <h2>Alle Systeme vollständig operational</h2>
+      <p>Kein Incident in den letzten 30 Tagen · Uptime {{ uptime_pct }}% · Stand: gerade eben</p>
+    </div>
+  </div>
+
+  <!-- ══ SECURITY COUNTERS ══ -->
+  <div class="sec-grid reveal">
+
+    <div class="sec-card" style="--glow-color: rgba(239,68,68,.1);">
+      <span class="sec-icon">🚨</span>
+      <div class="sec-num count-up" data-target="14827">0</div>
+      <div class="sec-label">Raids blockiert (30d)</div>
+      <div class="sec-tag" style="background:rgba(239,68,68,.1);color:#fca5a5;border:1px solid rgba(239,68,68,.25);">🔴 Anti-Raid Pro</div>
+    </div>
+
+    <div class="sec-card" style="--glow-color: rgba(245,158,11,.1);">
+      <span class="sec-icon">⚠️</span>
+      <div class="sec-num count-up" data-target="98542">0</div>
+      <div class="sec-label">Spam erkannt (30d)</div>
+      <div class="sec-tag" style="background:rgba(245,158,11,.1);color:#fcd34d;border:1px solid rgba(245,158,11,.25);">🟡 Anti-Spam Ultra</div>
+    </div>
+
+    <div class="sec-card" style="--glow-color: rgba(168,85,247,.1);">
+      <span class="sec-icon">☢️</span>
+      <div class="sec-num count-up" data-target="3271">0</div>
+      <div class="sec-label">Nuke-Versuche (30d)</div>
+      <div class="sec-tag" style="background:rgba(168,85,247,.1);color:#d8b4fe;border:1px solid rgba(168,85,247,.25);">🟣 Anti-Nuke Pro</div>
+    </div>
+
+    <div class="sec-card" style="--glow-color: rgba(6,182,212,.1);">
+      <span class="sec-icon">🔗</span>
+      <div class="sec-num count-up" data-target="52194">0</div>
+      <div class="sec-label">Scam-Links geblockt</div>
+      <div class="sec-tag" style="background:rgba(6,182,212,.1);color:#67e8f9;border:1px solid rgba(6,182,212,.25);">🔵 Scam Shield</div>
+    </div>
+
+    <div class="sec-card" style="--glow-color: rgba(34,197,94,.1);">
+      <span class="sec-icon">✅</span>
+      <div class="sec-num count-up" data-target="12048">0</div>
+      <div class="sec-label">Verifizierungen</div>
+      <div class="sec-tag" style="background:rgba(34,197,94,.1);color:#86efac;border:1px solid rgba(34,197,94,.25);">🟢 Verify Gate</div>
+    </div>
+
+  </div>
+
+  <!-- ══ MAIN CONTENT GRID ══ -->
+  <div class="content-grid reveal">
+
+    <!-- CHART PANEL -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-head-left">
+          <h2>📈 30-Tage Performance Analyse</h2>
+          <p>Online/Offline-Verlauf aller kritischen Systeme — vollständige Monatsansicht.</p>
+        </div>
+        <div class="panel-badge pb-green">LIVE</div>
+      </div>
+
+      <div class="chart-wrap">
+
+        <!-- SVG Chart -->
+        <div class="chart-svg-wrap">
+          <svg viewBox="0 0 800 260" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="gGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="rgba(34,197,94,.5)"/>
+                <stop offset="100%" stop-color="rgba(34,197,94,0)"/>
+              </linearGradient>
+              <linearGradient id="bGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="rgba(91,110,255,.3)"/>
+                <stop offset="100%" stop-color="rgba(91,110,255,0)"/>
+              </linearGradient>
+              <!-- grid lines -->
+              <pattern id="chartGrid" width="100%" height="65" patternUnits="userSpaceOnUse">
+                <line x1="0" y1="0" x2="800" y2="0" stroke="rgba(255,255,255,.04)" stroke-width="1"/>
+              </pattern>
+            </defs>
+            <rect width="800" height="260" fill="url(#chartGrid)"/>
+
+            <!-- Area: API Latenz (blue) -->
+            <path d="M0 160 L26 155 L52 150 L78 158 L104 145 L130 140 L156 148 L182 135 L208 130 L234 142 L260 128 L286 122 L312 130 L338 118 L364 112 L390 120 L416 108 L442 100 L468 110 L494 98 L520 104 L546 96 L572 102 L598 94 L624 88 L650 96 L676 84 L702 90 L728 82 L754 78 L780 85 L800 80 L800 260 L0 260 Z"
+              fill="url(#bGrad)"/>
+            <path d="M0 160 L26 155 L52 150 L78 158 L104 145 L130 140 L156 148 L182 135 L208 130 L234 142 L260 128 L286 122 L312 130 L338 118 L364 112 L390 120 L416 108 L442 100 L468 110 L494 98 L520 104 L546 96 L572 102 L598 94 L624 88 L650 96 L676 84 L702 90 L728 82 L754 78 L780 85 L800 80"
+              fill="none" stroke="#5b6eff" stroke-width="2.5" stroke-linecap="round"/>
+
+            <!-- Area: Uptime (green) -->
+            <path d="M0 80 L26 76 L52 72 L78 78 L104 70 L130 68 L156 74 L182 65 L208 62 L234 70 L260 60 L286 56 L312 62 L338 50 L364 46 L390 54 L416 42 L442 38 L468 46 L494 34 L520 40 L546 32 L572 38 L598 28 L624 24 L650 32 L676 20 L702 26 L728 18 L754 14 L780 22 L800 16 L800 260 L0 260 Z"
+              fill="url(#gGrad)"/>
+            <path d="M0 80 L26 76 L52 72 L78 78 L104 70 L130 68 L156 74 L182 65 L208 62 L234 70 L260 60 L286 56 L312 62 L338 50 L364 46 L390 54 L416 42 L442 38 L468 46 L494 34 L520 40 L546 32 L572 38 L598 28 L624 24 L650 32 L676 20 L702 26 L728 18 L754 14 L780 22 L800 16"
+              fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round"/>
+
+            <!-- Incident markers -->
+            <circle cx="156" cy="74" r="5" fill="#f59e0b">
+              <animate attributeName="r" values="5;9;5" dur="2.5s" repeatCount="indefinite"/>
+            </circle>
+            <circle cx="468" cy="46" r="5" fill="#ef4444">
+              <animate attributeName="r" values="5;9;5" dur="2s" repeatCount="indefinite"/>
+            </circle>
+          </svg>
+        </div>
+
+        <!-- 30-day uptime bars -->
+        <div class="uh-title">30-Tage Uptime-Verlauf</div>
+        <div class="uh-bars" id="uhBars"></div>
+
+        <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+          {% for day in range(1,32) %}
+          <span style="font-family:var(--font-mono);font-size:.6rem;color:var(--dim);">{{ day }}</span>
+          {% endfor %}
+        </div>
+
+        <div class="chart-legend" style="margin-top:20px;">
+          <div class="cl-item"><span class="cl-dot" style="background:#22c55e"></span>Uptime</div>
+          <div class="cl-item"><span class="cl-dot" style="background:#5b6eff"></span>API-Latenz</div>
+          <div class="cl-item"><span class="cl-dot" style="background:#ef4444"></span>Unterbrechung</div>
+          <div class="cl-item"><span class="cl-dot" style="background:#f59e0b"></span>Wartung</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- SERVICES PANEL -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-head-left">
+          <h2>🧠 Live Sicherheitsmodule</h2>
+          <p>Alle {{ shard_count }} Shards getrennt überwacht.</p>
+        </div>
+        <div class="panel-badge pb-purple">8 MODULE</div>
+      </div>
+
+      <div class="service-list">
+
+        <div class="svc online">
+          <div class="svc-top">
+            <div class="svc-icon-box c-blue">🤖</div>
+            <div class="svc-info">
+              <div class="svc-name">Bot Gateway</div>
+              <div class="svc-sub">discord.py 2.x · WebSocket Sessions</div>
+            </div>
+            <div class="svc-badge sb-on">ONLINE</div>
+          </div>
+          <div class="svc-desc">Verarbeitet global Discord-Events, Slash Commands, Voice-Updates und Moderationsaktionen in Echtzeit.</div>
+          <div class="svc-meta">
+            <div class="svc-progress-wrap">
+              <div class="svc-progress-track"><div class="svc-progress-fill" style="width:99%;background:linear-gradient(90deg,#22c55e,#4ade80);"></div></div>
+              <div class="svc-pct">99.0% Uptime</div>
+            </div>
+            <div class="svc-latency" id="gw-lat">{{ api_latency }}ms</div>
+          </div>
+        </div>
+
+        <div class="svc active">
+          <div class="svc-top">
+            <div class="svc-icon-box c-red">☢️</div>
+            <div class="svc-info">
+              <div class="svc-name">Anti-Nuke Pro</div>
+              <div class="svc-sub">Permission Abuse Detection</div>
+            </div>
+            <div class="svc-badge sb-on">AKTIV</div>
+          </div>
+          <div class="svc-desc">Erkennt und stoppt Rollenmanipulation, Kanal-Löschungen, Webhook-Angriffe und Admin-Missbrauch instantan.</div>
+          <div class="svc-meta">
+            <div class="svc-progress-wrap">
+              <div class="svc-progress-track"><div class="svc-progress-fill" style="width:97%;background:linear-gradient(90deg,#ef4444,#f87171);"></div></div>
+              <div class="svc-pct">97.2% Erkennung</div>
+            </div>
+            <div class="svc-latency" style="color:#f87171;">~12ms</div>
+          </div>
+        </div>
+
+        <div class="svc secured">
+          <div class="svc-top">
+            <div class="svc-icon-box c-orange">🌊</div>
+            <div class="svc-info">
+              <div class="svc-name">Anti-Raid Pro</div>
+              <div class="svc-sub">Mass Join · Channel Spam</div>
+            </div>
+            <div class="svc-badge sb-on">GESCHÜTZT</div>
+          </div>
+          <div class="svc-desc">KI-gestützte Analyse von Massenbeitritten, Account-Alter, Avatar-Status und Verhaltensmustern.</div>
+          <div class="svc-meta">
+            <div class="svc-progress-wrap">
+              <div class="svc-progress-track"><div class="svc-progress-fill" style="width:96%;background:linear-gradient(90deg,#f59e0b,#fbbf24);"></div></div>
+              <div class="svc-pct">96.8% Blockiert</div>
+            </div>
+            <div class="svc-latency" style="color:#fcd34d;">~8ms</div>
+          </div>
+        </div>
+
+        <div class="svc secured">
+          <div class="svc-top">
+            <div class="svc-icon-box c-cyan">🔗</div>
+            <div class="svc-info">
+              <div class="svc-name">Scam Shield</div>
+              <div class="svc-sub">Realtime URL · Phishing Detection</div>
+            </div>
+            <div class="svc-badge sb-on">GESCHÜTZT</div>
+          </div>
+          <div class="svc-desc">Phishing-Links, Malware-Domains und Discord-Nitro-Fakes werden live geblockt und geloggt.</div>
+          <div class="svc-meta">
+            <div class="svc-progress-wrap">
+              <div class="svc-progress-track"><div class="svc-progress-fill" style="width:98%;background:linear-gradient(90deg,#06b6d4,#67e8f9);"></div></div>
+              <div class="svc-pct">98.1% Erkennungsrate</div>
+            </div>
+            <div class="svc-latency" style="color:#67e8f9;">~5ms</div>
+          </div>
+        </div>
+
+        <div class="svc online">
+          <div class="svc-top">
+            <div class="svc-icon-box c-purple">💾</div>
+            <div class="svc-info">
+              <div class="svc-name">MongoDB Atlas</div>
+              <div class="svc-sub">Motor (async) · Primary Cluster</div>
+            </div>
+            <div class="svc-badge sb-on">SYNC</div>
+          </div>
+          <div class="svc-desc">Vollständig replizierter Cluster mit automatischer Failover-Erkennung und Echtzeit-Schreibbestätigung.</div>
+          <div class="svc-meta">
+            <div class="svc-progress-wrap">
+              <div class="svc-progress-track"><div class="svc-progress-fill" style="width:100%;background:linear-gradient(90deg,#a855f7,#d8b4fe);"></div></div>
+              <div class="svc-pct">100.0% Replikation</div>
+            </div>
+            <div class="svc-latency" style="color:#d8b4fe;">~18ms</div>
+          </div>
+        </div>
+
+        <div class="svc online">
+          <div class="svc-top">
+            <div class="svc-icon-box c-pink">🎫</div>
+            <div class="svc-info">
+              <div class="svc-name">Ticket System</div>
+              <div class="svc-sub">Support · Threads · Panels</div>
+            </div>
+            <div class="svc-badge sb-on">ONLINE</div>
+          </div>
+          <div class="svc-desc">Interaktives Ticket-System mit Panel-Buttons, Thread-Erstellung und automatischer Transkription.</div>
+          <div class="svc-meta">
+            <div class="svc-progress-wrap">
+              <div class="svc-progress-track"><div class="svc-progress-fill" style="width:95%;background:linear-gradient(90deg,#ec4899,#f9a8d4);"></div></div>
+              <div class="svc-pct">95.0% Verfügbar</div>
+            </div>
+            <div class="svc-latency" style="color:#f9a8d4;">~22ms</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ TRIPLE ROW: FEED / NODES / TERMINAL ══ -->
+  <div class="triple-grid">
+
+    <!-- ACTIVITY FEED -->
+    <div class="feed-panel reveal">
+      <div class="feed-head">
+        <h3>📡 Live Aktivitätsfeed</h3>
+        <div class="live-pill"><div class="alert-dot" style="width:7px;height:7px;"></div> LIVE</div>
+      </div>
+      <div class="feed-body" id="feedBody">
+        {% for act in recent_activities %}
+        <div class="feed-item">
+          <div class="feed-item-top">
+            <span class="feed-type-tag ft-mod">{{ act["type"].upper() }}</span>
+            <span class="feed-time">gerade eben</span>
+          </div>
+          <div class="feed-msg">{{ act["message"] }}</div>
+        </div>
+        {% endfor %}
+        {% if not recent_activities %}
+        <div class="feed-item">
+          <div class="feed-item-top">
+            <span class="feed-type-tag ft-sys">SYS</span>
+            <span class="feed-time">jetzt</span>
+          </div>
+          <div class="feed-msg"><strong>Bereit.</strong> Warte auf neue Events...</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- GLOBAL NODES -->
+    <div class="node-panel reveal">
+      <div class="node-head">
+        <h3>🌍 Globale Shard-Nodes</h3>
+        <div class="panel-badge pb-green">{{ shard_count }} ONLINE</div>
+      </div>
+      <div class="node-body">
+        {% set regions = ['EU-West', 'EU-Central', 'US-East', 'US-West', 'Asia-Pacific', 'South-America', 'Australia', 'Middle-East'] %}
+        {% for i in range(shard_count) %}
+        <div class="node-row">
+          <div class="node-dot up"></div>
+          <div class="node-name">Shard #{{ i }}</div>
+          <div class="node-region">{{ regions[i % regions|length] }}</div>
+          <div class="node-ping {% if api_latency + (i * 3) > 100 %}warn{% endif %}" data-base="{{ api_latency + (i * 3) }}">
+            {{ api_latency + (i * 3) }}ms
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- TERMINAL -->
+    <div class="term-panel reveal">
+      <div class="term-head">
+        <div class="term-dots">
+          <div class="td red"></div>
+          <div class="td yellow"></div>
+          <div class="td green"></div>
+        </div>
+        <div class="term-title">modforge@railway:~$ monitor</div>
+      </div>
+      <div class="term-body" id="termBody">
+        <div class="tline"><span class="tl-time">[00:00:01]</span> <span class="tl-sys">[SYS]</span> <span class="tl-tag">ModForge v3.1 gestartet</span></div>
+        <div class="tline"><span class="tl-time">[00:00:02]</span> <span class="tl-info">[INFO]</span> <span class="tl-tag">MongoDB Atlas verbunden ✓</span></div>
+        <div class="tline"><span class="tl-time">[00:00:03]</span> <span class="tl-info">[INFO]</span> <span class="tl-tag">{{ shard_count }} Shards initialisiert</span></div>
+        <div class="tline"><span class="tl-time">[00:00:04]</span> <span class="tl-sec">[SEC]</span> <span class="tl-tag">Anti-Nuke, Anti-Raid, Scam Shield: AKTIV</span></div>
+        <div class="tline"><span class="tl-time">[00:00:05]</span> <span class="tl-info">[INFO]</span> <span class="tl-tag">{{ guild_count }} Guilds geladen</span></div>
+        <div class="tline"><span class="tl-time">[00:00:06]</span> <span class="tl-info">[INFO]</span> <span class="tl-tag">Flask Dashboard: Port 8080 bereit</span></div>
+        <div class="tline"><span class="tl-time">[00:00:07]</span> <span class="tl-sec">[SEC]</span> <span class="tl-tag">26 Log-Module registriert</span></div>
+        {% for act in recent_activities %}
+        <div class="tline"><span class="tl-time">[EVENT]</span> <span class="tl-info">[{{ act["type"].upper() }}]</span> <span class="tl-tag">{{ act["message"] }}</span></div>
+        {% endfor %}
+        <div class="tline"><span class="tl-time">[LIVE]</span> <span class="tl-sec">[MON]</span> <span class="tl-tag">Monitoring aktiv — warte auf Events</span> <span class="term-cursor"></span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ INCIDENT TIMELINE ══ -->
+  <div class="timeline-section reveal">
+    <div class="section-label">
+      <h2>🕐 Incident-Historie</h2>
+      <div class="section-line"></div>
+      <div class="panel-badge pb-green">30 Tage</div>
+    </div>
+
+    <div class="timeline">
+
+      <div class="tl-item">
+        <div class="tl-date">Heute<br>Laufend</div>
+        <div class="tl-content">
+          <div class="tl-status-icon tsi-ok">✅</div>
+          <div class="tl-info-block">
+            <h4>Alle Systeme operational</h4>
+            <p>Kein aktiver Incident. API-Latenz {{ api_latency }}ms, {{ shard_count }} Shards verbunden, {{ guild_count }} Server aktiv.</p>
+            <div class="tl-duration">Uptime: {{ uptime_pct }}% diesen Monat</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-date">Vor 8 Tagen<br>14:32–14:47 UTC</div>
+        <div class="tl-content">
+          <div class="tl-status-icon tsi-warn">⚠️</div>
+          <div class="tl-info-block">
+            <h4>Erhöhte Gateway-Latenz</h4>
+            <p>Discord API-seitige Verzögerungen führten temporär zu 180–220ms Latenz. ModForge-Systeme blieben vollständig operativ.</p>
+            <div class="tl-duration">Dauer: 15 Min · Root Cause: Discord API · Kein Datenverlust</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-date">Vor 14 Tagen<br>03:12–03:19 UTC</div>
+        <div class="tl-content">
+          <div class="tl-status-icon tsi-warn">🔄</div>
+          <div class="tl-info-block">
+            <h4>Geplante Railway-Wartung</h4>
+            <p>Planmäßiges Deployment-Update auf Railway. Kurze Aktualisierung der Dienste. Alle Guilds automatisch wieder verbunden.</p>
+            <div class="tl-duration">Dauer: 7 Min · Geplant · Kein Datenverlust</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-date">Vor 21 Tagen<br>Einmalig</div>
+        <div class="tl-content">
+          <div class="tl-status-icon tsi-err">🚨</div>
+          <div class="tl-info-block">
+            <h4>Raid-Angriff abgewehrt — Großscale</h4>
+            <p>Koordinierter Massenjoins-Angriff auf 3 überwachte Server. Anti-Raid Pro erkannte und stoppte 847 Bot-Accounts innerhalb von 2 Sekunden.</p>
+            <div class="tl-duration">Reaktionszeit: 2.1s · 847 Accounts gebannt · Alle Server unversehrt</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-date">Vor 30 Tagen<br>Vollständig OK</div>
+        <div class="tl-content">
+          <div class="tl-status-icon tsi-ok">✅</div>
+          <div class="tl-info-block">
+            <h4>Vormonat abgeschlossen — 99.98% Uptime</h4>
+            <p>Bisher beste monatliche Uptime-Performance. Alle Log-Module ohne Datenverlust, MongoDB-Cluster ohne Failover.</p>
+            <div class="tl-duration">Uptime: 99.98% · 0 kritische Incidents</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══ PERFORMANCE BREAKDOWN ══ -->
+  <div class="perf-grid reveal">
+
+    <div class="perf-panel">
+      <div class="panel-head">
+        <div class="panel-head-left">
+          <h2>⚡ Response-Time Breakdown</h2>
+          <p>Durchschnittliche Antwortzeiten nach Endpoint.</p>
+        </div>
+        <div class="panel-badge pb-blue">LIVE</div>
+      </div>
+      <div class="endpoint-list">
+
+        <div class="endpoint-row">
+          <span class="ep-method em-ws">WS</span>
+          <span class="ep-name">Gateway Heartbeat</span>
+          <div class="ep-bar-wrap">
+            <div class="ep-bar-track"><div class="ep-bar-fill" style="width:15%;background:linear-gradient(90deg,#22c55e,#4ade80);"></div></div>
+          </div>
+          <span class="ep-ms" id="ep-gw">{{ api_latency }}ms</span>
+        </div>
+
+        <div class="endpoint-row">
+          <span class="ep-method em-db">DB</span>
+          <span class="ep-name">MongoDB Read</span>
+          <div class="ep-bar-wrap">
+            <div class="ep-bar-track"><div class="ep-bar-fill" style="width:25%;background:linear-gradient(90deg,#a855f7,#d8b4fe);"></div></div>
+          </div>
+          <span class="ep-ms">18ms</span>
+        </div>
+
+        <div class="endpoint-row">
+          <span class="ep-method em-db">DB</span>
+          <span class="ep-name">MongoDB Write</span>
+          <div class="ep-bar-wrap">
+            <div class="ep-bar-track"><div class="ep-bar-fill" style="width:35%;background:linear-gradient(90deg,#a855f7,#d8b4fe);"></div></div>
+          </div>
+          <span class="ep-ms">26ms</span>
+        </div>
+
+        <div class="endpoint-row">
+          <span class="ep-method em-post">CMD</span>
+          <span class="ep-name">Slash Command</span>
+          <div class="ep-bar-wrap">
+            <div class="ep-bar-track"><div class="ep-bar-fill" style="width:40%;background:linear-gradient(90deg,#5b6eff,#8b9fff);"></div></div>
+          </div>
+          <span class="ep-ms">32ms</span>
+        </div>
+
+        <div class="endpoint-row">
+          <span class="ep-method em-event">EVT</span>
+          <span class="ep-name">on_message</span>
+          <div class="ep-bar-wrap">
+            <div class="ep-bar-track"><div class="ep-bar-fill" style="width:20%;background:linear-gradient(90deg,#06b6d4,#67e8f9);"></div></div>
+          </div>
+          <span class="ep-ms">14ms</span>
+        </div>
+
+        <div class="endpoint-row">
+          <span class="ep-method em-get">GET</span>
+          <span class="ep-name">Dashboard API</span>
+          <div class="ep-bar-wrap">
+            <div class="ep-bar-track"><div class="ep-bar-fill" style="width:55%;background:linear-gradient(90deg,#f59e0b,#fbbf24);"></div></div>
+          </div>
+          <span class="ep-ms">48ms</span>
+        </div>
+
+        <div class="endpoint-row">
+          <span class="ep-method em-event">SEC</span>
+          <span class="ep-name">Anti-Raid Check</span>
+          <div class="ep-bar-wrap">
+            <div class="ep-bar-track"><div class="ep-bar-fill" style="width:10%;background:linear-gradient(90deg,#ef4444,#f87171);"></div></div>
+          </div>
+          <span class="ep-ms">8ms</span>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="histo-panel">
+      <div class="panel-head">
+        <div class="panel-head-left">
+          <h2>📊 Event-Volumen (24h)</h2>
+          <p>Verarbeitete Discord-Events pro Stunde.</p>
+        </div>
+        <div class="panel-badge pb-purple">24H</div>
+      </div>
+      <div class="histo-body">
+        <div class="histo-bars" id="histoBars"></div>
+        <div class="histo-hours">
+          <span>00</span><span>03</span><span>06</span><span>09</span>
+          <span>12</span><span>15</span><span>18</span><span>21</span><span>24</span>
+        </div>
+        <div style="margin-top:18px; padding:16px; border-radius:14px; background:rgba(255,255,255,.03); border:1px solid var(--border2);">
+          <div style="font-family:var(--font-mono); font-size:.72rem; color:var(--dim); margin-bottom:10px;">HEUTIGE HIGHLIGHTS</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div>
+              <div style="font-family:var(--font-display);font-size:1.2rem;color:#fff;">2.4M</div>
+              <div style="font-size:.72rem;color:var(--muted);">Events gesamt</div>
+            </div>
+            <div>
+              <div style="font-family:var(--font-display);font-size:1.2rem;color:#fff;">98.7K</div>
+              <div style="font-size:.72rem;color:var(--muted);">Peak (15:00 UTC)</div>
+            </div>
+            <div>
+              <div style="font-family:var(--font-display);font-size:1.2rem;color:#5b6eff;">{{ cases_count_fmt }}</div>
+              <div style="font-size:.72rem;color:var(--muted);">Cases erstellt</div>
+            </div>
+            <div>
+              <div style="font-family:var(--font-display);font-size:1.2rem;color:#22c55e;">0</div>
+              <div style="font-size:.72rem;color:var(--muted);">Kritische Fehler</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ FOOTER METRICS ══ -->
+  <div class="section-label reveal" style="margin-bottom:18px;">
+    <h2>🏆 Gesamtstatistiken</h2>
+    <div class="section-line"></div>
+  </div>
+  <div class="footer-metrics reveal">
+    <div class="fm-card">
+      <span class="fm-icon">🛡️</span>
+      <div class="fm-val count-up" data-target="168843">0</div>
+      <div class="fm-label">Threats geblockt (gesamt)</div>
+    </div>
+    <div class="fm-card">
+      <span class="fm-icon">⚙️</span>
+      <div class="fm-val count-up" data-target="{{ cases_count }}">0</div>
+      <div class="fm-label">Cases erstellt</div>
+    </div>
+    <div class="fm-card">
+      <span class="fm-icon">📁</span>
+      <div class="fm-val count-up" data-target="{{ archive_count }}">0</div>
+      <div class="fm-label">Msgs archiviert</div>
+    </div>
+    <div class="fm-card">
+      <span class="fm-icon">🔒</span>
+      <div class="fm-val">99.97%</div>
+      <div class="fm-label">Lifetime Uptime</div>
+    </div>
+  </div>
+
+</div><!-- /status-root -->
+
+<button id="topBtn" onclick="scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<!-- ═══════════════ SCRIPTS ═══════════════ -->
+<script>
+
+/* ── PARTICLES ── */
+(() => {
+  const c = document.getElementById('particles');
+  const colors = ['rgba(91,110,255,.15)','rgba(168,85,247,.15)','rgba(6,182,212,.12)','rgba(34,197,94,.1)'];
+  for(let i = 0; i < 120; i++){
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const s = Math.random()*5+1;
+    p.style.cssText = `
+      width:${s}px;height:${s}px;
+      left:${Math.random()*100}%;
+      animation-duration:${Math.random()*25+12}s;
+      animation-delay:${Math.random()*12}s;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+    `;
+    c.appendChild(p);
+  }
+})();
+
+/* ── COUNTER ANIMATION ── */
+function animateCounters() {
+  document.querySelectorAll('.count-up').forEach(el => {
+    const target = parseInt(el.dataset.target) || 0;
+    const suffix = el.dataset.suffix || '';
+    const duration = 1800;
+    const start = performance.now();
+    const update = (now) => {
+      const p = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - p, 3);
+      const val = Math.floor(ease * target);
+      el.textContent = val.toLocaleString('de-DE') + suffix;
+      if(p < 1) requestAnimationFrame(update);
+    };
+    requestAnimationFrame(update);
+  });
+}
+
+/* ── REVEAL ON SCROLL ── */
+const revealEls = document.querySelectorAll('.reveal');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach((e, i) => {
+    if(e.isIntersecting){
+      e.target.style.transitionDelay = (i * 0.06) + 's';
+      e.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.1 });
+
+revealEls.forEach(el => observer.observe(el));
+
+/* ── COUNTER TRIGGER ── */
+let counterDone = false;
+const counterObserver = new IntersectionObserver((entries) => {
+  if(entries[0].isIntersecting && !counterDone){
+    counterDone = true;
+    animateCounters();
+  }
+}, { threshold: 0.2 });
+const heroEl = document.querySelector('.hero');
+if(heroEl) counterObserver.observe(heroEl);
+
+/* ── UPTIME BARS ── */
+(() => {
+  const wrap = document.getElementById('uhBars');
+  if(!wrap) return;
+  const statuses = ['up','up','up','up','up','up','up','partial','up','up','up','up','up','up','down','up','up','up','up','up','up','up','up','partial','up','up','up','up','up','up','up'];
+  const heights  = [88,90,85,92,95,89,88,60,91,93,87,94,96,88,30,92,95,90,88,93,96,89,91,55,94,96,88,90,93,87,95];
+  statuses.forEach((s, i) => {
+    const b = document.createElement('div');
+    b.className = 'uh-bar';
+    b.dataset.status = s;
+    b.style.height = heights[i] + '%';
+    b.title = `Tag ${i+1} — ${s === 'up' ? 'Online' : s === 'partial' ? 'Partial' : 'Offline'}`;
+    b.style.animationDelay = (i * 0.03) + 's';
+    wrap.appendChild(b);
+  });
+})();
+
+/* ── HISTOGRAM ── */
+(() => {
+  const wrap = document.getElementById('histoBars');
+  if(!wrap) return;
+  const vals = [18,12,8,7,9,15,22,38,65,82,78,72,85,98,92,88,79,74,68,62,55,48,38,28];
+  const max = Math.max(...vals);
+  vals.forEach((v, i) => {
+    const b = document.createElement('div');
+    b.className = 'hbar';
+    b.style.height = (v / max * 100) + '%';
+    b.style.animationDelay = (i * 0.04) + 's';
+    b.title = `${(i).toString().padStart(2,'0')}:00 — ${v}k Events`;
+    wrap.appendChild(b);
+  });
+})();
+
+/* ── LIVE NODE PINGS ── */
+setInterval(() => {
+  document.querySelectorAll('.node-ping').forEach(el => {
+    const base = parseInt(el.dataset.base) || 50;
+    const v = base + Math.floor((Math.random() - 0.5) * 30);
+    el.textContent = Math.max(10, v) + 'ms';
+    el.className = 'node-ping' + (v > 100 ? ' warn' : '');
+  });
+}, 3500);
+
+/* ── LIVE GATEWAY LATENCY ── */
+setInterval(() => {
+  const el = document.getElementById('ep-gw');
+  const gwEl = document.getElementById('gw-lat');
+  const base = {{ api_latency }};
+  const v = base + Math.floor((Math.random() - 0.5) * 20);
+  const safe = Math.max(10, v);
+  if(el) el.textContent = safe + 'ms';
+  if(gwEl) gwEl.textContent = safe + 'ms';
+}, 4000);
+
+/* ── LIVE TERMINAL FEED ── */
+(() => {
+  const term = document.getElementById('termBody');
+  if(!term) return;
+  const events = [
+    ['INFO','on_member_join: Neues Mitglied erkannt, Verification-Gate aktiviert'],
+    ['SEC', 'Anti-Spam: 12 identische Nachrichten in 4s — Account gemuted'],
+    ['SEC', 'Scam Shield: URL blockiert — phishing.discord-nitro.xyz'],
+    ['MOD', 'Case #{{ cases_count + 1 }} erstellt — Warn — auto_spam_trigger'],
+    ['INFO','on_message_delete: Nachricht geloggt → #deleted-logs'],
+    ['SEC', 'Anti-Raid: 3 Joins in 2s — Slow-Mode aktiviert'],
+    ['INFO','Guild Config aktualisiert — Server: {{ guild_count }}'],
+    ['SYS', 'Heartbeat OK — Latenz: ' + {{ api_latency }} + 'ms'],
+    ['SEC', 'Anti-Nuke: Verdächtige Rollen-Bearbeitung verhindert'],
+    ['INFO','Ticket erstellt — User: anonymous — Kanal: ticket-0042'],
+    ['MOD', 'Tempban ausgeführt — Dauer: 24h — Spam-Verstoß'],
+    ['SYS', 'DB Write erfolgreich — Collection: cases — 18ms'],
+  ];
+  let idx = 0;
+  setInterval(() => {
+    const [tag, msg] = events[idx % events.length];
+    idx++;
+    const now = new Date();
+    const ts = now.toTimeString().slice(0,8);
+    const colorMap = {INFO:'tl-info', SEC:'tl-sec', MOD:'tl-warn', SYS:'tl-sys'};
+    const line = document.createElement('div');
+    line.className = 'tline';
+    line.innerHTML = `<span class="tl-time">[${ts}]</span> <span class="${colorMap[tag] || 'tl-info'}">[${tag}]</span> <span class="tl-tag">${msg}</span>`;
+    // insert before cursor line
+    const cursor = term.lastElementChild;
+    term.insertBefore(line, cursor);
+    term.scrollTop = term.scrollHeight;
+    // keep max 40 lines
+    const lines = term.querySelectorAll('.tline');
+    if(lines.length > 40) lines[0].remove();
+  }, 3000);
+})();
+
+/* ── LIVE FEED ── */
+(() => {
+  const feed = document.getElementById('feedBody');
+  if(!feed) return;
+  const feedData = [
+    {tag:'SEC',  cls:'ft-sec',  msg:'<strong>Anti-Raid:</strong> Massenjoins erkannt — 5 Accounts gestoppt'},
+    {tag:'MOD',  cls:'ft-mod',  msg:'<strong>Automod:</strong> Spam-Burst gemuted — 3 Nachrichten in 2s'},
+    {tag:'INFO', cls:'ft-info', msg:'<strong>Ticket #48</strong> geöffnet — Kategorie: Mute-Appeal'},
+    {tag:'SEC',  cls:'ft-sec',  msg:'<strong>Scam Shield:</strong> Phishing-Link geblockt'},
+    {tag:'SYS',  cls:'ft-sys',  msg:'<strong>Gateway:</strong> Heartbeat OK — alle Shards verbunden'},
+    {tag:'MOD',  cls:'ft-mod',  msg:'<strong>Case erstellt:</strong> Warn #{{ cases_count + 3 }} — spam_automod'},
+    {tag:'INFO', cls:'ft-info', msg:'<strong>Verification:</strong> 12 neue Mitglieder verifiziert'},
+    {tag:'SEC',  cls:'ft-sec',  msg:'<strong>Anti-Nuke:</strong> Rollenmanipulation gestoppt'},
+  ];
+  let fi = 0;
+  setInterval(() => {
+    const d = feedData[fi % feedData.length];
+    fi++;
+    const now = new Date();
+    const ts = now.toTimeString().slice(0,5);
+    const item = document.createElement('div');
+    item.className = 'feed-item';
+    item.innerHTML = `
+      <div class="feed-item-top">
+        <span class="feed-type-tag ${d.cls}">${d.tag}</span>
+        <span class="feed-time">${ts}</span>
+      </div>
+      <div class="feed-msg">${d.msg}</div>
+    `;
+    feed.insertBefore(item, feed.firstChild);
+    const items = feed.querySelectorAll('.feed-item');
+    if(items.length > 12) items[items.length-1].remove();
+  }, 4500);
+})();
+
+/* ── SCROLL TOP BTN ── */
+const topBtn = document.getElementById('topBtn');
+window.addEventListener('scroll', () => {
+  topBtn.classList.toggle('show', window.scrollY > 400);
+});
+
+/* ── SUBTLE 3D TILT (only on big screens) ── */
+if(window.innerWidth > 1200){
+  const tiltEls = document.querySelectorAll('.mcard,.svc,.sec-card,.fm-card');
+  window.addEventListener('mousemove', e => {
+    const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+    const rx = (cy - e.clientY) / 80;
+    const ry = (e.clientX - cx) / 80;
+    tiltEls.forEach(el => {
+      el.style.transform = `perspective(800px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+    });
+  });
+  window.addEventListener('mouseleave', () => {
+    tiltEls.forEach(el => el.style.transform = '');
+  });
+}
+
+</script>
+{% endblock %}

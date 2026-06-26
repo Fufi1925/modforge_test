@@ -1,0 +1,208 @@
+{% extends "dashboard/_base.html" %}
+{% set active = 'modules' %}
+{% block title %}Modul-Konfiguration{% endblock %}
+{% block page_title %}⚙️ Modul-Konfiguration{% endblock %}
+{% block page_desc %}Feineinstellung für jedes einzelne System.{% endblock %}
+
+{% block head %}
+<style>
+  .mod-container { display: grid; grid-template-columns: 280px 1fr; gap: 24px; align-items: start; }
+  .mod-nav { position: sticky; top: 24px; display: flex; flex-direction: column; gap: 4px; }
+  .mod-nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 14px; border: 1px solid transparent; color: var(--muted); cursor: pointer; transition: .15s; font-size: .85rem; font-weight: 600; }
+  .mod-nav-item:hover { background: rgba(255,255,255,0.03); color: #fff; }
+  .mod-nav-item.active { background: rgba(59,130,246,0.08); border-color: var(--border); color: var(--vl); }
+  .mod-nav-item .m-icon { font-size: 1.1rem; width: 24px; text-align: center; }
+  
+  .mod-content { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 24px; padding: 32px; min-height: 400px; }
+  .mod-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .mod-title { font-size: 1.4rem; font-weight: 900; color: #fff; display: flex; align-items: center; gap: 12px; }
+  
+  .param-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+  .param-card { background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
+  .param-label { font-size: .7rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; display: block; }
+  
+  @media(max-width: 800px) { .mod-container { grid-template-columns: 1fr; } .mod-nav { position: relative; top: 0; flex-direction: row; overflow-x: auto; padding-bottom: 10px; } .mod-nav-item { white-space: nowrap; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mod-container">
+  <aside class="mod-nav">
+    {% for s in sections %}
+    <div class="mod-nav-item {% if current_section == s.key %}active{% endif %}" onclick="loadSec('{{ s.key }}')">
+      <span class="m-icon">{{ s.icon }}</span>
+      <span>{{ s.label }}</span>
+    </div>
+    {% endfor %}
+  </aside>
+
+  <main class="mod-content" id="modContent">
+    <div class="mod-header">
+      <div class="mod-title">
+        <span id="cIcon">⚡</span>
+        <span id="cLabel">Modul laden...</span>
+      </div>
+      <label class="toggle"><input type="checkbox" id="cEnabled" onchange="showSaveBar()"><span class="slider"></span></label>
+    </div>
+
+    <div id="cParams" class="param-grid">
+      <!-- Dynamic content -->
+    </div>
+    
+    <div id="cDesc" style="margin-top:24px;font-size:.85rem;color:var(--muted);line-height:1.6;padding:16px;background:rgba(255,255,255,0.02);border-radius:14px;border-left:4px solid var(--v)">
+    </div>
+  </main>
+</div>
+
+{% block scripts %}
+<script>
+const GID = "{{ guild.id }}";
+const CFG = {{ cfg|tojson|safe }};
+const SECTIONS = {{ sections|tojson|safe }};
+
+// Map dashboard section keys to config module keys
+const KEY_MAP = {
+  antispam: 'anti_spam', antinuke: 'anti_nuke', antiraid: 'anti_raid',
+  antimention: 'anti_mention', antiscam: 'anti_scam', automod: 'automod',
+  verify: 'verify_system', tickets: 'ticket_system', autorole: 'welcome',
+  warns: 'warn_system', logs: 'log_channels'
+};
+
+const DEFS = {
+  antispam: {
+    icon: '⚡', label: 'Anti-Spam', desc: 'Verhindert Nachrichten-Spam, CAPS-Exzesse und Emoji-Flood.',
+    fields: [
+        {k:'msg_limit', l:'Nachrichten-Limit', t:'number'},
+        {k:'msg_window', l:'Zeitfenster (s)', t:'number'},
+        {k:'caps_pct', l:'CAPS-Limit %', t:'number'},
+        {k:'emoji_max', l:'Max. Emojis', t:'number'},
+        {k:'duplicate_max', l:'Max. Duplikate', t:'number'},
+        {k:'timeout_duration', l:'Timeout (s)', t:'number'},
+        {k:'punishment', l:'Bestrafung', t:'select', o:['warn','timeout','kick','ban']}
+    ]
+  },
+  antinuke: {
+    icon: '💥', label: 'Anti-Nuke', desc: 'Schützt vor destruktiven Aktionen wie Massen-Bans oder Kanal-Löschungen.',
+    fields: [
+        {k:'threshold', l:'Aktions-Limit', t:'number'},
+        {k:'window', l:'Zeitfenster (s)', t:'number'},
+        {k:'remove_roles', l:'Rollen entfernen', t:'select', o:['true','false']},
+        {k:'punishment', l:'Bestrafung', t:'select', o:['warn','timeout','kick','ban']}
+    ]
+  },
+  antiraid: {
+    icon: '🚨', label: 'Anti-Raid', desc: 'Blockiert koordinierte Beitritts-Wellen und verdächtige neue Accounts.',
+    fields: [
+        {k:'join_threshold', l:'Join-Schwelle', t:'number'},
+        {k:'window', l:'Zeitfenster (s)', t:'number'},
+        {k:'min_account_age', l:'Min. Alter (Tage)', t:'number'},
+        {k:'auto_kick', l:'Auto-Kick neue Accounts', t:'select', o:['true','false']},
+        {k:'lockdown', l:'Auto-Lockdown', t:'select', o:['true','false']},
+        {k:'suspicious_name_check', l:'Namens-Check', t:'select', o:['true','false']}
+    ]
+  },
+  antimention: {
+    icon: '🔔', label: 'Anti-Mention', desc: 'Verhindert Massen-Erwähnungen und Spam von @everyone/@here.',
+    fields: [
+        {k:'mention_limit', l:'Max. Mentions', t:'number'},
+        {k:'window', l:'Zeitfenster (s)', t:'number'},
+        {k:'punishment', l:'Bestrafung', t:'select', o:['warn','timeout','kick','ban']}
+    ]
+  },
+  antiscam: {
+    icon: '🎣', label: 'Anti-Scam', desc: 'Erkennt automatisch Phishing-Links und Fake-Gifts.',
+    fields: [
+        {k:'punishment', l:'Bestrafung', t:'select', o:['warn','timeout','kick','ban']}
+    ]
+  },
+  automod: {
+    icon: '🤖', label: 'AutoMod', desc: 'Zentraler Filter für Wortlisten und Links.',
+    fields: [
+        {k:'invite_filter', l:'Invite-Blocker', t:'select', o:['true','false']},
+        {k:'link_filter', l:'Link-Filter', t:'select', o:['true','false']},
+        {k:'zalgo_filter', l:'Zalgo-Schutz', t:'select', o:['true','false']},
+        {k:'unicode_abuse', l:'Unicode-Schutz', t:'select', o:['true','false']},
+        {k:'phishing_check', l:'Phishing-Check', t:'select', o:['true','false']},
+        {k:'punishment', l:'Bestrafung', t:'select', o:['warn','timeout','kick','ban']}
+    ]
+  },
+  verify: {
+    icon: '✅', label: 'Verifizierung', desc: 'Erzwingt eine Prüfung für neue Mitglieder.',
+    fields: [
+        {k:'mode', l:'Modus', t:'select', o:['one_click','captcha']},
+        {k:'captcha_difficulty', l:'Schwierigkeit', t:'select', o:['easy','medium','hard']}
+    ]
+  },
+  tickets: {
+    icon: '🎫', label: 'Tickets', desc: 'Support-Ticket-System Konfiguration.',
+    fields: [
+        {k:'enabled', l:'System aktiv', t:'select', o:['true','false']}
+    ]
+  },
+  autorole: {
+    icon: '🏷️', label: 'Auto-Rolle', desc: 'Automatisierung von Rollenvergaben.',
+    fields: [
+        {k:'enabled', l:'Auto-Role aktiv', t:'select', o:['true','false']}
+    ]
+  }
+};
+
+let activeSec = 'antispam';
+
+function loadSec(key) {
+  activeSec = key;
+  document.querySelectorAll('.mod-nav-item').forEach(i => i.classList.toggle('active', i.getAttribute('onclick').includes(key)));
+  
+  const def = DEFS[key] || { icon:'⚙️', label: key.toUpperCase(), desc: '', fields: [] };
+  const mKey = KEY_MAP[key] || key;
+  const mCfg = CFG[mKey] || {};
+  
+  document.getElementById('cIcon').textContent = def.icon;
+  document.getElementById('cLabel').textContent = def.label;
+  document.getElementById('cDesc').textContent = def.desc;
+  document.getElementById('cEnabled').checked = !!mCfg.enabled;
+  
+  const pc = document.getElementById('cParams');
+  pc.innerHTML = '';
+  
+  def.fields.forEach(f => {
+    const val = mCfg[f.k] ?? '';
+    const div = document.createElement('div');
+    div.className = 'param-card';
+    let input = '';
+    if(f.t === 'select') {
+      input = `<select class="cfg-select" style="width:100%" data-key="${f.k}" onchange="showSaveBar()">
+        ${f.o.map(o => `<option value="${o}" ${val.toString()===o?'selected':''}>${o}</option>`).join('')}
+      </select>`;
+    } else {
+      input = `<input class="cfg-input" type="${f.t}" style="width:100%;max-width:100%" data-key="${f.k}" value="${val}" oninput="showSaveBar()">`;
+    }
+    div.innerHTML = `<label class="param-label">${f.l}</label>${input}`;
+    pc.appendChild(div);
+  });
+}
+
+async function saveConfig() {
+  const mKey = KEY_MAP[activeSec];
+  const payload = { [mKey]: { enabled: document.getElementById('cEnabled').checked } };
+  document.querySelectorAll('#cParams [data-key]').forEach(el => {
+    let v = el.value;
+    if(el.type === 'number') v = Number(v);
+    if(v === 'true') v = true; if(v === 'false') v = false;
+    payload[mKey][el.dataset.key] = v;
+  });
+  
+  try {
+    const r = await fetch(`/api/guild/${GID}/config`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+    });
+    if((await r.json()).ok) markSaved();
+  } catch(e) { markError(); }
+}
+
+loadSec('antispam');
+</script>
+{% endblock %}
+{% endblock %}

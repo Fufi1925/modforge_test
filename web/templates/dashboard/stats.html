@@ -1,0 +1,243 @@
+{% extends "dashboard/_base.html" %}
+{% set active = 'stats' %}
+{% block title %}Statistiken{% endblock %}
+{% block page_title %}📊 Server-Statistiken{% endblock %}
+{% block page_desc %}Echte Daten aus deinem Server{% endblock %}
+{% block content %}
+
+<!-- TOP STATS -->
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:18px">
+  {% for val,label,color in [
+    (humans,'👤 Menschen','var(--vl)'),
+    (bots,'🤖 Bots','var(--cl)'),
+    (online,'🟢 Online','var(--green)'),
+    (boosts,'💎 Boosts','#f472b6'),
+    (cases_count,'📋 Cases','var(--orange)'),
+    (warns_count,'⚠️ Warns','var(--amberl)'),
+    (roles_count,'🏷️ Rollen','var(--p2)'),
+    (text_ch,'💬 Text','var(--fg)'),
+    (voice_ch,'🔊 Voice','var(--fg)'),
+    (log_channels_count,'📢 Logs','var(--cl)'),
+  ] %}
+  <div class="ov-stat" style="animation:scaleIn .25s ease {{ loop.index*0.03 }}s both">
+    <div class="ov-sv" style="color:{{ color }}">{{ val }}</div>
+    <div class="ov-sl">{{ label }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- SECURITY OVERVIEW -->
+<div class="db-card" style="padding:14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div style="width:40px;height:40px;border-radius:10px;background:{% if active_mods>=4 %}rgba(74,222,128,0.1){% elif active_mods>=2 %}rgba(245,158,11,0.1){% else %}rgba(239,68,68,0.1){% endif %};display:flex;align-items:center;justify-content:center;font-size:1.1rem">🛡️</div>
+    <div><div style="font-weight:700;font-size:.85rem">{{ active_mods }}/6 Security-Module aktiv</div><div style="font-size:.65rem;color:var(--muted)">Security Level: {{ sec_level }}</div></div>
+  </div>
+  <a href="/dashboard/{{ guild.id }}/security" class="btn-glass btn-sm btn-glass-ghost">Konfigurieren →</a>
+</div>
+
+<!-- MEMBER GROWTH CHART (kumulativ seit Server-Erstellung) -->
+<div class="db-card" style="padding:16px;margin-bottom:14px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <div>
+      <div style="font-weight:700;font-size:.85rem;display:flex;align-items:center;gap:6px">
+        📈 Member-Wachstum
+        <span style="font-size:.6rem;color:var(--muted);font-weight:400">
+          seit
+          {% if server_created_ts %}
+            <span class="ts" data-ts="{{ server_created_ts }}">Server-Erstellung</span>
+          {% else %}Server-Erstellung{% endif %}
+        </span>
+      </div>
+      <div style="font-size:.65rem;color:var(--muted);margin-top:2px">
+        Kumulative Joins der aktuellen Mitglieder. (Verlassene Member sind nicht enthalten – Discord liefert diese Daten nicht.)
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <span class="badge badge-purple" style="font-family:'Geist Mono',monospace">{{ growth_total or humans + bots }} Member</span>
+    </div>
+  </div>
+  {% if growth_data and growth_data|length > 1 %}
+    <canvas id="growthChart" height="120"></canvas>
+  {% else %}
+    <div style="text-align:center;padding:32px;color:var(--muted);font-size:.78rem">
+      Noch zu wenig Daten – ist der Bot bereits gestartet und hat die Mitglieder gecacht?
+    </div>
+  {% endif %}
+</div>
+
+<!-- CHARTS ROW -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+
+  <!-- CASES PER DAY CHART -->
+  <div class="db-card" style="padding:16px">
+    <div style="font-weight:700;font-size:.85rem;margin-bottom:12px;display:flex;align-items:center;gap:6px">
+      📈 Cases pro Tag <span style="font-size:.6rem;color:var(--muted);font-weight:400">(letzte 7 Tage)</span>
+    </div>
+    <canvas id="casesChart" height="180"></canvas>
+  </div>
+
+  <!-- TOP MODERATORS -->
+  <div class="db-card" style="padding:16px">
+    <div style="font-weight:700;font-size:.85rem;margin-bottom:12px">🏆 Top-Moderatoren</div>
+    {% if top_mods %}
+    {% for mod in top_mods %}
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;{% if not loop.last %}border-bottom:1px solid rgba(255,255,255,0.03){% endif %};animation:fadeUp .2s ease {{ loop.index*0.05 }}s both">
+      <span style="font-weight:900;font-size:.85rem;min-width:22px;color:{% if loop.index==1 %}#fbbf24{% elif loop.index==2 %}#94a3b8{% elif loop.index==3 %}#cd7f32{% else %}var(--muted){% endif %}">{{ loop.index }}.</span>
+      <span style="flex:1;font-size:.78rem;font-family:'Geist Mono',monospace;color:var(--fg)">&lt;@{{ mod.id }}&gt;</span>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span style="font-family:'Geist Mono',monospace;font-size:.82rem;font-weight:700;color:var(--cl)">{{ mod.count }}</span>
+        <div style="width:{{ (mod.count / (top_mods[0].count if top_mods[0].count else 1) * 60)|int }}px;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--v),var(--cl))"></div>
+      </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div style="text-align:center;padding:24px;color:var(--muted);font-size:.78rem">Noch keine Moderation-Daten</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- CASE TYPES -->
+<div class="db-card" style="padding:16px;margin-bottom:14px">
+  <div style="font-weight:700;font-size:.85rem;margin-bottom:14px">📋 Cases nach Typ</div>
+  {% if case_types %}
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+    {% for typ, count in case_types.items() %}
+    <div style="text-align:center;padding:12px 18px;border-radius:12px;background:{% if typ=='ban' %}rgba(239,68,68,0.06){% elif typ=='warn' %}rgba(234,179,8,0.06){% elif typ=='kick' %}rgba(251,146,60,0.06){% else %}rgba(56,189,248,0.05){% endif %};border:1px solid {% if typ=='ban' %}rgba(239,68,68,0.1){% elif typ=='warn' %}rgba(234,179,8,0.1){% elif typ=='kick' %}rgba(251,146,60,0.1){% else %}rgba(56,189,248,0.08){% endif %};min-width:70px;animation:scaleIn .3s ease {{ loop.index*0.05 }}s both">
+      <div style="font-size:1.5rem;font-weight:900;color:{% if typ=='ban' %}var(--red){% elif typ=='warn' %}var(--amberl){% elif typ=='kick' %}var(--orange){% else %}var(--cl){% endif %}">{{ count }}</div>
+      <div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:2px">{{ typ }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  <!-- Case type bar -->
+  {% set total_cases = case_types.values()|sum %}
+  {% if total_cases > 0 %}
+  <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;gap:1px">
+    {% for typ, count in case_types.items() %}
+    <div style="flex:{{ count }};background:{% if typ=='ban' %}var(--red){% elif typ=='warn' %}var(--amberl){% elif typ=='kick' %}var(--orange){% else %}var(--cl){% endif %};border-radius:2px" title="{{ typ }}: {{ count }} ({{ ((count/total_cases)*100)|round|int }}%)"></div>
+    {% endfor %}
+  </div>
+  <div style="display:flex;justify-content:space-between;margin-top:4px">
+    {% for typ, count in case_types.items() %}
+    <span style="font-size:.55rem;color:var(--muted)">{{ typ }} {{ ((count/total_cases)*100)|round|int }}%</span>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% else %}
+  <div style="text-align:center;padding:20px;color:var(--muted);font-size:.78rem">Noch keine Cases</div>
+  {% endif %}
+</div>
+
+<!-- QUICK LINKS -->
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px">
+  <a href="/dashboard/{{ guild.id }}/cases" class="db-card" style="padding:14px;text-decoration:none;text-align:center"><div style="font-size:1.2rem;margin-bottom:4px">📋</div><div style="font-size:.75rem;font-weight:600;color:var(--fg)">Cases</div></a>
+  <a href="/dashboard/{{ guild.id }}/members" class="db-card" style="padding:14px;text-decoration:none;text-align:center"><div style="font-size:1.2rem;margin-bottom:4px">👥</div><div style="font-size:.75rem;font-weight:600;color:var(--fg)">Members</div></a>
+  <a href="/dashboard/{{ guild.id }}/livefeed" class="db-card" style="padding:14px;text-decoration:none;text-align:center"><div style="font-size:1.2rem;margin-bottom:4px">⚡</div><div style="font-size:.75rem;font-weight:600;color:var(--fg)">Live-Feed</div></a>
+  <a href="/dashboard/{{ guild.id }}/security" class="db-card" style="padding:14px;text-decoration:none;text-align:center"><div style="font-size:1.2rem;margin-bottom:4px">🛡️</div><div style="font-size:.75rem;font-weight:600;color:var(--fg)">Security</div></a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+// Cases pro Tag (Balken)
+const ctx = document.getElementById('casesChart');
+if (ctx) {
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: {{ days_labels|tojson }},
+      datasets: [{
+        label: 'Cases',
+        data: {{ days_data|tojson }},
+        backgroundColor: 'rgba(59,130,246,0.3)',
+        borderColor: 'rgba(59,130,246,0.7)',
+        borderWidth: 1,
+        borderRadius: 8,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#64748b', font: { size: 10 } } },
+        x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 } } }
+      },
+      animation: { duration: 1000, easing: 'easeOutQuart' },
+      responsive: true,
+    }
+  });
+}
+
+// Member-Wachstum (kumulative Area-Linie seit Server-Erstellung)
+const growthCtx = document.getElementById('growthChart');
+const growthLabels = {{ growth_labels|tojson }};
+const growthData   = {{ growth_data|tojson }};
+if (growthCtx && growthLabels.length > 1) {
+  const grad = growthCtx.getContext('2d').createLinearGradient(0, 0, 0, 240);
+  grad.addColorStop(0, 'rgba(59,130,246,0.45)');
+  grad.addColorStop(1, 'rgba(59,130,246,0.00)');
+
+  new Chart(growthCtx, {
+    type: 'line',
+    data: {
+      labels: growthLabels,
+      datasets: [{
+        label: 'Mitglieder',
+        data: growthData,
+        fill: true,
+        backgroundColor: grad,
+        borderColor: 'rgba(167,139,250,0.95)',
+        borderWidth: 2,
+        tension: 0.32,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: '#fff',
+        pointHoverBorderColor: 'rgba(167,139,250,1)',
+        pointHoverBorderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { intersect: false, mode: 'index' },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(10,10,26,0.95)',
+          titleColor: '#fff',
+          bodyColor: '#a78bfa',
+          borderColor: 'rgba(59,130,246,0.4)',
+          borderWidth: 1,
+          padding: 10,
+          displayColors: false,
+          callbacks: {
+            title: (items) => items[0].label,
+            label:  (item) => `  ${item.parsed.y.toLocaleString('de-DE')} Mitglieder`,
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: 'rgba(255,255,255,0.03)' },
+          ticks: { color: '#64748b', font: { size: 10 }, precision: 0 }
+        },
+        x: {
+          grid: { display: false },
+          ticks: {
+            color: '#64748b', font: { size: 10 }, maxRotation: 0, autoSkip: true,
+            maxTicksLimit: 10,
+          }
+        }
+      },
+      animation: { duration: 900, easing: 'easeOutQuart' },
+    }
+  });
+}
+
+// "ts" → lesbares Datum (für den Server-Erstellungs-Hint)
+document.querySelectorAll('.ts').forEach(el => {
+  const ts = Number(el.dataset.ts || 0);
+  if (ts) el.textContent = new Date(ts * 1000).toLocaleDateString('de-DE',
+    { year: 'numeric', month: 'long', day: 'numeric' });
+});
+</script>
+{% endblock %}

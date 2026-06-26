@@ -1,0 +1,693 @@
+{% extends "dashboard/_base.html" %}
+{% set active = 'autonick' %}
+{% block title %}Auto-Nickname{% endblock %}
+{% block page_title %}📝 Auto-Nickname{% endblock %}
+{% block page_desc %}Setzt Nicknames automatisch nach Rolle – rate-limit-sicher, mit Ausnahme-Rollen.{% endblock %}
+
+{% block head %}
+<style>
+/* ── Stats ─────────────────────────────────────────────────────── */
+.an-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+/* ── Rule Card ──────────────────────────────────────────────────── */
+.rule-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 15px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  transition: background .15s, border-color .15s;
+}
+.rule-card:hover {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(59,130,246,0.25);
+}
+.rule-card.top-rule { border-top: 2px solid #4ade80; }
+
+.rule-num {
+  font-size: .65rem;
+  color: var(--muted);
+  font-family: 'Geist Mono', monospace;
+  font-weight: 700;
+  min-width: 22px;
+  text-align: center;
+}
+
+.rule-move {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.rule-move button {
+  width: 24px; height: 20px;
+  border-radius: 5px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: .55rem;
+  cursor: pointer;
+  transition: .15s;
+  display: flex; align-items: center; justify-content: center;
+  font-family: inherit;
+  line-height: 1;
+}
+.rule-move button:hover:not(:disabled) {
+  background: rgba(59,130,246,0.15);
+  color: var(--vl);
+  border-color: rgba(59,130,246,0.3);
+}
+.rule-move button:disabled { opacity: .2; cursor: not-allowed; }
+
+.rule-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.role-pill {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: .65rem;
+  font-weight: 700;
+  background: rgba(59,130,246,0.08);
+  color: var(--vl);
+  border: 1px solid rgba(59,130,246,0.18);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.rule-preview-txt {
+  font-family: 'Geist Mono', monospace;
+  font-size: .8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+/* ── Exempt ─────────────────────────────────────────────────────── */
+.exempt-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 34px;
+  margin-top: 10px;
+  align-items: center;
+}
+.exempt-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(239,68,68,0.07);
+  border: 1px solid rgba(239,68,68,0.18);
+  color: #f87171;
+  font-size: .7rem;
+  font-weight: 700;
+}
+.exempt-tag button {
+  background: none; border: none;
+  color: #f87171; cursor: pointer;
+  font-size: .8rem; padding: 0; margin: 0;
+  opacity: .6; transition: opacity .15s;
+  line-height: 1; font-family: inherit;
+  display: flex; align-items: center;
+}
+.exempt-tag button:hover { opacity: 1; }
+
+/* ── Nick Preview ───────────────────────────────────────────────── */
+.nick-preview-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 11px 15px;
+  border-radius: 12px;
+  background: rgba(59,130,246,0.04);
+  border: 1px solid rgba(59,130,246,0.1);
+  flex-wrap: wrap;
+}
+.nick-preview-result {
+  font-family: 'Geist Mono', monospace;
+  font-size: .92rem;
+  color: var(--cl);
+}
+.nick-len-badge {
+  padding: 3px 9px;
+  border-radius: 7px;
+  font-size: .65rem;
+  font-weight: 800;
+  font-family: 'Geist Mono', monospace;
+  background: rgba(255,255,255,0.04);
+  color: var(--muted);
+  transition: .2s;
+  white-space: nowrap;
+}
+.nick-len-badge.over {
+  background: rgba(239,68,68,0.15);
+  color: #f87171;
+}
+
+/* ── Progress ───────────────────────────────────────────────────── */
+.progress-wrap {
+  display: none;
+  margin-top: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(59,130,246,0.05);
+  border: 1px solid rgba(59,130,246,0.12);
+}
+.progress-wrap.show { display: block; }
+.progress-track {
+  height: 5px;
+  border-radius: 99px;
+  background: rgba(255,255,255,0.06);
+  overflow: hidden;
+  margin: 6px 0 4px;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--v), var(--cl));
+  width: 0%;
+  transition: width .3s ease;
+}
+
+/* ── Form Grid ──────────────────────────────────────────────────── */
+.form-g3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+@media(max-width: 680px) { .form-g3 { grid-template-columns: 1fr; } }
+
+.field-lbl {
+  font-size: .62rem;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+/* ── Info Box ───────────────────────────────────────────────────── */
+.info-box {
+  padding: 13px 15px;
+  border-radius: 13px;
+  background: rgba(59,130,246,0.03);
+  border: 1px solid rgba(59,130,246,0.09);
+  font-size: .76rem;
+  color: var(--muted);
+  line-height: 1.75;
+  margin-bottom: 16px;
+}
+.info-box code {
+  background: rgba(255,255,255,0.06);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: 'Geist Mono', monospace;
+  color: var(--vl);
+  font-size: .82em;
+}
+
+/* ── Empty State ────────────────────────────────────────────────── */
+.rules-empty {
+  text-align: center;
+  padding: 36px 20px;
+  color: var(--muted);
+  font-size: .82rem;
+  width: 100%;
+}
+.rules-empty-icon { font-size: 2.2rem; margin-bottom: 8px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── STATS ── #}
+<div class="an-stats">
+  <div class="ov-stat">
+    <div class="ov-sv" style="color:{% if enabled %}#4ade80{% else %}var(--muted){% endif %}">
+      {% if enabled %}AN{% else %}AUS{% endif %}
+    </div>
+    <div class="ov-sl">System</div>
+  </div>
+  <div class="ov-stat">
+    <div class="ov-sv" style="color:var(--vl)">{{ rules | length }}</div>
+    <div class="ov-sl">Regeln</div>
+  </div>
+  <div class="ov-stat">
+    <div class="ov-sv" style="color:var(--cl)">{{ guild_roles | length }}</div>
+    <div class="ov-sl">Rollen</div>
+  </div>
+  <div class="ov-stat">
+    <div class="ov-sv" style="color:{% if exempt_roles %}#fb923c{% else %}var(--muted){% endif %}">
+      {{ exempt_roles | length }}
+    </div>
+    <div class="ov-sl">Ausnahmen</div>
+  </div>
+</div>
+
+{# ── SYSTEM TOGGLE ── #}
+<div class="cfg-row" style="margin-bottom:14px;{% if enabled %}background:rgba(74,222,128,0.03);border-color:rgba(74,222,128,0.12){% endif %}">
+  <div>
+    <span class="cfg-label">Auto-Nickname System</span>
+    <div class="cfg-desc">
+      Setzt Nicknames automatisch wenn ein Mitglied eine Rolle bekommt oder bereits hat.
+      Beim Speichern einer neuen Regel werden alle bestehenden Mitglieder mit dieser
+      Rolle sofort und rate-limit-sicher angepasst.
+    </div>
+  </div>
+  <label class="toggle">
+    <input type="checkbox" id="anOn" {% if enabled %}checked{% endif %} onchange="toggleAN()">
+    <span class="slider"></span>
+  </label>
+</div>
+
+{# ── EXEMPT ROLES ── #}
+<div class="db-card" style="padding:16px;margin-bottom:16px">
+  <div style="font-weight:700;font-size:.85rem;margin-bottom:3px">🛡️ Ausnahme-Rollen</div>
+  <div class="cfg-desc" style="margin-bottom:12px">
+    Mitglieder mit diesen Rollen werden <strong>niemals</strong> vom Auto-Nickname-System
+    angefasst. Perfekt für Admins, Moderatoren oder andere privilegierte Rollen.
+    Wird in der Datenbank gespeichert.
+  </div>
+
+  <div style="display:flex;gap:8px;align-items:center">
+    <select class="cfg-select" id="exemptRoleSelect" style="flex:1;min-width:0">
+      <option value="">— Ausnahme-Rolle wählen —</option>
+      {% for r in guild_roles %}
+      <option value="{{ r.id }}" data-name="{{ r.name | e }}">@{{ r.name }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn-glass btn-glass-primary btn-sm" onclick="addExempt()" style="flex-shrink:0">
+      ➕ Hinzufügen
+    </button>
+  </div>
+
+  <div class="exempt-list" id="exemptList">
+    {% for er in exempt_roles %}
+    <span class="exempt-tag" data-id="{{ er.id }}">
+      🛡️ @{{ er.name }}
+      <button onclick="removeExempt('{{ er.id }}', '{{ er.name | e }}')" title="Ausnahme entfernen">✕</button>
+    </span>
+    {% else %}
+    <span style="font-size:.72rem;color:var(--muted)" id="exemptEmptyNote">
+      Keine Ausnahmen konfiguriert.
+    </span>
+    {% endfor %}
+  </div>
+</div>
+
+{# ── INFO ── #}
+<div class="info-box">
+  <strong style="color:var(--fg)">ℹ️ Funktionsweise:</strong><br>
+  Rolle <code>Member</code> · Prefix <code style="color:#4ade80">BeK | </code>
+  → User <strong style="color:#fff">Vexo</strong>
+  erhält Nickname <strong style="color:var(--cl)">BeK | Vexo</strong>.<br>
+  Rolle entfernt → Nickname zurückgesetzt.
+  <strong style="color:var(--fg)">Erste passende Regel gewinnt</strong> (oben = höchste Priorität).
+  Limit: <code>32</code> Zeichen. Ausnahme-Rollen werden niemals verändert.
+</div>
+
+{# ── ADD RULE ── #}
+<div class="db-card" style="padding:16px;margin-bottom:16px">
+  <div style="font-weight:700;font-size:.86rem;margin-bottom:13px">➕ Neue Regel erstellen</div>
+
+  <div class="form-g3">
+    <div>
+      <label class="field-lbl" for="nrRole">Trigger-Rolle</label>
+      <select class="cfg-select" id="nrRole" style="width:100%" onchange="previewNick()">
+        <option value="">— Rolle wählen —</option>
+        {% for r in guild_roles %}
+        <option value="{{ r.id }}" data-name="{{ r.name | e }}">@{{ r.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="field-lbl" for="nrPrefix">Prefix <span style="opacity:.5;font-style:italic">(vor dem Namen)</span></label>
+      <input class="cfg-input" id="nrPrefix" placeholder="BeK | "
+             style="width:100%;max-width:100%" oninput="previewNick()" maxlength="28">
+    </div>
+    <div>
+      <label class="field-lbl" for="nrSuffix">Suffix <span style="opacity:.5;font-style:italic">(nach dem Namen)</span></label>
+      <input class="cfg-input" id="nrSuffix" placeholder=" | Staff"
+             style="width:100%;max-width:100%" oninput="previewNick()" maxlength="28">
+    </div>
+  </div>
+
+  <div class="nick-preview-box">
+    <div>
+      <div class="field-lbl" style="margin-bottom:3px">Vorschau</div>
+      <div class="nick-preview-result" id="nickPreviewResult">Vexo</div>
+    </div>
+    <span class="nick-len-badge" id="nickLenBadge">5 / 32</span>
+  </div>
+
+  {# Fortschrittsbalken – erscheint nach Speichern #}
+  <div class="progress-wrap" id="progressWrap">
+    <div style="font-size:.72rem;color:var(--vl);font-weight:700" id="progressLabel">
+      Wende auf bestehende Mitglieder an…
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div style="font-size:.6rem;color:var(--muted);margin-top:2px" id="progressSub"></div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:10px;margin-top:13px;flex-wrap:wrap">
+    <button class="btn-glass btn-glass-primary btn-sm" onclick="addRule()" id="addRuleBtn">
+      ➕ Speichern &amp; sofort auf alle anwenden
+    </button>
+    <span style="font-size:.63rem;color:var(--muted)">
+      Alle Mitglieder mit dieser Rolle erhalten den Nickname sofort (rate-limit-sicher, 2/Sek).
+    </span>
+  </div>
+</div>
+
+{# ── RULES LIST ── #}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
+  <span style="font-weight:700;font-size:.86rem">
+    📋 Aktive Regeln
+    <span style="color:var(--muted);font-weight:500;font-size:.75rem">({{ rules | length }})</span>
+  </span>
+  <span style="font-size:.6rem;color:var(--muted)">↕ Oben = höchste Priorität</span>
+</div>
+
+<div id="rulesList" style="display:flex;flex-direction:column;gap:8px">
+{% for rule in rules %}
+  {% set rname = rule.role_name or 'Unbekannte Rolle' %}
+  <div class="rule-card {% if loop.first %}top-rule{% endif %}" data-idx="{{ loop.index0 }}">
+
+    <div class="rule-num">#{{ loop.index }}</div>
+
+    <div class="rule-move">
+      <button onclick="moveRule({{ loop.index0 }}, -1)"
+              {% if loop.first %}disabled{% endif %}
+              title="Priorität erhöhen">▲</button>
+      <button onclick="moveRule({{ loop.index0 }}, 1)"
+              {% if loop.last %}disabled{% endif %}
+              title="Priorität verringern">▼</button>
+    </div>
+
+    <div class="rule-body">
+      <span class="role-pill">@{{ rname }}</span>
+      <span style="color:var(--muted);font-size:.7rem;flex-shrink:0">→</span>
+      <span class="rule-preview-txt">
+        {% if rule.prefix %}<span style="color:#4ade80">{{ rule.prefix }}</span>{% endif %}
+        <span style="color:var(--fg)">Name</span>
+        {% if rule.suffix %}<span style="color:#fcd34d">{{ rule.suffix }}</span>{% endif %}
+      </span>
+      {% if loop.first %}
+      <span style="font-size:.58rem;color:#4ade80;font-weight:700;flex-shrink:0">★ Prio 1</span>
+      {% endif %}
+    </div>
+
+    <button class="btn-glass btn-sm btn-glass-danger"
+            onclick="delRule({{ loop.index0 }})"
+            title="Regel löschen"
+            style="padding:5px 10px!important;flex-shrink:0">🗑️</button>
+  </div>
+{% else %}
+  <div class="rule-card">
+    <div class="rules-empty">
+      <div class="rules-empty-icon">📝</div>
+      Noch keine Regeln vorhanden – erstelle oben deine erste Regel.
+    </div>
+  </div>
+{% endfor %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ─── Konstanten ───────────────────────────────────────────────────
+const GID = "{{ guild.id }}";
+
+// Lokale Exempt-Liste (in sync mit Server/DB)
+let exemptRoles = [
+  {% for er in exempt_roles %}
+  { id: "{{ er.id }}", name: {{ er.name | tojson }} }{% if not loop.last %},{% endif %}
+  {% endfor %}
+];
+
+// ─── Hilfsfunktionen ─────────────────────────────────────────────
+function esc(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+async function apiAN(body) {
+  try {
+    const r = await fetch(`/api/guild/${GID}/autonick`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body),
+    });
+    if (!r.ok) {
+      const txt = await r.text();
+      throw new Error(`HTTP ${r.status}: ${txt}`);
+    }
+    return await r.json();
+  } catch (e) {
+    console.error('[autonick API]', e);
+    return { ok: false, error: e.message };
+  }
+}
+
+// ─── Nick Vorschau ────────────────────────────────────────────────
+function previewNick() {
+  const p    = document.getElementById('nrPrefix').value;
+  const s    = document.getElementById('nrSuffix').value;
+  const res  = `${p}Vexo${s}`;
+  const len  = res.length;
+  const over = len > 32;
+
+  document.getElementById('nickPreviewResult').textContent = res;
+
+  const badge = document.getElementById('nickLenBadge');
+  badge.textContent = `${len} / 32${over ? ' ❌' : ''}`;
+  badge.classList.toggle('over', over);
+}
+
+// ─── Fortschrittsbalken ───────────────────────────────────────────
+function showProgress(applied, total, skipped, failed) {
+  const wrap = document.getElementById('progressWrap');
+  const fill = document.getElementById('progressFill');
+  const lbl  = document.getElementById('progressLabel');
+  const sub  = document.getElementById('progressSub');
+
+  wrap.classList.add('show');
+  const pct = total > 0 ? Math.round((applied / total) * 100) : 100;
+  fill.style.width = pct + '%';
+  lbl.textContent  = total > 0
+    ? `${applied} / ${total} Mitglieder verarbeitet`
+    : 'Fertig';
+  sub.textContent  =
+    `✅ ${applied} geändert  ·  ⏭️ ${skipped} übersprungen  ·  ❌ ${failed} Fehler`;
+}
+
+function hideProgress() {
+  document.getElementById('progressWrap').classList.remove('show');
+}
+
+// ─── Toggle ───────────────────────────────────────────────────────
+async function toggleAN() {
+  const on = document.getElementById('anOn').checked;
+  const d  = await apiAN({ action: 'toggle', enabled: on });
+  if (d.ok) {
+    showToast(on ? '✅ Auto-Nickname aktiviert' : '⏸️ Deaktiviert', 'ok');
+  } else {
+    showToast('❌ ' + (d.error || 'Fehler'), 'err');
+    // Checkbox zurücksetzen bei Fehler
+    document.getElementById('anOn').checked = !on;
+  }
+}
+
+// ─── Regel hinzufügen ─────────────────────────────────────────────
+async function addRule() {
+  const sel    = document.getElementById('nrRole');
+  const roleId = sel.value;
+  const name   = sel.options[sel.selectedIndex]?.dataset?.name || '';
+  const prefix = document.getElementById('nrPrefix').value;
+  const suffix = document.getElementById('nrSuffix').value;
+
+  // Validierung
+  if (!roleId) {
+    showToast('❌ Bitte eine Rolle auswählen!', 'err');
+    return;
+  }
+  if (!prefix && !suffix) {
+    showToast('❌ Prefix oder Suffix wird benötigt!', 'err');
+    return;
+  }
+  if ((prefix + 'MaximumDiscordNameLength' + suffix).length > 32) {
+    if (!confirm(
+      'Bei sehr langen Nutzernamen könnte der Nickname > 32 Zeichen werden ' +
+      '(Discord schneidet dann ab).\nTrotzdem speichern?'
+    )) return;
+  }
+
+  const btn = document.getElementById('addRuleBtn');
+  btn.disabled    = true;
+  btn.textContent = '⏳ Speichert & wendet an…';
+  hideProgress();
+
+  const d = await apiAN({
+    action:    'add',
+    role_id:   roleId,
+    role_name: name,
+    prefix,
+    suffix,
+  });
+
+  btn.disabled    = false;
+  btn.textContent = '➕ Speichern & sofort auf alle anwenden';
+
+  if (!d.ok) {
+    showToast('❌ ' + (d.error || 'Fehler beim Speichern'), 'err');
+    return;
+  }
+
+  // Fortschritt anzeigen
+  if (typeof d.total === 'number' && d.total > 0) {
+    showProgress(d.applied ?? 0, d.total, d.skipped ?? 0, d.failed ?? 0);
+    showToast(
+      `✅ Gespeichert – ${d.applied}/${d.total} Nicknames sofort gesetzt`,
+      'ok'
+    );
+  } else {
+    showToast('✅ Regel gespeichert', 'ok');
+  }
+
+  setTimeout(() => location.reload(), 1500);
+}
+
+// ─── Regel löschen ────────────────────────────────────────────────
+async function delRule(idx) {
+  if (!confirm(
+    `Regel #${idx + 1} wirklich löschen?\n` +
+    `Mitglieder behalten ihren aktuellen Nickname.`
+  )) return;
+
+  const d = await apiAN({ action: 'delete', index: idx });
+  if (d.ok) {
+    showToast('🗑️ Regel gelöscht', 'ok');
+    setTimeout(() => location.reload(), 450);
+  } else {
+    showToast('❌ ' + (d.error || 'Fehler'), 'err');
+  }
+}
+
+// ─── Regel verschieben ────────────────────────────────────────────
+async function moveRule(idx, dir) {
+  const list  = document.getElementById('rulesList');
+  const cards = [...list.querySelectorAll('.rule-card[data-idx]')];
+  const total = cards.length;
+  const ni    = idx + dir;
+
+  if (ni < 0 || ni >= total) return;
+
+  // Optimistisches UI – sofort tauschen
+  if (dir === -1) list.insertBefore(cards[idx], cards[ni]);
+  else            list.insertBefore(cards[ni], cards[idx]);
+
+  // Neue Reihenfolge ermitteln
+  const newOrder = [...list.querySelectorAll('.rule-card[data-idx]')]
+    .map(el => parseInt(el.dataset.idx, 10));
+
+  const d = await apiAN({ action: 'reorder', order: newOrder });
+  if (d.ok) {
+    showToast('↕️ Reihenfolge gespeichert', 'ok');
+    setTimeout(() => location.reload(), 400);
+  } else {
+    showToast('❌ Fehler beim Speichern der Reihenfolge', 'err');
+    setTimeout(() => location.reload(), 300); // Revert via Reload
+  }
+}
+
+// ─── Ausnahme hinzufügen ─────────────────────────────────────────
+async function addExempt() {
+  const sel    = document.getElementById('exemptRoleSelect');
+  const roleId = sel.value;
+  const name   = sel.options[sel.selectedIndex]?.dataset?.name || roleId;
+
+  if (!roleId) {
+    showToast('❌ Bitte eine Rolle auswählen!', 'err');
+    return;
+  }
+  if (exemptRoles.some(r => r.id === roleId)) {
+    showToast('ℹ️ Diese Rolle ist bereits als Ausnahme eingetragen.', 'info');
+    return;
+  }
+
+  const d = await apiAN({ action: 'add_exempt', role_id: roleId, role_name: name });
+  if (!d.ok) {
+    showToast('❌ ' + (d.error || 'Fehler'), 'err');
+    return;
+  }
+
+  exemptRoles.push({ id: roleId, name });
+  renderExemptList();
+  sel.value = '';
+  showToast(`🛡️ @${esc(name)} als Ausnahme gespeichert`, 'ok');
+}
+
+// ─── Ausnahme entfernen ──────────────────────────────────────────
+async function removeExempt(roleId, name) {
+  if (!confirm(
+    `Ausnahme für @${name} entfernen?\n` +
+    `Mitglieder mit dieser Rolle werden wieder vom System erfasst.`
+  )) return;
+
+  const d = await apiAN({ action: 'remove_exempt', role_id: roleId });
+  if (!d.ok) {
+    showToast('❌ ' + (d.error || 'Fehler'), 'err');
+    return;
+  }
+
+  exemptRoles = exemptRoles.filter(r => r.id !== roleId);
+  renderExemptList();
+  showToast(`✅ Ausnahme für @${esc(name)} entfernt`, 'ok');
+}
+
+// ─── Ausnahmen rendern ───────────────────────────────────────────
+function renderExemptList() {
+  const list = document.getElementById('exemptList');
+  if (!exemptRoles.length) {
+    list.innerHTML =
+      '<span style="font-size:.72rem;color:var(--muted)">Keine Ausnahmen konfiguriert.</span>';
+    return;
+  }
+  list.innerHTML = exemptRoles.map(r => `
+    <span class="exempt-tag" data-id="${esc(r.id)}">
+      🛡️ @${esc(r.name)}
+      <button onclick="removeExempt('${esc(r.id)}', '${esc(r.name)}')"
+              title="Ausnahme entfernen">✕</button>
+    </span>
+  `).join('');
+}
+
+// ─── Init ────────────────────────────────────────────────────────
+previewNick();
+window._dirty = false;
+</script>
+{% endblock %}

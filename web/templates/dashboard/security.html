@@ -1,0 +1,736 @@
+{% extends "dashboard/_base.html" %}
+{% set active = 'security' %}
+{% block title %}Security Center{% endblock %}
+{% block page_title %}🛡️ Security Center{% endblock %}
+{% block page_desc %}{{ active_count }} / {{ total_count }} Module aktiv · Security Level {{ security_level }}{% endblock %}
+
+{% block head %}
+<style>
+/* ── Stats Row ──────────────────────────────────────────────────── */
+.sec-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+/* ── Level Selector ─────────────────────────────────────────────── */
+.level-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.level-btn {
+  flex: 1;
+  min-width: 120px;
+  padding: 12px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.02);
+  color: var(--muted);
+  font-size: .75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s;
+  text-align: center;
+  font-family: inherit;
+  position: relative;
+  overflow: hidden;
+}
+.level-btn:hover {
+  border-color: rgba(59,130,246,0.3);
+  background: rgba(59,130,246,0.05);
+  color: var(--fg);
+}
+.level-btn.active {
+  border-color: var(--v);
+  background: rgba(59,130,246,0.1);
+  color: #fff;
+  box-shadow: 0 0 0 1px var(--v);
+}
+.level-btn .lvl-num {
+  font-size: 1.1rem;
+  font-family: 'Geist Mono', monospace;
+  display: block;
+  margin-bottom: 2px;
+}
+.level-btn .lvl-label {
+  font-size: .58rem;
+  opacity: .7;
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.level-btn .lvl-badge {
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+}
+
+/* ── Module Card ────────────────────────────────────────────────── */
+.mod-card {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: border-color .15s, box-shadow .15s;
+  margin-bottom: 10px;
+}
+.mod-card:hover {
+  border-color: rgba(59,130,246,0.2);
+}
+.mod-card.enabled {
+  border-color: rgba(74,222,128,0.2);
+  box-shadow: 0 0 0 1px rgba(74,222,128,0.08);
+}
+
+.mod-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 18px;
+  cursor: pointer;
+  user-select: none;
+}
+.mod-header:hover { background: rgba(255,255,255,0.01); }
+
+.mod-icon-wrap {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  transition: .15s;
+}
+.mod-card.enabled .mod-icon-wrap {
+  background: rgba(74,222,128,0.08);
+  border-color: rgba(74,222,128,0.2);
+}
+
+.mod-info { flex: 1; min-width: 0; }
+.mod-title {
+  font-size: .9rem;
+  font-weight: 800;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.mod-desc {
+  font-size: .7rem;
+  color: var(--muted);
+  margin-top: 2px;
+  line-height: 1.5;
+}
+
+.mod-status-pill {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: .58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  flex-shrink: 0;
+}
+.mod-status-pill.on {
+  background: rgba(34,197,94,0.12);
+  color: #4ade80;
+}
+.mod-status-pill.off {
+  background: rgba(100,116,139,0.1);
+  color: var(--muted);
+}
+
+.mod-expand-btn {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  font-size: .7rem;
+  transition: .15s;
+  flex-shrink: 0;
+}
+.mod-expand-btn:hover {
+  background: rgba(59,130,246,0.1);
+  border-color: rgba(59,130,246,0.3);
+  color: var(--vl);
+}
+
+/* ── Module Body (params) ───────────────────────────────────────── */
+.mod-body {
+  padding: 0 18px 16px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+  display: none;
+}
+.mod-body.open { display: block; }
+
+.param-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.param-field { display: flex; flex-direction: column; gap: 4px; }
+.param-lbl {
+  font-size: .62rem;
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.param-unit {
+  font-size: .55rem;
+  color: rgba(255,255,255,0.2);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* ── Toggle Param (kleiner Toggle für Params) ───────────────────── */
+.param-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  transition: .15s;
+}
+.param-toggle-row:hover { border-color: rgba(59,130,246,0.2); }
+.param-toggle-lbl { font-size: .74rem; color: var(--fg); }
+
+/* ── Number Input with Range ────────────────────────────────────── */
+.param-num-wrap {
+  position: relative;
+}
+.param-num-wrap input[type="number"] {
+  padding-right: 50px;
+}
+.param-num-unit {
+  position: absolute;
+  right: 10px; top: 50%;
+  transform: translateY(-50%);
+  font-size: .6rem;
+  color: var(--muted);
+  pointer-events: none;
+  font-family: 'Geist Mono', monospace;
+}
+
+/* ── Punishment Badge Select ────────────────────────────────────── */
+.punishment-grid {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.pun-opt {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: .68rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.03);
+  color: var(--muted);
+  transition: .15s;
+  font-family: inherit;
+}
+.pun-opt:hover { border-color: rgba(59,130,246,0.3); color: var(--fg); }
+.pun-opt.sel-warn    { background: rgba(234,179,8,0.12);  color: #fcd34d; border-color: rgba(234,179,8,0.3); }
+.pun-opt.sel-timeout { background: rgba(167,139,250,0.1); color: #c4b5fd; border-color: rgba(167,139,250,0.3); }
+.pun-opt.sel-kick    { background: rgba(249,115,22,0.1);  color: #fdba74; border-color: rgba(249,115,22,0.3); }
+.pun-opt.sel-ban     { background: rgba(239,68,68,0.12);  color: #fca5a5; border-color: rgba(239,68,68,0.3); }
+.pun-opt.sel-log     { background: rgba(56,189,248,0.08); color: #7dd3fc; border-color: rgba(56,189,248,0.2); }
+
+/* ── Divider in mod-body ────────────────────────────────────────── */
+.param-section-title {
+  font-size: .62rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-weight: 700;
+  margin: 14px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.param-section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--border), transparent);
+}
+
+/* ── Quick Actions ──────────────────────────────────────────────── */
+.quick-actions {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+/* ── Whitelist hint ─────────────────────────────────────────────── */
+.wl-hint {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(59,130,246,0.04);
+  border: 1px solid rgba(59,130,246,0.1);
+  font-size: .72rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+@media(max-width: 600px) {
+  .level-btn { min-width: 80px; }
+  .param-grid { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── STATS ── #}
+<div class="sec-stats">
+  <div class="ov-stat">
+    <div class="ov-sv" style="color:#4ade80">{{ active_count }}</div>
+    <div class="ov-sl">✅ Aktiv</div>
+  </div>
+  <div class="ov-stat">
+    <div class="ov-sv" style="color:var(--muted)">{{ total_count - active_count }}</div>
+    <div class="ov-sl">○ Inaktiv</div>
+  </div>
+  <div class="ov-stat">
+    <div class="ov-sv" style="color:var(--vl)">{{ security_level }}</div>
+    <div class="ov-sl">🛡️ Level</div>
+  </div>
+  <div class="ov-stat">
+    <div class="ov-sv" style="color:var(--cl)">{{ wl_count }}</div>
+    <div class="ov-sl">🔐 Whitelist</div>
+  </div>
+  <div class="ov-stat">
+    <div class="ov-sv" style="color:var(--amberl)">
+      {{ ((active_count / total_count) * 100) | int }}%
+    </div>
+    <div class="ov-sl">📊 Abdeckung</div>
+  </div>
+</div>
+
+{# ── QUICK ACTIONS ── #}
+<div class="quick-actions">
+  <button class="btn-glass btn-glass-primary btn-sm" onclick="enableAll()">✅ Alle aktivieren</button>
+  <button class="btn-glass btn-glass-ghost btn-sm" onclick="disableAll()">○ Alle deaktivieren</button>
+  <button class="btn-glass btn-glass-ghost btn-sm" onclick="expandAll()">↓ Alle ausklappen</button>
+  <button class="btn-glass btn-glass-ghost btn-sm" onclick="collapseAll()">↑ Alle einklappen</button>
+  <a href="/dashboard/{{ guild.id }}/whitelist" class="btn-glass btn-glass-ghost btn-sm" style="text-decoration:none">
+    🔐 Whitelist ({{ wl_count }})
+  </a>
+</div>
+
+<div class="db-grid" style="margin-bottom:18px">
+  <div class="db-card" style="padding:16px">
+    <div class="db-card-header"><span class="db-card-title">🩺 Rechte-Check</span><a class="btn-glass btn-sm" href="/dashboard/{{ guild.id }}/audit">Audit öffnen</a></div>
+    <div style="display:grid;gap:8px">
+      {% for c in perm_checks|default([]) %}
+      <div class="cfg-row" style="margin:0">
+        <div><span class="cfg-label">{% if c.ok %}✅{% else %}❌{% endif %} {{ c.label }}</span><div class="cfg-desc">{{ 'OK' if c.ok else c.fix }}</div></div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="db-card" style="padding:16px">
+    <div class="db-card-header"><span class="db-card-title">🚨 Emergency Mode</span></div>
+    <p style="color:var(--muted);font-size:.82rem;line-height:1.6">Sperrt Kanäle, setzt AntiRaid maximal und informiert den Owner.</p>
+    <button class="btn-glass btn-glass-danger" onclick="runEmergencyMode()">🚨 Emergency aktivieren</button>
+    <div style="margin-top:12px;font-size:.72rem;color:var(--muted)">Gefährliche Rollen: {{ dangerous_roles|default([])|length }}</div>
+  </div>
+</div>
+
+{# ── SECURITY LEVEL ── #}
+<div style="margin-bottom:18px">
+  <div style="font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;
+              letter-spacing:.06em;margin-bottom:8px">
+    🛡️ Security Level
+  </div>
+  <div class="level-bar">
+    {% set level_info = [
+      (0, '0', 'Aus',       'Kein Schutz',        '#64748b'),
+      (1, '1', 'Niedrig',   'Basis-Schutz',        '#4ade80'),
+      (2, '2', 'Mittel',    'Empfohlen',           '#fbbf24'),
+      (3, '3', 'Hoch',      'Maximaler Schutz',    '#f87171'),
+    ] %}
+    {% for lvl, num, name, hint, color in level_info %}
+    <button class="level-btn {% if security_level == lvl %}active{% endif %}"
+            onclick="setLevel({{ lvl }})"
+            id="lvlBtn{{ lvl }}">
+      <span class="lvl-num" style="color:{% if security_level == lvl %}{{ color }}{% endif %}">{{ num }}</span>
+      <span style="font-size:.8rem;font-weight:800;color:{% if security_level == lvl %}#fff{% else %}var(--fg){% endif %}">{{ name }}</span>
+      <span class="lvl-label">{{ hint }}</span>
+      {% if security_level == lvl %}
+      <span class="lvl-badge" style="background:{{ color }}"></span>
+      {% endif %}
+    </button>
+    {% endfor %}
+  </div>
+</div>
+
+{# ── WHITELIST HINT ── #}
+{% if wl_count == 0 %}
+<div class="wl-hint">
+  <span>💡</span>
+  <span>
+    <strong style="color:var(--fg)">Tipp:</strong>
+    Richte eine Whitelist ein um Admins und vertrauenswürdige Bots vom Security-System auszunehmen.
+    <a href="/dashboard/{{ guild.id }}/whitelist" style="color:var(--vl)">→ Whitelist einrichten</a>
+  </span>
+</div>
+{% endif %}
+
+{# ── MODULE CARDS ── #}
+<div id="moduleList">
+{% for mod in modules %}
+<div class="mod-card {% if mod.enabled %}enabled{% endif %}" id="card-{{ mod.key }}">
+
+  {# ── Header ── #}
+  <div class="mod-header" onclick="toggleExpand('{{ mod.key }}')">
+
+    {# Icon #}
+    <div class="mod-icon-wrap" style="{% if mod.enabled %}color:{{ mod.color }}{% endif %}">
+      {{ mod.icon }}
+    </div>
+
+    {# Info #}
+    <div class="mod-info">
+      <div class="mod-title">
+        {{ mod.label }}
+        <span class="mod-status-pill {% if mod.enabled %}on{% else %}off{% endif %}"
+              id="pill-{{ mod.key }}">
+          {% if mod.enabled %}● AN{% else %}○ AUS{% endif %}
+        </span>
+      </div>
+      <div class="mod-desc">{{ mod.desc }}</div>
+    </div>
+
+    {# Toggle #}
+    <label class="toggle" onclick="event.stopPropagation()">
+      <input type="checkbox"
+             id="toggle-{{ mod.key }}"
+             data-mod="{{ mod.key }}"
+             data-field="enabled"
+             {% if mod.enabled %}checked{% endif %}
+             onchange="onModToggle('{{ mod.key }}', this.checked)">
+      <span class="slider"></span>
+    </label>
+
+    {# Expand arrow #}
+    {% if mod.params %}
+    <div class="mod-expand-btn" id="arrow-{{ mod.key }}">▼</div>
+    {% endif %}
+  </div>
+
+  {# ── Body / Params ── #}
+  {% if mod.params %}
+  <div class="mod-body" id="body-{{ mod.key }}">
+
+    <div class="param-section-title">⚙️ Einstellungen</div>
+
+    {# Punishment zuerst als spezielle Darstellung #}
+    {% set pun_param = mod.params | selectattr('key', 'equalto', 'punishment') | first | default(None) %}
+    {% if pun_param %}
+    <div style="margin-bottom:12px">
+      <div class="param-lbl" style="margin-bottom:6px">Bestrafung</div>
+      <div class="punishment-grid" id="pun-{{ mod.key }}">
+        {% for opt in pun_param.options %}
+        <button class="pun-opt {% if pun_param.value == opt %}sel-{{ opt }}{% endif %}"
+                data-mod="{{ mod.key }}"
+                data-field="punishment"
+                data-value="{{ opt }}"
+                onclick="selectPunishment('{{ mod.key }}', '{{ opt }}', this)">
+          {{ {'warn':'⚠️ Verwarnung','timeout':'⏳ Timeout','kick':'👢 Kick','ban':'🔨 Bann','log':'📋 Nur loggen'}.get(opt, opt) }}
+        </button>
+        {% endfor %}
+      </div>
+      <input type="hidden"
+             id="pun-val-{{ mod.key }}"
+             data-mod="{{ mod.key }}"
+             data-field="punishment"
+             value="{{ pun_param.value }}">
+    </div>
+    {% endif %}
+
+    <div class="param-grid">
+    {% for p in mod.params %}
+    {% if p.key != 'punishment' %}
+
+      {# Toggle Parameter #}
+      {% if p.type == 'toggle' %}
+      <div style="grid-column: span 1">
+        <div class="param-toggle-row">
+          <span class="param-toggle-lbl">{{ p.label }}</span>
+          <label class="toggle" style="transform:scale(0.85)">
+            <input type="checkbox"
+                   data-mod="{{ mod.key }}"
+                   data-field="{{ p.key }}"
+                   {% if p.value %}checked{% endif %}
+                   onchange="onParamChange()">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      {# Number Parameter #}
+      {% elif p.type == 'number' %}
+      <div class="param-field">
+        <div class="param-lbl">
+          {{ p.label }}
+          {% if p.unit %}<span class="param-unit">{{ p.unit }}</span>{% endif %}
+        </div>
+        <div class="param-num-wrap">
+          <input type="number"
+                 class="cfg-input"
+                 data-mod="{{ mod.key }}"
+                 data-field="{{ p.key }}"
+                 value="{{ p.value }}"
+                 min="{{ p.min }}"
+                 max="{{ p.max }}"
+                 style="width:100%;max-width:100%;font-size:.78rem"
+                 oninput="onParamChange()">
+          {% if p.unit %}
+          <span class="param-num-unit">{{ p.unit }}</span>
+          {% endif %}
+        </div>
+        {# Mini range hint #}
+        <div style="font-size:.55rem;color:var(--muted);text-align:right">
+          {{ p.min }} – {{ p.max }}
+        </div>
+      </div>
+
+      {# Select Parameter (non-punishment) #}
+      {% elif p.type == 'select' %}
+      <div class="param-field">
+        <div class="param-lbl">{{ p.label }}</div>
+        <select class="cfg-select"
+                data-mod="{{ mod.key }}"
+                data-field="{{ p.key }}"
+                style="width:100%;font-size:.78rem"
+                onchange="onParamChange()">
+          {% for opt in p.options %}
+          <option value="{{ opt }}" {% if p.value | string == opt | string %}selected{% endif %}>
+            {{ opt }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+    {% endif %}
+    {% endfor %}
+    </div>
+
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ─── State ────────────────────────────────────────────────────────
+const GID = "{{ guild.id }}";
+let pendingChanges = {};   // { module_key: { field: value, ... } }
+let saveTimeout   = null;
+
+// ─── API ──────────────────────────────────────────────────────────
+async function apiConfig(payload) {
+  try {
+    const r = await fetch(`/api/guild/${GID}/config`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  } catch (e) {
+    console.error('[security API]', e);
+    return { ok: false, error: e.message };
+  }
+}
+
+// ─── Collect all current values ───────────────────────────────────
+function collectAll() {
+  const payload = {};
+  document.querySelectorAll('[data-mod][data-field]').forEach(el => {
+    const mod   = el.dataset.mod;
+    const field = el.dataset.field;
+    if (!mod || !field) return;
+    if (el.tagName === 'INPUT' && el.type === 'hidden') return; // punishment handled separately
+    if (!payload[mod]) payload[mod] = {};
+
+    if (el.type === 'checkbox') {
+      payload[mod][field] = el.checked;
+    } else if (el.type === 'number') {
+      payload[mod][field] = Number(el.value) || 0;
+    } else {
+      payload[mod][field] = el.value;
+    }
+  });
+  // Punishment hidden inputs
+  document.querySelectorAll('input[type="hidden"][data-mod][data-field]').forEach(el => {
+    const mod   = el.dataset.mod;
+    const field = el.dataset.field;
+    if (!payload[mod]) payload[mod] = {};
+    payload[mod][field] = el.value;
+  });
+  return payload;
+}
+
+// ─── Auto-Save (debounced) ────────────────────────────────────────
+function scheduleSave() {
+  showSaveBar();
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(saveAll, 1500); // Auto-save nach 1.5s
+}
+
+async function saveAll() {
+  clearTimeout(saveTimeout);
+  const payload = collectAll();
+  const d = await apiConfig(payload);
+  if (d.ok) {
+    markSaved();
+  } else {
+    showToast('❌ Fehler: ' + (d.error || '?'), 'err');
+  }
+}
+
+// ─── Module Toggle ────────────────────────────────────────────────
+function onModToggle(key, enabled) {
+  const card = document.getElementById('card-' + key);
+  const pill = document.getElementById('pill-' + key);
+
+  if (card) {
+    card.classList.toggle('enabled', enabled);
+  }
+  if (pill) {
+    pill.className = 'mod-status-pill ' + (enabled ? 'on' : 'off');
+    pill.textContent = enabled ? '● AN' : '○ AUS';
+  }
+
+  scheduleSave();
+}
+
+// ─── Param Change ─────────────────────────────────────────────────
+function onParamChange() {
+  scheduleSave();
+}
+
+// ─── Punishment Select ────────────────────────────────────────────
+function selectPunishment(modKey, value, btn) {
+  // Reset all buttons in this group
+  document.querySelectorAll(`#pun-${modKey} .pun-opt`).forEach(b => {
+    b.className = 'pun-opt';
+  });
+  // Set selected
+  btn.className = `pun-opt sel-${value}`;
+  // Update hidden input
+  const hidden = document.getElementById(`pun-val-${modKey}`);
+  if (hidden) hidden.value = value;
+  scheduleSave();
+}
+
+// ─── Expand / Collapse ───────────────────────────────────────────
+function toggleExpand(key) {
+  const body  = document.getElementById('body-' + key);
+  const arrow = document.getElementById('arrow-' + key);
+  if (!body) return;
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  if (arrow) arrow.textContent = isOpen ? '▼' : '▲';
+}
+
+function expandAll() {
+  document.querySelectorAll('.mod-body').forEach(b => b.classList.add('open'));
+  document.querySelectorAll('[id^="arrow-"]').forEach(a => a.textContent = '▲');
+}
+
+function collapseAll() {
+  document.querySelectorAll('.mod-body').forEach(b => b.classList.remove('open'));
+  document.querySelectorAll('[id^="arrow-"]').forEach(a => a.textContent = '▼');
+}
+
+// ─── Enable / Disable All ────────────────────────────────────────
+async function enableAll() {
+  document.querySelectorAll('[data-field="enabled"]').forEach(cb => {
+    if (cb.type === 'checkbox' && !cb.checked) {
+      cb.checked = true;
+      onModToggle(cb.dataset.mod, true);
+    }
+  });
+  await saveAll();
+  showToast('✅ Alle Module aktiviert', 'ok');
+}
+
+async function disableAll() {
+  if (!confirm('Alle Security-Module deaktivieren?')) return;
+  document.querySelectorAll('[data-field="enabled"]').forEach(cb => {
+    if (cb.type === 'checkbox' && cb.checked) {
+      cb.checked = false;
+      onModToggle(cb.dataset.mod, false);
+    }
+  });
+  await saveAll();
+  showToast('⏸️ Alle Module deaktiviert', 'ok');
+}
+
+// ─── Security Level ───────────────────────────────────────────────
+async function setLevel(lvl) {
+  const colors = ['#64748b', '#4ade80', '#fbbf24', '#f87171'];
+
+  // UI update
+  document.querySelectorAll('.level-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i === lvl);
+    const numEl = btn.querySelector('.lvl-num');
+    if (numEl) numEl.style.color = i === lvl ? colors[i] : '';
+  });
+
+  const d = await apiConfig({ _security_level: lvl });
+  if (d.ok) {
+    showToast(`🛡️ Security Level ${lvl} gesetzt`, 'ok');
+  } else {
+    showToast('❌ Fehler beim Speichern', 'err');
+  }
+}
+
+// ─── Init ────────────────────────────────────────────────────────
+// Enabled Module beim Start aufklappen
+document.querySelectorAll('.mod-card.enabled').forEach(card => {
+  const key  = card.id.replace('card-', '');
+  const body = document.getElementById('body-' + key);
+  if (body) {
+    body.classList.add('open');
+    const arrow = document.getElementById('arrow-' + key);
+    if (arrow) arrow.textContent = '▲';
+  }
+});
+
+window._dirty = false;
+</script>
+{% endblock %}

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="de" data-theme="purple">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard – ModForge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;700&family=Outfit:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+<style>
+  body{background:var(--bg);color:var(--fg);min-height:100vh;padding:0;margin:0}
+  .dash-header{padding:20px 32px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);background:rgba(8,8,20,0.95);backdrop-filter:blur(20px);position:sticky;top:0;z-index:100}
+  .server-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;padding:24px 32px;max-width:1200px;margin:0 auto}
+  .server-card{background:rgba(255,255,255,0.035);border:1px solid var(--border);border-radius:16px;padding:20px;cursor:pointer;transition:all .2s;text-decoration:none;display:block;position:relative;overflow:hidden;color:inherit}
+  .server-card:hover{border-color:rgba(96,165,250,0.3);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,0.2)}
+  .server-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--v),var(--c));opacity:0;transition:.2s}
+  .server-card:hover::after{opacity:1}.server-card.no-bot{opacity:.7}.server-card.no-bot:hover{opacity:1}
+  .sc-icon{width:48px;height:48px;border-radius:14px;object-fit:cover;flex-shrink:0}.sc-fallback{width:48px;height:48px;border-radius:14px;background:rgba(59,130,246,0.15);display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:800;color:var(--vl);flex-shrink:0}
+  .sc-badge{position:absolute;top:14px;right:14px;padding:3px 10px;border-radius:999px;font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em}.sc-badge.on{background:rgba(74,222,128,0.1);color:var(--green);border:1px solid rgba(74,222,128,0.2)}.sc-badge.off{background:rgba(148,163,184,0.06);color:var(--muted);border:1px solid rgba(148,163,184,0.12)}.section-label{padding:20px 32px 8px;max-width:1200px;margin:0 auto}
+</style>
+</head>
+<body>
+  <div class="dash-header">
+    <div style="display:flex;align-items:center;gap:10px"><div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--v),var(--p));display:flex;align-items:center;justify-content:center;font-size:.85rem">🛡️</div><div><div style="font-weight:800;font-size:.95rem">ModForge</div><div style="font-size:.65rem;color:var(--muted)">Dashboard</div></div></div>
+    <div style="display:flex;align-items:center;gap:10px"><a href="/dashboard/refresh" class="btn-glass btn-sm btn-glass-ghost" title="Server-Liste aktualisieren">🔄</a><img src="{{ user.avatar_url }}" style="width:30px;height:30px;border-radius:50%"><span style="font-size:.8rem;font-weight:600">{{ user.username }}</span><a href="/logout" class="btn-glass btn-sm btn-glass-danger" style="font-size:.7rem">Logout</a></div>
+  </div>
+  {% if bot_servers %}<div class="section-label"><h2 style="font-size:1rem;font-weight:700;display:flex;align-items:center;gap:8px"><span style="color:var(--green)">●</span> Bot aktiv ({{ bot_servers|length }})</h2></div><div class="server-grid">{% for s in bot_servers %}<a href="/dashboard/{{ s.id }}" class="server-card"><div class="sc-badge on">✅ Aktiv</div><div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">{% if s.icon and 'avatars' not in s.icon %}<img src="{{ s.icon }}" class="sc-icon">{% else %}<div class="sc-fallback">{{ s.name[0] }}</div>{% endif %}<div><div style="font-weight:700;font-size:.95rem">{{ s.name }}</div><div style="font-size:.65rem;color:var(--muted);font-family:'Geist Mono',monospace">{{ s.id }}</div></div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><span style="padding:3px 8px;border-radius:999px;background:var(--glass2);font-size:.62rem;color:var(--muted)">🛡️ Security</span><span style="padding:3px 8px;border-radius:999px;background:var(--glass2);font-size:.62rem;color:var(--muted)">📋 Cases</span><span style="padding:3px 8px;border-radius:999px;background:var(--glass2);font-size:.62rem;color:var(--muted)">⚙️ Config</span></div></a>{% endfor %}</div>{% endif %}
+  {% if other_servers %}<div class="section-label"><h2 style="font-size:1rem;font-weight:700;display:flex;align-items:center;gap:8px"><span style="color:var(--muted)">●</span> Bot einladen ({{ other_servers|length }})</h2></div><div class="server-grid">{% for s in other_servers %}<a href="https://discord.com/oauth2/authorize?client_id={{ cid }}&scope=bot+applications.commands&permissions=8&guild_id={{ s.id }}" class="server-card no-bot" target="_blank"><div class="sc-badge off">Bot einladen →</div><div style="display:flex;align-items:center;gap:12px">{% if s.icon and 'avatars' not in s.icon %}<img src="{{ s.icon }}" class="sc-icon">{% else %}<div class="sc-fallback">{{ s.name[0] }}</div>{% endif %}<div><div style="font-weight:700;font-size:.95rem">{{ s.name }}</div><div style="font-size:.65rem;color:var(--muted)">Klicke um den Bot einzuladen</div></div></div></a>{% endfor %}</div>{% endif %}
+  {% if not servers %}<div style="text-align:center;padding:80px 20px"><div style="font-size:4rem;margin-bottom:16px">🤖</div><h2 style="font-size:1.3rem;font-weight:800;margin-bottom:8px">Kein Server gefunden</h2><p style="color:var(--muted);margin-bottom:24px">Du hast auf keinem Server Admin- oder Server-verwalten-Rechte.</p><a href="/dashboard/login?force=1" class="btn-glass btn-glass-primary btn-lg">Neu anmelden</a></div>{% endif %}
+<script>(function(){const t=localStorage.getItem('mf-theme');if(t)document.documentElement.setAttribute('data-theme',t)})()</script>
+</body></html>

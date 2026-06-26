@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} – ModForge{% endblock %}
+{% block content %}
+<div class="container" style="max-width:800px;padding-top:40px;padding-bottom:80px">
+  <div class="sec-head reveal" style="text-align:left;margin-bottom:40px">
+    <div class="sec-badge" style="margin-bottom:12px">⚖️ {{ title }}</div>
+    <h1 style="font-size:clamp(1.6rem,3.5vw,2.4rem);font-weight:800;margin-bottom:8px">Rechtliche Informationen</h1>
+    <p style="color:var(--muted)">Stand: {{ today }}</p>
+  </div>
+
+  <div class="reveal" style="padding:28px;border-radius:var(--radius);background:var(--glass2);border:1px solid var(--border)">
+    <div style="color:var(--muted);font-size:.88rem;line-height:1.8">
+      <h2 style="font-size:1.1rem;font-weight:700;color:var(--fg);margin-bottom:12px">Nutzungsbedingungen</h2>
+      <p style="margin-bottom:16px">Die vollständigen Nutzungsbedingungen findest du unter <a href="/terms" style="color:var(--vl)">Terms of Service</a>.</p>
+
+      <h2 style="font-size:1.1rem;font-weight:700;color:var(--fg);margin-bottom:12px">Datenschutz</h2>
+      <p style="margin-bottom:16px">Unsere Datenschutzerklärung findest du unter <a href="/privacy" style="color:var(--vl)">Privacy Policy</a>.</p>
+
+      <h2 style="font-size:1.1rem;font-weight:700;color:var(--fg);margin-bottom:12px">Impressum</h2>
+      <p style="margin-bottom:16px">Das Impressum findest du unter <a href="/imprint" style="color:var(--vl)">Impressum</a>.</p>
+
+      <h2 style="font-size:1.1rem;font-weight:700;color:var(--fg);margin-bottom:12px">Kontakt</h2>
+      <p>Bei rechtlichen Fragen kontaktiere uns über unseren <a href="https://discord.gg/CYqH8QTmR3" target="_blank" style="color:var(--vl)">Discord Support-Server</a>.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

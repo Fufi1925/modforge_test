@@ -1,0 +1,562 @@
+{% extends "dashboard/_base.html" %}
+{% set active = 'livefeed' %}
+{% block title %}Live-Feed{% endblock %}
+{% block page_title %}⚡ Live Mod-Feed{% endblock %}
+{% block page_desc %}Verfolge Sicherheits- und Moderationsevents in Echtzeit, filtere nach Kategorien, pausiere den Datenstrom und lade Protokolle herunter.{% endblock %}
+
+{% block head %}
+<style>
+  /* ── Stats ── */
+  .lf-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .lf-stat-card {
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.02);
+    text-align: center;
+  }
+  .lf-stat-num {
+    font-size: 1.4rem;
+    font-weight: 800;
+    font-family: 'Geist Mono', monospace;
+  }
+  .lf-stat-lbl {
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* ── Toolbar & Filters ── */
+  .lf-toolbar {
+    background: rgba(255,255,255,0.015);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .lf-filter-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  
+  /* Filter pills */
+  .filter-pill {
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .filter-pill:hover, .filter-pill.active {
+    background: rgba(96,165,250,0.1);
+    color: var(--fg);
+    border-color: rgba(96,165,250,0.3);
+  }
+
+  /* Feed list */
+  .lf-card {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.01);
+    overflow: hidden;
+  }
+  .lf-header-bar {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,0.015);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .lf-list {
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 6px 0;
+  }
+  .lf-list::-webkit-scrollbar {
+    width: 4px;
+  }
+  .lf-list::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px;
+  }
+
+  .lf-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .lf-item:last-child {
+    border-bottom: none;
+  }
+  .lf-item:hover {
+    background: rgba(96, 165, 250, 0.04);
+  }
+  .lf-item.new {
+    animation: lfNew .4s ease;
+  }
+  @keyframes lfNew {
+    from { background: rgba(59,130,246,0.1); transform: translateX(-4px); }
+    to { background: transparent; transform: none; }
+  }
+
+  /* Badges */
+  .lf-badge {
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: .6rem;
+    font-weight: 800;
+    font-family: 'Geist Mono', monospace;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    border: 1px solid transparent;
+    text-align: center;
+    min-width: 65px;
+  }
+  .lf-badge.case, .lf-badge.ban, .lf-badge.kick { background: rgba(239, 68, 68, 0.12); color: #fca5a5; border-color: rgba(239, 68, 68, 0.2); }
+  .lf-badge.warn, .lf-badge.timeout, .lf-badge.mute { background: rgba(245, 158, 11, 0.12); color: #fcd34d; border-color: rgba(245, 158, 11, 0.2); }
+  .lf-badge.join, .lf-badge.leave { background: rgba(34, 197, 94, 0.12); color: #86efac; border-color: rgba(34, 197, 94, 0.2); }
+  .lf-badge.spam, .lf-badge.automod { background: rgba(59, 130, 246, 0.12); color: #93c5fd; border-color: rgba(59, 130, 246, 0.2); }
+  .lf-badge.voice { background: rgba(34, 211, 238, 0.12); color: #67e8f9; border-color: rgba(34, 211, 238, 0.2); }
+  .lf-badge.backup { background: rgba(167, 139, 250, 0.12); color: #c4b5fd; border-color: rgba(167, 139, 250, 0.2); }
+  .lf-badge.security, .lf-badge.nuke, .lf-badge.raid { background: rgba(239, 68, 68, 0.15); color: #ff8b8b; border-color: rgba(239, 68, 68, 0.3); font-weight: 900; }
+
+  /* Pause dot */
+  .lf-pause-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .lf-pause-dot.live { background: var(--green); animation: pulse 1.5s infinite; }
+  .lf-pause-dot.paused { background: var(--amberl); }
+
+  .lf-empty {
+    padding: 40px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.82rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- LIVE STATS -->
+<div class="lf-stats">
+  <div class="lf-stat-card">
+    <div class="lf-stat-num" style="color:var(--green)" id="s-total">{{ activities|length }}</div>
+    <div class="lf-stat-lbl">Gesamt Events</div>
+  </div>
+  <div class="lf-stat-card">
+    <div class="lf-stat-num" style="color:#f87171" id="s-security">0</div>
+    <div class="lf-stat-lbl">Security / Nuke</div>
+  </div>
+  <div class="lf-stat-card">
+    <div class="lf-stat-num" style="color:#fbbf24" id="s-cases">0</div>
+    <div class="lf-stat-lbl">Cases / Strafen</div>
+  </div>
+  <div class="lf-stat-card">
+    <div class="lf-stat-num" style="color:var(--cl)" id="s-automod">0</div>
+    <div class="lf-stat-lbl">AutoMod / Spam</div>
+  </div>
+  <div class="lf-stat-card">
+    <div class="lf-stat-num" style="color:#a78bfa" id="s-joins">0</div>
+    <div class="lf-stat-lbl">Joins / Leaves</div>
+  </div>
+</div>
+
+<!-- TOOLBAR / FILTER PANEL -->
+<div class="lf-toolbar">
+  <div style="position:relative; width:100%;">
+    <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none;">🔍</span>
+    <input type="text" id="lf-search" class="cfg-input ignore-dirty" placeholder="Suche in Live-Events nach User, ID, Text..." style="width:100%; max-width:100%; padding-left:36px; border-radius:12px; box-sizing:border-box" oninput="applyFilter()">
+  </div>
+
+  <div class="lf-filter-row" style="justify-content: space-between;">
+    <div class="lf-filter-row" id="filterPillsContainer">
+      <button class="filter-pill active" data-filter="all" onclick="setFilter('all', this)">✨ Alle Events</button>
+      <button class="filter-pill" data-filter="security" onclick="setFilter('security', this)">🛡️ Security</button>
+      <button class="filter-pill" data-filter="automod" onclick="setFilter('automod', this)">🤖 AutoMod</button>
+      <button class="filter-pill" data-filter="case" onclick="setFilter('case', this)">📋 Cases</button>
+      <button class="filter-pill" data-filter="ticket" onclick="setFilter('ticket', this)">🎫 Tickets</button>
+      <button class="filter-pill" data-filter="voice" onclick="setFilter('voice', this)">🎤 Voice</button>
+      <button class="filter-pill" data-filter="backup" onclick="setFilter('backup', this)">💾 Backup</button>
+    </div>
+
+    <div style="display:flex; gap:8px;">
+      <button class="btn-glass btn-sm" id="lf-pause-btn" onclick="togglePause()">
+        <span class="lf-pause-dot live" id="lf-dot" style="margin-right:6px;"></span>
+        <span id="lf-pause-text">Stream: Live</span>
+      </button>
+      <button class="btn-glass btn-sm" onclick="exportLivefeedJSON()">💾 Export JSON</button>
+      <button class="btn-glass btn-sm btn-glass-ghost" onclick="clearFeed()">🗑️ Leeren</button>
+    </div>
+  </div>
+</div>
+
+<!-- EVENT FEED CARD -->
+<div class="lf-card">
+  <div class="lf-header-bar">
+    <span style="font-weight:700; font-size:.85rem; color:#fff;">📡 ModForge Event-Stream</span>
+    <span style="font-size:.65rem; color:var(--muted);" id="lf-update">Warte auf erste Eventübertragung...</span>
+  </div>
+  
+  <div class="lf-list" id="lf-list">
+    {% for a in activities %}
+      {% set k = a.kind|lower %}
+      {% set badge_cls = 'case' if k in ('case', 'ban', 'kick', 'warn', 'timeout', 'mute') else 'join' if k in ('join', 'leave') else 'spam' if k in ('spam', 'automod') else 'voice' if k=='voice' else 'backup' if k=='backup' else 'security' if k in ('security', 'nuke', 'raid') else 'ready' %}
+      
+      <div class="lf-item" 
+           data-kind="{{ k }}" 
+           data-text="{{ a.text|lower if a.text else '' }}" 
+           data-ts="{{ a.ts }}"
+           data-user-name="{{ a.user_name|default('') }}"
+           data-user-id="{{ a.user_id|default('') }}"
+           data-guild-name="{{ a.guild_name|default('') }}"
+           data-guild-id="{{ a.guild_id|default('') }}"
+           data-extra="{{ a.extra|tojson if a.extra else '{}' }}"
+           onclick="showEventDetail(this)">
+           
+        <span class="lf-badge {{ badge_cls }}">{{ a.kind|upper }}</span>
+        
+        <div style="flex:1; min-width:0;">
+          <div class="lf-text" style="color:#fff;">{{ a.text }}</div>
+          <div class="lf-ts">{{ a.ts }}</div>
+        </div>
+      </div>
+    {% endfor %}
+    
+    {% if not activities %}
+      <div class="lf-empty" id="lf-empty">Warte auf Live-Events…<br>Der Stream aktualisiert sich automatisch alle 3 Sekunden.</div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const GID = "{{ guild.id }}";
+
+let isPaused = false;
+let seenIds = new Set();
+let stats = { total: 0, security: 0, cases: 0, automod: 0, joins: 0 };
+let currentFilter = 'all';
+let bufferedEvents = [];
+
+// Track loaded events locally for JSON export
+let loadedEvents = [];
+
+// Init loaded items from DOM
+document.querySelectorAll('.lf-item').forEach(el => {
+  const kind = el.dataset.kind;
+  const text = el.querySelector('.lf-text').textContent;
+  const ts = el.dataset.ts;
+  
+  const id = ts + kind;
+  seenIds.add(id);
+  
+  const eventObj = {
+    kind: kind,
+    text: text,
+    ts: ts,
+    user_name: el.dataset.userName,
+    user_id: el.dataset.userId,
+    guild_name: el.dataset.guildName,
+    guild_id: el.dataset.guildId,
+    extra: JSON.parse(el.dataset.extra || '{}')
+  };
+  loadedEvents.push(eventObj);
+
+  stats.total++;
+  if (['security', 'nuke', 'raid'].includes(kind)) stats.security++;
+  if (['case', 'ban', 'kick', 'warn', 'timeout', 'mute'].includes(kind)) stats.cases++;
+  if (['spam', 'automod'].includes(kind)) stats.automod++;
+  if (['join', 'leave'].includes(kind)) stats.joins++;
+});
+updateStatsUI();
+
+function updateStats() {
+  stats = { total: 0, security: 0, cases: 0, automod: 0, joins: 0 };
+  loadedEvents.forEach(e => {
+    stats.total++;
+    const k = e.kind;
+    if (['security', 'nuke', 'raid'].includes(k)) stats.security++;
+    if (['case', 'ban', 'kick', 'warn', 'timeout', 'mute'].includes(k)) stats.cases++;
+    if (['spam', 'automod'].includes(k)) stats.automod++;
+    if (['join', 'leave'].includes(k)) stats.joins++;
+  });
+  updateStatsUI();
+}
+
+function updateStatsUI() {
+  document.getElementById('s-total').textContent = stats.total;
+  document.getElementById('s-security').textContent = stats.security;
+  document.getElementById('s-cases').textContent = stats.cases;
+  document.getElementById('s-automod').textContent = stats.automod;
+  document.getElementById('s-joins').textContent = stats.joins;
+}
+
+function getBadgeClass(k) {
+  if (['case', 'ban', 'kick', 'warn', 'timeout', 'mute'].includes(k)) return 'case';
+  if (['join', 'leave'].includes(k)) return 'join';
+  if (['spam', 'automod'].includes(k)) return 'spam';
+  if (k === 'voice') return 'voice';
+  if (k === 'backup') return 'backup';
+  if (['security', 'nuke', 'raid'].includes(k)) return 'security';
+  return 'ready';
+}
+
+function createItemDOM(a) {
+  const k = (a.kind || 'info').toLowerCase();
+  const div = document.createElement('div');
+  div.className = 'lf-item new';
+  div.dataset.kind = k;
+  div.dataset.text = (a.text || '').toLowerCase();
+  div.dataset.ts = a.ts || '';
+  div.dataset.userName = a.user_name || '';
+  div.dataset.userId = a.user_id || '';
+  div.dataset.guildName = a.guild_name || '';
+  div.dataset.guildId = a.guild_id || '';
+  div.dataset.extra = JSON.stringify(a.extra || {});
+  div.onclick = function() { showEventDetail(div); };
+  
+  const badgeCls = getBadgeClass(k);
+  
+  div.innerHTML = `
+    <span class="lf-badge ${badgeCls}">${k.toUpperCase()}</span>
+    <div style="flex:1; min-width:0;">
+      <div class="lf-text" style="color:#fff;">${a.text || ''}</div>
+      <div class="lf-ts">${a.ts || ''}</div>
+    </div>
+  `;
+  return div;
+}
+
+async function fetchActivity() {
+  try {
+    const r = await fetch(`/api/guild/${GID}/activity`);
+    const data = await r.json();
+    if (!Array.isArray(data) || !data.length) return;
+
+    const list = document.getElementById('lf-list');
+    const empty = document.getElementById('lf-empty');
+
+    let newCount = 0;
+    // Iterate in reverse to add oldest first
+    for (const a of data.reverse()) {
+      const id = (a.ts || '') + (a.kind || '');
+      if (seenIds.has(id)) continue;
+      seenIds.add(id);
+      
+      const eventObj = {
+        kind: a.kind,
+        text: a.text,
+        ts: a.ts,
+        user_name: a.user_name,
+        user_id: a.user_id,
+        guild_name: a.guild_name,
+        guild_id: a.guild_id,
+        extra: a.extra || {}
+      };
+      
+      if (isPaused) {
+        // Stream is paused, buffer the incoming events
+        bufferedEvents.push(eventObj);
+        updatePauseButtonLabel();
+      } else {
+        // Stream is live, add to DOM instantly
+        loadedEvents.unshift(eventObj);
+        newCount++;
+
+        if (empty) empty.remove();
+        const item = createItemDOM(a);
+        list.insertBefore(item, list.firstChild);
+        setTimeout(() => item.classList.remove('new'), 500);
+      }
+    }
+
+    if (newCount > 0) {
+      updateStats();
+      applyFilter();
+      // Bound history limit to 200 items in DOM
+      while (list.children.length > 200) list.removeChild(list.lastChild);
+    }
+
+    document.getElementById('lf-update').textContent = `Aktualisiert: ${new Date().toLocaleTimeString('de-DE')}`;
+  } catch(e) {
+    document.getElementById('lf-update').textContent = 'Fehler bei der Live-Synchronisation';
+  }
+}
+
+function setFilter(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilter();
+}
+
+function applyFilter() {
+  const search = document.getElementById('lf-search').value.toLowerCase().trim();
+  let visible = 0;
+  
+  document.querySelectorAll('.lf-item').forEach(el => {
+    const kind = el.dataset.kind;
+    const text = el.dataset.text;
+    
+    let matchFilter = true;
+    if (currentFilter !== 'all') {
+      if (currentFilter === 'security') matchFilter = ['security', 'nuke', 'raid'].includes(kind);
+      else if (currentFilter === 'automod') matchFilter = ['spam', 'automod'].includes(kind);
+      else if (currentFilter === 'case') matchFilter = ['case', 'ban', 'kick', 'warn', 'timeout', 'mute'].includes(kind);
+      else matchFilter = (kind === currentFilter);
+    }
+    
+    const matchSearch = !search || text.includes(search) || el.dataset.userId.includes(search) || el.dataset.userName.toLowerCase().includes(search);
+    const show = matchFilter && matchSearch;
+    el.style.display = show ? 'flex' : 'none';
+    if (show) visible++;
+  });
+  
+  document.getElementById('lf-count').textContent = `${visible} Events`;
+}
+
+function togglePause() {
+  isPaused = !isPaused;
+  const dot = document.getElementById('lf-dot');
+  const btn = document.getElementById('lf-pause-btn');
+  
+  if (isPaused) {
+    dot.className = 'lf-pause-dot paused';
+    updatePauseButtonLabel();
+  } else {
+    dot.className = 'lf-pause-dot live';
+    document.getElementById('lf-pause-text').textContent = 'Stream: Live';
+    
+    // Release buffer into the list
+    if (bufferedEvents.length > 0) {
+      const list = document.getElementById('lf-list');
+      const empty = document.getElementById('lf-empty');
+      if (empty) empty.remove();
+      
+      bufferedEvents.forEach(a => {
+        loadedEvents.unshift(a);
+        const item = createItemDOM(a);
+        list.insertBefore(item, list.firstChild);
+      });
+      bufferedEvents = [];
+      updateStats();
+      applyFilter();
+    }
+    fetchActivity();
+  }
+}
+
+function updatePauseButtonLabel() {
+  const text = document.getElementById('lf-pause-text');
+  if (bufferedEvents.length > 0) {
+    text.textContent = `Pausiert (+${bufferedEvents.length})`;
+  } else {
+    text.textContent = 'Stream: Pausiert';
+  }
+}
+
+function clearFeed() {
+  if (!confirm('Möchtest du den Eventfeed wirklich leeren?')) return;
+  document.getElementById('lf-list').innerHTML = '<div class="lf-empty" id="lf-empty">Feed geleert. Neue Live-Events erscheinen automatisch.</div>';
+  seenIds.clear();
+  loadedEvents = [];
+  bufferedEvents = [];
+  updateStats();
+}
+
+function exportLivefeedJSON() {
+  if (loadedEvents.length === 0) return showToast('Keine Events zum Exportieren vorhanden.', 'err');
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(loadedEvents, null, 2));
+  const link = document.createElement('a');
+  link.setAttribute("href", dataStr);
+  link.setAttribute("download", `livefeed-guild-${GID}.json`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast('JSON Export abgeschlossen!', 'ok');
+}
+
+function showEventDetail(el) {
+  const kind = el.dataset.kind;
+  const text = el.querySelector('.lf-text').textContent;
+  const ts = el.dataset.ts;
+  const userName = el.dataset.userName || 'System / Auto-Routine';
+  const userId = el.dataset.userId || '—';
+  const guildName = el.dataset.guildName || 'ModForge';
+  const guildId = el.dataset.guildId || '—';
+  const extraObj = JSON.parse(el.dataset.extra || '{}');
+
+  let extraHtml = '<p class="cfg-desc">Keine weiteren Metadaten vorhanden.</p>';
+  if (Object.keys(extraObj).length > 0) {
+    extraHtml = `
+      <pre style="background:rgba(255,255,255,0.02); border:1px solid var(--border); padding:10px; border-radius:8px; font-family:'Geist Mono',monospace; font-size:0.75rem; color:#a78bfa; overflow-x:auto;">
+${JSON.stringify(extraObj, null, 2)}
+      </pre>
+    `;
+  }
+
+  showModal(`
+    <div style="max-width: 500px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+        <span class="lf-badge ${getBadgeClass(kind)}" style="font-size:0.75rem; padding: 4px 10px;">${kind.toUpperCase()}</span>
+        <b style="color:#fff; font-size:1.1rem;">Echtzeit Event-Details</b>
+      </div>
+
+      <div style="display:grid; gap:8px;">
+        <div class="info-row"><span class="info-lbl">Zeitpunkt</span><span class="info-val">${ts}</span></div>
+        <div class="info-row"><span class="info-lbl">Betroffener User</span><span class="info-val">${userName}</span></div>
+        <div class="info-row"><span class="info-lbl">User-ID</span><span class="info-val" style="font-family:'Geist Mono',monospace">${userId}</span></div>
+        <div class="info-row"><span class="info-lbl">Server / Gilde</span><span class="info-val">${guildName}</span></div>
+        <div class="info-row"><span class="info-lbl">Server-ID</span><span class="info-val" style="font-family:'Geist Mono',monospace">${guildId}</span></div>
+      </div>
+
+      <div style="margin-top:14px; padding:12px; border-radius:10px; background:rgba(255,255,255,0.015); border:1px solid var(--border);">
+        <b style="font-size:0.8rem; color:#fff; display:block; margin-bottom:4px;">Ereignis-Meldung:</b>
+        <p style="font-size:0.82rem; color:var(--fg); line-height:1.4; margin:0;">${text}</p>
+      </div>
+
+      <div style="margin-top:14px;">
+        <b style="font-size:0.8rem; color:#fff; display:block; margin-bottom:4px;">Erweiterte Metadaten (Extra-Payload):</b>
+        ${extraHtml}
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; margin-top:20px;">
+        <button class="btn-glass" onclick="closeModal()">Schließen</button>
+      </div>
+    </div>
+  `);
+}
+
+// Poll activity stream every 3 seconds
+setInterval(fetchActivity, 3000);
+// Initial fetch
+setTimeout(fetchActivity, 500);
+</script>
+{% endblock %}

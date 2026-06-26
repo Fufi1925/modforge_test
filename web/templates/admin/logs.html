@@ -1,0 +1,49 @@
+{% extends "admin/_base.html" %}
+{% set active = 'logs' %}
+{% block title %}System-Logs{% endblock %}
+{% block page_title %}📄 System-Logs{% endblock %}
+{% block page_desc %}Bot-Logs durchsuchen und filtern{% endblock %}
+{% block content %}
+<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+  <input type="text" id="logSearch" class="cfg-input" placeholder="🔍 Filtern…" style="max-width:300px;width:100%" oninput="filterLogs()">
+  <select class="cfg-select" id="logLevel" onchange="filterLogs()">
+    <option value="">Alle Level</option>
+    <option value="ERROR">ERROR</option>
+    <option value="WARNING">WARNING</option>
+    <option value="INFO">INFO</option>
+  </select>
+</div>
+
+<div class="db-card" style="padding:0;overflow:hidden">
+  <div style="padding:14px 20px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.02)">
+    <span class="db-card-title">📜 Log-Einträge ({{ log_entries|length }})</span>
+  </div>
+  <div style="max-height:600px;overflow-y:auto;font-family:'Geist Mono',monospace;font-size:.75rem;line-height:2">
+    {% for entry in log_entries %}
+    <div class="log-line" data-level="{{ entry.level }}"
+         style="padding:4px 20px;border-bottom:1px solid rgba(255,255,255,0.02);
+                color:{% if entry.level=='ERROR' %}var(--red){% elif entry.level=='WARNING' %}var(--amberl){% else %}var(--muted){% endif %}">
+      <span style="color:var(--muted);opacity:.6">{{ entry.timestamp }}</span>
+      <span style="padding:1px 6px;border-radius:4px;font-size:.6rem;font-weight:700;
+                   background:{% if entry.level=='ERROR' %}rgba(239,68,68,0.15){% elif entry.level=='WARNING' %}rgba(245,158,11,0.15){% else %}rgba(56,189,248,0.1){% endif %}">{{ entry.level }}</span>
+      {{ entry.message }}
+    </div>
+    {% endfor %}
+    {% if not log_entries %}
+    <div style="padding:40px;text-align:center;color:var(--muted)">Keine Logs verfügbar.</div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+function filterLogs(){
+  const q=document.getElementById('logSearch').value.toLowerCase();
+  const lvl=document.getElementById('logLevel').value;
+  document.querySelectorAll('.log-line').forEach(l=>{
+    const matchQ=!q||l.textContent.toLowerCase().includes(q);
+    const matchL=!lvl||l.dataset.level===lvl;
+    l.style.display=matchQ&&matchL?'':'none';
+  });
+}
+</script>
+{% endblock %}

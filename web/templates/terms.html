@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Terms of Service – ModForge{% endblock %}
+{% block content %}
+<div class="legal-wrap container">
+  <h1>Terms of Service</h1>
+  <p class="date">Stand: {{ today }}</p>
+
+  <details open>
+    <summary>1. Allgemeine Bestimmungen</summary>
+    <div class="detail-body">
+      <h3>1.1 Geltungsbereich</h3>
+      <p>Diese Nutzungsbedingungen (im Folgenden „Bedingungen“) regeln die Nutzung des Discord‑Bots <strong>ModForge</strong> (nachfolgend „Bot“) sowie des zugehörigen Web‑Dashboards (nachfolgend „Dashboard“), die von BotForge (nachfolgend „Betreiber“) entwickelt und bereitgestellt werden. Mit der Hinzufügung des Bots zu einem Discord‑Server oder der Nutzung des Dashboards erklären Sie sich mit diesen Bedingungen einverstanden. Sollten Sie mit einzelnen Bestimmungen nicht einverstanden sein, ist die Nutzung unverzüglich einzustellen und der Bot von allen Servern zu entfernen.</p>
+
+      <h3>1.2 Vertragspartner</h3>
+      <p>Vertragspartner des Nutzers ist der Betreiber des Bots, erreichbar über den offiziellen <a href="https://discord.gg/CYqH8QTmR3" target="_blank" style="color:var(--p)">ModForge Support‑Server</a>. Eine gesonderte Registrierung ist nicht erforderlich; das Vertragsverhältnis kommt durch die Nutzung des Bots zustande.</p>
+
+      <h3>1.3 Änderungen der Bedingungen</h3>
+      <p>Der Betreiber behält sich vor, diese Bedingungen jederzeit und ohne Nennung von Gründen zu ändern. Die geänderten Bedingungen werden auf der Website veröffentlicht und treten mit ihrer Veröffentlichung in Kraft. Durch die fortgesetzte Nutzung des Bots oder des Dashboards nach Inkrafttreten der geänderten Bedingungen stimmen Sie den Änderungen zu. Wir empfehlen, die Bedingungen regelmäßig auf Änderungen zu überprüfen.</p>
+
+      <h3>1.4 Sprachversionen</h3>
+      <p>Maßgeblich ist die deutsche Fassung dieser Bedingungen. Übersetzungen dienen nur der Information.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>2. Vertragsgegenstand und Leistungsumfang</summary>
+    <div class="detail-body">
+      <h3>2.1 Beschreibung des Bots</h3>
+      <p>ModForge ist ein multifunktionaler Discord‑Bot, der Server‑Administratoren Moderatios‑, Sicherheits‑ und Automatisierungsfunktionen zur Verfügung stellt. Das Funktionsspektrum umfasst unter anderem:</p>
+      <ul>
+        <li>Anti‑Spam‑System mit einstellbaren Schwellenwerten und Strafen</li>
+        <li>Anti‑Nuke‑Erkennung, die automatisch Massen‑Aktionen (z. B. Kanal‑/Rollen‑Löschungen) unterbindet</li>
+        <li>Anti‑Raid‑Schutz, der auffällige Join‑Muster erkennt und Gegenmaßnahmen ergreift</li>
+        <li>AutoMod‑Filter (unerwünschte Wörter, Einladungslink‑Blockierung, Zalgo‑Text‑Erkennung, Phishing‑Schutz u. v. m.)</li>
+        <li>Verifizierungssystem (One‑Click oder Captcha)</li>
+        <li>Ticket‑System für Support‑Anfragen innerhalb eines Servers</li>
+        <li>Umfangreiches Logging‑System mit konfigurierbaren Kanälen pro Modul</li>
+        <li>Case‑System mit eindeutigen Fall‑IDs, Beweismittel‑Anhängen und Nachrichten‑Archiv</li>
+      </ul>
+      <p>Der Betreiber ist berechtigt, den Funktionsumfang jederzeit zu erweitern, einzuschränken oder einzelne Funktionen ganz einzustellen. Ein Anspruch auf unveränderte Funktionalität besteht nicht.</p>
+
+      <h3>2.2 Web‑Dashboard</h3>
+      <p>Das Dashboard ermöglicht registrierten Nutzern die grafische Konfiguration der Bot‑Einstellungen über den Browser. Die Anmeldung erfolgt mittels Discord OAuth2. Die Verfügbarkeit des Dashboards kann vorübergehend eingeschränkt sein, insbesondere bei Wartungsarbeiten oder technischen Störungen.</p>
+
+      <h3>2.3 Verfügbarkeit und Wartung</h3>
+      <p>Der Betreiber ist bemüht, eine möglichst hohe Verfügbarkeit des Bots und des Dashboards zu gewährleisten. Dennoch kann es zu Unterbrechungen kommen, die insbesondere auf folgende Ursachen zurückzuführen sind:</p>
+      <ul>
+        <li>Geplante Wartungsarbeiten, die nach Möglichkeit vorab angekündigt werden</li>
+        <li>Unvorhergesehene technische Störungen, Angriffe Dritter oder Ausfälle der genutzten Infrastruktur</li>
+        <li>Maßnahmen, die der Sicherheit oder der Stabilität des Dienstes dienen</li>
+      </ul>
+      <p>Ein Anspruch auf Schadensersatz wegen vorübergehender Nichterreichbarkeit besteht nicht, soweit dies gesetzlich zulässig ist.</p>
+
+      <h3>2.4 Kosten</h3>
+      <p>Der Bot und das Dashboard sind derzeit kostenlos. Der Betreiber behält sich vor, in Zukunft kostenpflichtige Premium‑Funktionen anzubieten. Bestehende kostenlose Funktionen bleiben davon unberührt.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>3. Pflichten des Nutzers</summary>
+    <div class="detail-body">
+      <h3>3.1 Rechtskonforme Nutzung</h3>
+      <p>Der Nutzer verpflichtet sich, den Bot ausschließlich im Rahmen der geltenden Gesetze sowie der Discord‑Nutzungsbedingungen und ‑Richtlinien zu verwenden. Insbesondere sind folgende Handlungen untersagt:</p>
+      <ul>
+        <li>Die Nutzung zu Zwecken des Spammings, der Belästigung oder der Verbreitung von Schadsoftware</li>
+        <li>Die Verwendung für automatisierte Massenaktionen, die die Discord‑API übermäßig beanspruchen</li>
+        <li>Die Umgehung oder Manipulation der Sicherheitsmechanismen des Bots</li>
+        <li>Die Nutzung zur Verbreitung illegaler, jugendgefährdender oder extremisierender Inhalte</li>
+        <li>Jegliche Form des Reverse Engineerings, Dekompilierens oder Modifizierens des Bots ohne vorherige schriftliche Zustimmung des Betreibers</li>
+      </ul>
+
+      <h3>3.2 Verantwortlichkeit des Server‑Administrators</h3>
+      <p>Derjenige, der den Bot zu einem Server hinzufügt (in der Regel der Server‑Eigentümer oder ein Administrator), trägt die alleinige Verantwortung für alle Aktionen, die durch die Konfiguration des Bots auf diesem Server ausgeführt werden. Er hat insbesondere sicherzustellen, dass:</p>
+      <ul>
+        <li>Der Bot mit angemessenen Berechtigungen ausgestattet wird</li>
+        <li>Die konfigurierten Strafen (z. B. Banns, Timeouts) im Einklang mit den servereigenen Regeln und den Discord‑Richtlinien stehen</li>
+        <li>Die erfassten Log‑Daten datenschutzkonform behandelt werden</li>
+      </ul>
+
+      <h3>3.3 Zugangsdaten und Sicherheit</h3>
+      <p>Sofern Sie Zugangsdaten für das Dashboard oder das Admin‑Panel verwenden, sind diese vertraulich zu behandeln und vor unbefugtem Zugriff zu schützen. Der Betreiber haftet nicht für Schäden, die durch missbräuchliche Nutzung Ihrer Zugangsdaten entstehen, es sei denn, der Missbrauch ist auf ein Verschulden des Betreibers zurückzuführen.</p>
+
+      <h3>3.4 Meldung von Missbrauch</h3>
+      <p>Sie sind verpflichtet, uns umgehend über den Support‑Server zu informieren, wenn Sie Kenntnis von einer missbräuchlichen Nutzung des Bots oder einer Sicherheitslücke erhalten.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>4. Haftungsbeschränkung und Gewährleistung</summary>
+    <div class="detail-body">
+      <h3>4.1 Haftungsausschluss</h3>
+      <p>Der Bot und das Dashboard werden „wie besehen“ (as is) ohne jegliche ausdrückliche oder stillschweigende Gewährleistung bereitgestellt. Der Betreiber übernimmt insbesondere keine Gewähr dafür, dass der Bot fehlerfrei, sicher oder ohne Unterbrechungen funktioniert.</p>
+
+      <h3>4.2 Haftungsumfang</h3>
+      <p>Der Betreiber haftet unbeschränkt für Schäden aus der Verletzung des Lebens, des Körpers oder der Gesundheit, die auf einer Pflichtverletzung des Betreibers beruhen, sowie für sonstige Schäden, die auf einer vorsätzlichen oder grob fahrlässigen Pflichtverletzung des Betreibers beruhen. Für einfache Fahrlässigkeit haftet der Betreiber nur, sofern eine wesentliche Vertragspflicht (Kardinalpflicht) verletzt wurde; die Haftung ist in diesen Fällen auf den vertragstypischen, vorhersehbaren Schaden begrenzt.</p>
+
+      <h3>4.3 Haftung für Dienste Dritter</h3>
+      <p>Der Bot interagiert mit Diensten Dritter (insbesondere Discord, MongoDB). Der Betreiber übernimmt keine Haftung für die Verfügbarkeit oder Sicherheit dieser Dienste.</p>
+
+      <h3>4.4 Schadensminderungspflicht</h3>
+      <p>Der Nutzer ist gehalten, zumutbare Maßnahmen zur Abwendung und Minderung von Schäden zu ergreifen.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>5. Datenschutz</summary>
+    <div class="detail-body">
+      <p>Informationen zum Umgang mit personenbezogenen Daten finden Sie in unserer <a href="/privacy">Privacy Policy</a>, die Bestandteil dieser Bedingungen ist.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>6. Schlussbestimmungen</summary>
+    <div class="detail-body">
+      <h3>6.1 Salvatorische Klausel</h3>
+      <p>Sollten einzelne Bestimmungen dieser Bedingungen unwirksam sein oder werden, bleibt die Wirksamkeit der übrigen Bestimmungen unberührt. Die unwirksame Bestimmung gilt als durch eine solche ersetzt, die dem wirtschaftlichen Zweck der unwirksamen Bestimmung am nächsten kommt.</p>
+
+      <h3>6.2 Gerichtsstand und anwendbares Recht</h3>
+      <p>Es gilt das Recht der Bundesrepublik Deutschland. Gerichtsstand für alle Streitigkeiten aus oder im Zusammenhang mit diesen Bedingungen ist, soweit gesetzlich zulässig, der Sitz des Betreibers.</p>
+
+      <h3>6.3 Kontakt</h3>
+      <p>Bei Fragen, Beschwerden oder Hinweisen zu diesen Bedingungen wenden Sie sich bitte an den <a href="https://discord.gg/CYqH8QTmR3" target="_blank" style="color:var(--p)">ModForge Support‑Server</a>.</p>
+
+      <h3>6.4 Außergerichtliche Streitbeilegung</h3>
+      <p>Die EU‑Kommission stellt eine Plattform zur Online‑Streitbeilegung bereit: <a href="https://ec.europa.eu/consumers/odr" target="_blank" style="color:var(--p)">https://ec.europa.eu/consumers/odr</a>. Wir sind nicht verpflichtet, an einem Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.</p>
+    </div>
+  </details>
+</div>
+{% endblock %}

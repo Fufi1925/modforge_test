@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ profile.display_name }} – Badge Profil{% endblock %}
+{% block content %}
+<section class="container" style="max-width:980px;padding-top:60px;padding-bottom:90px">
+  <div class="db-card" style="text-align:center;position:relative;overflow:hidden;padding:42px 24px">
+    <div class="mf-orb" aria-hidden="true"></div>
+    <img src="{{ profile.avatar }}" alt="{{ profile.display_name }}" style="width:104px;height:104px;border-radius:32px;object-fit:cover;border:1px solid var(--border);box-shadow:0 20px 70px rgba(0,0,0,.35)">
+    <div class="sec-badge" style="margin:20px auto 10px;width:max-content">🏅 Öffentliches Badge-Profil</div>
+    <h1 style="font-size:clamp(2rem,5vw,3.2rem);font-weight:900;margin:0">{{ profile.display_name }}</h1>
+    <p style="color:var(--muted);margin:8px 0 0">{{ profile.server_name }} · ID {{ profile.id }}</p>
+  </div>
+  <div class="db-card" style="margin-top:20px">
+    <div class="db-card-header"><span class="db-card-title">🏅 Badges</span><span class="tag">{{ profile.badges|length }}</span></div>
+    {% if profile.badges %}
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px">
+        {% for b in profile.badges %}
+        <div class="badge-def-card">
+          <span class="mf-user-badge mf-badge-{{ b.style|default('solid') }} mf-rarity-{{ b.rarity|default('common') }}" style="--bc:{{ b.color }}">{{ b.emoji }} {{ b.name }}</span>
+          <div class="badge-meta"><span>{{ b.category|default('general') }}</span><span>{{ b.rarity|default('common') }}</span><span>Lvl {{ b.level|default(1) }}</span></div>
+          <p style="color:var(--muted);font-size:.8rem;line-height:1.6">{{ b.desc }}</p>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p style="color:var(--muted);margin:0">Dieser User hat noch keine öffentlichen Badges.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

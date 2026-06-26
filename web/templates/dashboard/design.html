@@ -1,0 +1,222 @@
+{% extends "dashboard/_base.html" %}
+{% set active = 'design' %}
+{% block title %}Interface Design{% endblock %}
+{% block page_title %}🖌️ Interface Design{% endblock %}
+{% block page_desc %}Personalisiere dein Dashboard-Erlebnis. Diese Einstellungen gelten nur für dich und werden lokal gespeichert.{% endblock %}
+
+{% block head %}
+<style>
+  .design-container { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
+  .ds-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 20px; padding: 24px; margin-bottom: 20px; }
+  .ds-card h3 { font-size: 1rem; font-weight: 800; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; color: #fff; }
+  .ds-card p { font-size: .8rem; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+
+  /* ── THEME TILES ── */
+  .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; }
+  .theme-tile { position: relative; border-radius: 16px; border: 2px solid var(--border); background: rgba(255,255,255,0.02); padding: 12px; cursor: pointer; transition: all .2s cubic-bezier(0.4,0,0.2,1); text-align: center; }
+  .theme-tile:hover { border-color: rgba(255,255,255,0.2); transform: translateY(-3px); }
+  .theme-tile.active { border-color: var(--v); background: rgba(59,130,246,0.08); box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+  .theme-swatch { width: 100%; aspect-ratio: 1.5; border-radius: 10px; margin-bottom: 10px; position: relative; overflow: hidden; }
+  .theme-swatch::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent); }
+  .theme-name { font-size: .75rem; font-weight: 700; color: #fff; }
+
+  /* ── SEGMENTED CONTROL ── */
+  .seg { display: flex; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 14px; padding: 4px; gap: 4px; }
+  .seg button { flex: 1; padding: 10px; border-radius: 10px; border: none; background: transparent; color: var(--muted); font-size: .75rem; font-weight: 700; cursor: pointer; transition: .2s; font-family: inherit; }
+  .seg button:hover { color: #fff; background: rgba(255,255,255,0.05); }
+  .seg button.active { background: var(--v); color: #fff; box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
+
+  /* ── PREVIEW ── */
+  .preview-box { position: sticky; top: 24px; background: rgba(8,8,20,0.6); border: 1px solid var(--border); border-radius: 24px; overflow: hidden; box-shadow: 0 30px 60px rgba(0,0,0,0.4); }
+  .preview-header { padding: 16px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02); display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: .8rem; }
+  .preview-content { padding: 20px; }
+  .p-card { background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; }
+  .p-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--v); display: flex; align-items: center; justify-content:center; color:#fff; font-size:.8rem; }
+  .p-bar { height: 8px; background: var(--border); border-radius: 4px; flex: 1; position: relative; overflow: hidden; }
+  .p-bar::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 65%; background: var(--v); border-radius: 4px; }
+
+  @media(max-width: 900px) { .design-container { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="design-container">
+  <div class="design-main">
+    
+    <!-- THEMES -->
+    <div class="ds-card">
+      <h3>🎭 Visuelles Theme</h3>
+      <p>Wähle eine Grundstimmung für das Dashboard. AMOLED ist für OLED-Displays optimiert (reines Schwarz).</p>
+      <div class="theme-grid" id="themeGrid">
+        <div class="theme-tile" data-t="purple" onclick="pickT('purple')">
+          <div class="theme-swatch" style="background: linear-gradient(135deg, #7c3aed, #4f46e5)"></div>
+          <div class="theme-name">Royal Purple</div>
+        </div>
+        <div class="theme-tile" data-t="blue" onclick="pickT('blue')">
+          <div class="theme-swatch" style="background: linear-gradient(135deg, #2563eb, #0ea5e9)"></div>
+          <div class="theme-name">Ocean Blue</div>
+        </div>
+        <div class="theme-tile" data-t="green" onclick="pickT('green')">
+          <div class="theme-swatch" style="background: linear-gradient(135deg, #059669, #10b981)"></div>
+          <div class="theme-name">Forest Green</div>
+        </div>
+        <div class="theme-tile" data-t="rose" onclick="pickT('rose')">
+          <div class="theme-swatch" style="background: linear-gradient(135deg, #e11d48, #f43f5e)"></div>
+          <div class="theme-name">Electric Rose</div>
+        </div>
+        <div class="theme-tile" data-t="sunset" onclick="pickT('sunset')">
+          <div class="theme-swatch" style="background: linear-gradient(135deg, #f97316, #ec4899)"></div>
+          <div class="theme-name">Neon Sunset</div>
+        </div>
+        <div class="theme-tile" data-t="midnight" onclick="pickT('midnight')">
+          <div class="theme-swatch" style="background: linear-gradient(135deg, #0f172a, #334155)"></div>
+          <div class="theme-name">Midnight</div>
+        </div>
+        <div class="theme-tile" data-t="amoled" onclick="pickT('amoled')">
+          <div class="theme-swatch" style="background: #000; border: 1px solid #333"></div>
+          <div class="theme-name">Pure AMOLED</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACCENT -->
+    <div class="ds-card">
+      <h3>🌈 Eigene Akzentfarbe</h3>
+      <p>Willst du eine ganz eigene Farbe? Wähle sie hier aus. (Wählt automatisch das "Custom" Theme)</p>
+      <div style="display:flex;align-items:center;gap:15px;background:rgba(0,0,0,0.2);padding:15px;border-radius:16px;border:1px solid var(--border)">
+        <input type="color" id="accCol" value="#7c3aed" style="width:60px;height:45px;border:none;border-radius:10px;cursor:pointer;background:transparent" oninput="onAccI(this.value)">
+        <div style="flex:1">
+          <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;font-weight:800;letter-spacing:.05em">Hex-Code</div>
+          <input type="text" id="accHex" class="cfg-input ignore-dirty" style="background:transparent;border:none;padding:0;font-size:1.2rem;font-weight:900;color:#fff;width:100%" value="#7C3AED" oninput="onAccT(this.value)">
+        </div>
+      </div>
+    </div>
+
+    <!-- DENSITY & RADIUS -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div class="ds-card">
+        <h3>📐 Layout-Dichte</h3>
+        <p>Wie kompakt soll das Interface sein?</p>
+        <div class="seg" id="densSeg">
+          <button data-v="compact" onclick="pickD('compact')">Compact</button>
+          <button data-v="comfy" onclick="pickD('comfy')">Comfy</button>
+          <button data-v="cozy" onclick="pickD('cozy')">Cozy</button>
+        </div>
+      </div>
+      <div class="ds-card">
+        <h3>🔘 Ecken-Stil</h3>
+        <p>Der Radius für Karten und Buttons.</p>
+        <div class="seg" id="radSeg">
+          <button data-v="sharp" onclick="pickR('sharp')">Eckig</button>
+          <button data-v="soft" onclick="pickR('soft')">Weich</button>
+          <button data-v="rounded" onclick="pickR('rounded')">Rund</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANIMATIONS -->
+    <div class="ds-card">
+      <h3>✨ Animationen & Effekte</h3>
+      <p>Wähle Presets: Ruhig, Smooth, Cyber, Minimal oder Performance.</p>
+      <div class="seg" id="animSeg" style="max-width:300px;margin-bottom:12px">
+        <button data-v="on" onclick="pickA('on')">✨ Aktiviert</button>
+        <button data-v="off" onclick="pickA('off')">⏹️ Deaktiviert</button>
+      </div>
+      <div class="seg" id="presetSeg">
+        <button data-v="calm" onclick="pickPreset('calm')">Ruhig</button>
+        <button data-v="smooth" onclick="pickPreset('smooth')">Smooth</button>
+        <button data-v="cyber" onclick="pickPreset('cyber')">Cyber</button>
+        <button data-v="minimal" onclick="pickPreset('minimal')">Minimal</button>
+        <button data-v="performance" onclick="pickPreset('performance')">Performance</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PREVIEW SIDEBAR -->
+  <aside class="design-sidebar">
+    <div class="preview-box">
+      <div class="preview-header">🛡️ ModForge Live Preview</div>
+      <div class="preview-content">
+        <div style="font-weight:900;font-size:1.2rem;margin-bottom:15px;color:#fff">Übersicht</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:15px">
+          <div class="mp-stat-card" style="padding:10px"><div class="mp-stat-v" style="font-size:.9rem">1.2k</div><div class="mp-sl" style="font-size:.45rem">User</div></div>
+          <div class="mp-stat-card" style="padding:10px"><div class="mp-stat-v" style="font-size:.9rem;color:var(--v)">24</div><div class="mp-sl" style="font-size:.45rem">Logs</div></div>
+        </div>
+        <div class="p-card">
+          <div class="p-icon">⚡</div>
+          <div style="flex:1"><div style="font-weight:700;font-size:.7rem">Anti-Spam</div><div style="height:4px;background:var(--border);border-radius:2px;margin-top:4px;width:80%"></div></div>
+          <div style="width:30px;height:16px;background:var(--v);border-radius:10px;position:relative"><div style="position:absolute;right:2px;top:2px;width:12px;height:12px;background:#fff;border-radius:50%"></div></div>
+        </div>
+        <div class="p-card" style="flex-direction:column;align-items:stretch">
+          <div style="display:flex;justify-content:space-between;font-weight:700;font-size:.7rem;margin-bottom:8px"><span>Server-Sicherheit</span><span>65%</span></div>
+          <div class="p-bar"></div>
+        </div>
+        <button class="btn-glass btn-sm btn-glass-primary" style="width:100%;margin-top:10px">Beispiel Button</button>
+      </div>
+    </div>
+    
+    <div class="ds-card" style="margin-top:20px;border-color:rgba(239,68,68,0.2)">
+      <h3 style="color:var(--redl)">↩️ Werkszustand</h3>
+      <p>Setzt alle Design-Anpassungen auf die Standardwerte zurück.</p>
+      <button class="action-btn ban" style="padding:10px;font-size:.75rem" onclick="resetD()">Design zurücksetzen</button>
+    </div>
+  </aside>
+</div>
+
+{% block scripts %}
+<script>
+function sync() {
+  const theme = localStorage.getItem('mf-theme') || 'purple';
+  const density = localStorage.getItem('mf-density') || 'comfy';
+  const radius = localStorage.getItem('mf-radius') || 'rounded';
+  const anim = localStorage.getItem('mf-anim') || 'on';
+  const preset = localStorage.getItem('mf-anim-preset') || 'smooth';
+  const accent = localStorage.getItem('mf-accent') || '#7C3AED';
+
+  document.querySelectorAll('.theme-tile').forEach(t => t.classList.toggle('active', t.dataset.t === theme));
+  
+  const sets = [['#densSeg', density], ['#radSeg', radius], ['#animSeg', anim], ['#presetSeg', preset]];
+  sets.forEach(([id, val]) => {
+    document.querySelectorAll(`${id} button`).forEach(b => b.classList.toggle('active', b.dataset.v === val));
+  });
+
+  document.getElementById('accCol').value = accent;
+  document.getElementById('accHex').value = accent.toUpperCase();
+}
+
+function pickT(t) { setTheme(t); sync(); showToast('Theme gewechselt: ' + t, 'ok'); }
+function pickD(v) { setDensity(v); sync(); }
+function pickR(v) { setRadius(v); sync(); }
+function pickA(v) { setAnim(v); sync(); }
+function pickPreset(v) {
+  localStorage.setItem('mf-anim-preset', v);
+  document.documentElement.setAttribute('data-anim-preset', v);
+  if(v === 'performance') setAnim('off');
+  sync();
+  showToast('Animations-Preset: ' + v, 'ok');
+}
+
+function onAccI(v) {
+  document.getElementById('accHex').value = v.toUpperCase();
+  setAccent(v);
+  if(localStorage.getItem('mf-theme') !== 'custom') setTheme('custom');
+  sync();
+}
+
+function onAccT(v) {
+  if(/^#[0-9A-F]{6}$/i.test(v)) onAccI(v);
+}
+
+function resetD() {
+  if(!confirm('Alle Design-Einstellungen löschen?')) return;
+  ['mf-theme','mf-accent','mf-density','mf-radius','mf-anim','mf-anim-preset'].forEach(k => localStorage.removeItem(k));
+  location.reload();
+}
+
+document.documentElement.setAttribute('data-anim-preset', localStorage.getItem('mf-anim-preset') || 'smooth');
+sync();
+window._dirty = false;
+</script>
+{% endblock %}
+{% endblock %}

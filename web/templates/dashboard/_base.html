@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="de" data-theme="purple">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}Dashboard{% endblock %} – {{ guild.name }} – ModForge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;700&family=Outfit:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    :root{--sidebar-w:240px;--topbar-h:56px}
+    body{margin:0;padding:0;background:var(--bg);color:var(--fg);overflow-x:hidden}
+
+    /* ── SIDEBAR ── */
+    .db-sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sidebar-w);background:rgba(8,8,20,0.97);backdrop-filter:blur(30px);border-right:1px solid var(--border);z-index:9999;display:flex;flex-direction:column;overflow-y:auto}
+    .db-sidebar::-webkit-scrollbar{width:3px}
+    .db-sidebar::-webkit-scrollbar-thumb{background:rgba(59,130,246,0.2);border-radius:9px}
+    .db-brand{padding:18px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+    .db-brand-icon{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,var(--v),var(--p));display:flex;align-items:center;justify-content:center;font-size:.9rem;box-shadow:0 4px 14px rgba(59,130,246,0.4)}
+    .db-brand-text{font-size:.92rem;font-weight:800}
+    .db-server{padding:14px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.02)}
+    .db-server img{width:32px;height:32px;border-radius:50%;object-fit:cover}
+    .db-server-fallback{width:32px;height:32px;border-radius:50%;background:rgba(59,130,246,0.2);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--vl);font-size:.8rem}
+    .db-server-name{font-size:.78rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .db-server-sub{font-size:.62rem;color:var(--muted)}
+    .db-nav{padding:12px 0;flex:1}
+    .db-nav-label{padding:6px 20px;font-size:.58rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-top:8px}
+    .db-nav a{display:flex;align-items:center;gap:10px;padding:9px 20px;font-size:.8rem;font-weight:500;color:var(--muted);transition:all .15s;border-left:3px solid transparent}
+    .db-nav a:hover{color:var(--fg);background:rgba(255,255,255,0.03)}
+    .db-nav a.active{color:var(--vl);background:rgba(59,130,246,0.06);border-left-color:var(--v);font-weight:700}
+    .db-nav a .nav-icon{width:18px;text-align:center;font-size:.85rem;flex-shrink:0}
+    .db-user{padding:14px 20px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.01)}
+    .db-user img{width:30px;height:30px;border-radius:50%}
+    .db-user-info{flex:1;min-width:0}
+    .db-user-name{font-size:.78rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .db-user-tag{font-size:.6rem;color:var(--muted)}
+
+    /* ── MAIN ── */
+    .db-main{margin-left:var(--sidebar-w);min-height:100vh;padding:32px 40px 80px}
+    .db-header{margin-bottom:32px}
+    .db-header h1{font-size:1.5rem;font-weight:800;margin-bottom:4px}
+    .db-header p{font-size:.82rem;color:var(--muted)}
+
+    /* ── CARDS ── */
+    .db-card{background:rgba(255,255,255,0.035);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:16px;padding:24px;transition:all var(--r)}
+    .db-card:hover{border-color:rgba(96,165,250,0.2);box-shadow:0 8px 32px rgba(0,0,0,0.15)}
+    .db-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .db-card-title{font-size:.95rem;font-weight:700;display:flex;align-items:center;gap:8px}
+    .db-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px}
+
+    /* ── CONFIG ROW ── */
+    .cfg-row{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;margin-bottom:8px;transition:all var(--r);gap:12px}
+    .cfg-row:hover{border-color:rgba(96,165,250,0.18);background:rgba(255,255,255,0.045)}
+    .cfg-label{font-size:.85rem;font-weight:600}
+    .cfg-desc{font-size:.72rem;color:var(--muted);margin-top:2px}
+
+    /* ── TOGGLE ── */
+    .toggle{position:relative;width:44px;height:24px;flex-shrink:0}
+    .toggle input{opacity:0;width:0;height:0;position:absolute}
+    .toggle .slider{position:absolute;inset:0;background:rgba(255,255,255,0.08);border-radius:999px;cursor:pointer;transition:all .25s;border:1px solid rgba(255,255,255,0.08)}
+    .toggle .slider::before{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:var(--muted);left:2px;top:2px;transition:all .25s}
+    .toggle input:checked+.slider{background:rgba(59,130,246,0.35);border-color:rgba(59,130,246,0.5)}
+    .toggle input:checked+.slider::before{transform:translateX(20px);background:var(--vl);box-shadow:0 0 8px rgba(59,130,246,0.5)}
+
+    /* ── INPUTS ── */
+    .cfg-input{padding:9px 14px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--fg);font-size:.82rem;outline:none;font-family:inherit;transition:all var(--r);max-width:200px}
+    .cfg-input:focus{border-color:rgba(59,130,246,0.5);box-shadow:0 0 0 3px rgba(59,130,246,0.1);background:rgba(59,130,246,0.04)}
+    .cfg-select{padding:9px 14px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--fg);font-size:.82rem;outline:none;font-family:inherit;transition:all var(--r)}
+    .cfg-select:focus{border-color:rgba(59,130,246,0.5)}
+
+    /* ── STAT CARDS ── */
+    .db-stat{text-align:center;padding:20px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid var(--border)}
+    .db-stat-val{font-size:1.6rem;font-weight:900;font-family:'Geist Mono',monospace}
+    .db-stat-label{font-size:.68rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.06em}
+
+    /* ── TAGS ── */
+    .tag-list{display:flex;flex-wrap:wrap;gap:6px}
+    .tag{padding:5px 12px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid var(--border);font-size:.75rem;display:inline-flex;align-items:center;gap:6px}
+    .tag .tag-del{cursor:pointer;color:var(--redl);font-weight:700;font-size:.85rem;line-height:1}
+    .tag .tag-del:hover{color:var(--err)}
+
+    /* ── SAVE BAR ── */
+    .save-bar{position:fixed;bottom:0;left:var(--sidebar-w);right:0;z-index:9998;padding:12px 32px;background:rgba(6,6,16,0.97);backdrop-filter:blur(24px);border-top:1px solid var(--border);display:none;align-items:center;justify-content:flex-end;gap:12px}
+    .save-bar.visible{display:flex}
+
+    /* ── EMBED PREVIEW ── */
+    .embed-preview{max-width:520px;border-radius:8px;overflow:hidden;border-left:4px solid var(--v);background:rgba(47,49,54,0.95);padding:16px 20px;font-size:.85rem}
+    .embed-preview .ep-author{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:.78rem;font-weight:600}
+    .embed-preview .ep-author img{width:24px;height:24px;border-radius:50%}
+    .embed-preview .ep-title{font-weight:700;font-size:.92rem;margin-bottom:6px}
+    .embed-preview .ep-desc{color:#dcddde;font-size:.82rem;line-height:1.5}
+    .embed-preview .ep-footer{margin-top:10px;font-size:.68rem;color:#72767d;display:flex;align-items:center;gap:6px}
+    .embed-preview .ep-footer img{width:16px;height:16px;border-radius:50%}
+    .embed-preview .ep-thumb{width:80px;height:80px;border-radius:8px;object-fit:cover;float:right;margin-left:12px}
+    .embed-preview .ep-image{width:100%;border-radius:6px;margin-top:10px}
+
+    /* ── RESPONSIVE ── */
+    @media(max-width:900px){
+      .db-sidebar{width:60px;overflow:hidden}
+      .db-sidebar .db-brand-text,.db-nav a span,.db-server-name,.db-server-sub,.db-user-info,.db-nav-label{display:none}
+      .db-nav a{justify-content:center;padding:12px 0}
+      .db-nav a .nav-icon{width:auto}
+      .db-main{margin-left:60px;padding:20px 16px 80px}
+      .db-user{justify-content:center;padding:10px}
+      .db-server{justify-content:center}
+      .save-bar{left:60px}
+      :root{--sidebar-w:60px}
+    }
+    @media(max-width:640px){
+      .db-grid{grid-template-columns:1fr}
+    }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  {% set dash_base = dashboard_base|default(('/admin/server/' ~ guild.id) if user.id|string == '0' else ('/dashboard/' ~ guild.id)) %}
+  <!-- SIDEBAR -->
+  <aside class="db-sidebar">
+    <a href="/" class="db-brand"><div class="db-brand-icon">🛡️</div><span class="db-brand-text">ModForge</span></a>
+    <div class="db-server">
+      {% if guild.icon %}<img src="{{ guild.icon.url }}" alt="">{% else %}<div class="db-server-fallback">{{ guild.name[0] }}</div>{% endif %}
+      <div><div class="db-server-name">{{ guild.name }}</div><div class="db-server-sub">{{ guild.member_count }} Mitglieder</div></div>
+    </div>
+    <nav class="db-nav">
+      <div class="db-nav-label">Dashboard</div>
+      <a href="{{ dash_base }}" {% if active=='overview' %}class="active"{% endif %}><span class="nav-icon">📊</span><span>Übersicht</span></a>
+      <a href="{{ dash_base }}/security" {% if active=='security' %}class="active"{% endif %}><span class="nav-icon">🛡️</span><span>Security</span></a>
+      <a href="{{ dash_base }}/automod" {% if active=='automod' %}class="active"{% endif %}><span class="nav-icon">🤖</span><span>AutoMod</span></a>
+      <a href="{{ dash_base }}/logs" {% if active=='logs' %}class="active"{% endif %}><span class="nav-icon">📢</span><span>Logs</span></a>
+      <a href="{{ dash_base }}/cases" {% if active=='cases' %}class="active"{% endif %}><span class="nav-icon">📋</span><span>Cases</span></a>
+      <div class="db-nav-label">Konfiguration</div>
+      <a href="{{ dash_base }}/warns" {% if active=='warns' %}class="active"{% endif %}><span class="nav-icon">⚠️</span><span>Warns</span></a>
+      <a href="{{ dash_base }}/modules" {% if active=='modules' %}class="active"{% endif %}><span class="nav-icon">⚙️</span><span>Module</span></a>
+      <a href="{{ dash_base }}/welcome" {% if active=='welcome' %}class="active"{% endif %}><span class="nav-icon">👋</span><span>Welcome</span></a>
+      <a href="{{ dash_base }}/verification" {% if active=='verification' %}class="active"{% endif %}><span class="nav-icon">✅</span><span>Verifizierung</span></a>
+      <a href="{{ dash_base }}/roles" {% if active=='roles' %}class="active"{% endif %}><span class="nav-icon">🏷️</span><span>Rollen</span></a>
+      <a href="{{ dash_base }}/autonick" {% if active=='autonick' %}class="active"{% endif %}><span class="nav-icon">📝</span><span>Auto-Nick</span></a>
+      <a href="{{ dash_base }}/autoresponse" {% if active=='autoresponse' %}class="active"{% endif %}><span class="nav-icon">💬</span><span>Auto-Antwort</span></a>
+      <div class="db-nav-label">Analyse</div>
+      <a href="{{ dash_base }}/stats" {% if active=='stats' %}class="active"{% endif %}><span class="nav-icon">📊</span><span>Statistiken</span></a>
+      <a href="{{ dash_base }}/livefeed" {% if active=='livefeed' %}class="active"{% endif %}><span class="nav-icon">⚡</span><span>Live-Feed</span></a>
+      <a href="{{ dash_base }}/audit" {% if active=='audit' %}class="active"{% endif %}><span class="nav-icon">🔍</span><span>Audit</span></a>
+      {% if user.id|string == '1033826242270609449' %}<a href="{{ dash_base }}/badges" {% if active=='badges' %}class="active"{% endif %}><span class="nav-icon">🏅</span><span>Badge Studio</span></a>{% endif %}
+      <a href="{{ dash_base }}/whitelist" {% if active=='whitelist' %}class="active"{% endif %}><span class="nav-icon">🔐</span><span>Whitelist</span></a>
+      <div class="db-nav-label">System</div>
+      <a href="{{ dash_base }}/members" {% if active=='members' %}class="active"{% endif %}><span class="nav-icon">👥</span><span>Mitglieder</span></a>
+      <a href="{{ dash_base }}/tempvoice" {% if active=='tempvoice' %}class="active"{% endif %}><span class="nav-icon">🎤</span><span>Temp-Voice</span></a>
+      <a href="{{ dash_base }}/tickets" {% if active=='tickets' %}class="active"{% endif %}><span class="nav-icon">🎫</span><span>Tickets</span></a>
+      <a href="{{ dash_base }}/backup" {% if active=='backup' %}class="active"{% endif %}><span class="nav-icon">💾</span><span>Backup</span></a>
+      <a href="{{ dash_base }}/templates" {% if active=='templates' %}class="active"{% endif %}><span class="nav-icon">🌐</span><span>Community Templates</span></a>
+      <a href="{{ dash_base }}/embed" {% if active=='embed' %}class="active"{% endif %}><span class="nav-icon">🎨</span><span>Embed Builder</span></a>
+      <a href="{{ dash_base }}/design" {% if active=='design' %}class="active"{% endif %}><span class="nav-icon">🖌️</span><span>Design</span></a>
+      <a href="{{ dash_base }}/beta" {% if active=='beta' %}class="active"{% endif %}><span class="nav-icon">🧪</span><span>Beta <span style="font-size:0.6em;color:#f59e0b;background:rgba(245,158,11,.15);padding:1px 5px;border-radius:4px;margin-left:4px">BETA</span></span></a>
+      <a href="{{ dash_base }}/settings" {% if active=='settings' %}class="active"{% endif %}><span class="nav-icon">⚙️</span><span>Einstellungen</span></a>
+    </nav>
+    <div style="padding:8px 16px;border-top:1px solid var(--border)">
+      <div class="db-nav-label" style="padding:0;margin:0 0 6px">Theme</div>
+      <div class="theme-switcher" style="padding:0">
+        <div class="theme-dot active" data-t="purple" onclick="setTheme('purple')"></div>
+        <div class="theme-dot" data-t="blue" onclick="setTheme('blue')"></div>
+        <div class="theme-dot" data-t="green" onclick="setTheme('green')"></div>
+        <div class="theme-dot" data-t="amoled" onclick="setTheme('amoled')"></div>
+      </div>
+    </div>
+    <div class="db-user">
+      <img src="{{ user.avatar_url }}" alt="">
+      <div class="db-user-info"><div class="db-user-name">{{ user.username }}</div><div class="db-user-tag"><a href="/logout" style="color:var(--redl)">Logout</a></div></div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="db-main">
+    <div class="db-header">
+      <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+      <p>{% block page_desc %}{{ guild.name }}{% endblock %}</p>
+    </div>
+    {% set has_logs = cfg.get('log_channel') or (cfg.get('log_channels', {})|length > 0) %}
+    {% set me = guild.me if guild.me is defined else none %}
+    {% set perms = me.guild_permissions if me and me.guild_permissions is defined else none %}
+    <div class="mf-health-strip">
+      <span class="mf-health ok">✅ Config gespeichert</span>
+      <span class="mf-health {% if web_bot_online %}ok{% else %}bad{% endif %}">{% if web_bot_online %}✅ Bot online{% else %}❌ Bot offline{% endif %}</span>
+      <span class="mf-health {% if has_logs %}ok{% else %}warn{% endif %}">{% if has_logs %}✅ Logs aktiv{% else %}⚠️ Log-Kanal fehlt{% endif %}</span>
+      <span class="mf-health {% if perms and perms.manage_roles and perms.ban_members %}ok{% else %}warn{% endif %}">{% if perms and perms.manage_roles and perms.ban_members %}✅ Rechte OK{% else %}⚠️ Rechte prüfen{% endif %}</span>
+      <button class="mf-health-action" onclick="openQuickWizard()">✨ Quick-Setup</button>
+      <button class="mf-health-action danger" onclick="runEmergencyMode()">🚨 Emergency</button>
+    </div>
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- ═══ SAVE BAR ═══ -->
+  <div id="saveBar" style="position:fixed;bottom:0;left:var(--sidebar-w);right:0;z-index:9998;display:none;transform:translateY(100%)">
+    <div style="margin:0 20px 20px;padding:14px 20px;border-radius:16px;background:rgba(10,10,26,0.97);backdrop-filter:blur(30px);border:1px solid rgba(245,158,11,0.2);box-shadow:0 -4px 30px rgba(0,0,0,0.4);display:flex;align-items:center;gap:12px">
+      <div style="width:10px;height:10px;border-radius:50%;background:var(--amberl);animation:pulse 1.5s ease infinite;flex-shrink:0"></div>
+      <span style="color:var(--amberl);font-size:.82rem;font-weight:600;flex:1">Ungespeicherte Änderungen</span>
+      <button onclick="showChangeCenter()" style="padding:8px 12px;border-radius:10px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.18);color:var(--vl);font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s">🧾 Änderungen</button>
+      <button onclick="discardChanges()" style="padding:8px 16px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:var(--muted);font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s" onmouseover="this.style.background='rgba(255,255,255,0.1)';this.style.color='var(--fg)'" onmouseout="this.style.background='rgba(255,255,255,0.05)';this.style.color='var(--muted)'">✕ Verwerfen</button>
+      <button onclick="saveConfig()" style="padding:8px 20px;border-radius:10px;background:linear-gradient(135deg,rgba(37,99,235,0.8),rgba(30,64,175,0.8));border:1px solid rgba(96,165,250,0.4);color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;box-shadow:0 2px 12px rgba(37,99,235,0.3)" onmouseover="this.style.boxShadow='0 4px 20px rgba(37,99,235,0.5)'" onmouseout="this.style.boxShadow='0 2px 12px rgba(37,99,235,0.3)'">💾 Speichern</button>
+    </div>
+  </div>
+
+  <!-- ═══ TOAST ═══ -->
+  <div id="mfToast" style="position:fixed;bottom:24px;right:24px;z-index:99999;pointer-events:none"></div>
+
+  <!-- ═══ MODAL OVERLAY ═══ -->
+  <div id="mfModal" style="display:none;position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);align-items:center;justify-content:center">
+    <div style="background:rgba(10,10,26,0.98);border:1px solid var(--border);border-radius:20px;padding:28px;max-width:520px;width:90%;box-shadow:0 24px 80px rgba(0,0,0,0.5);animation:scaleIn .2s ease">
+      <div id="mfModalBody"></div>
+    </div>
+  </div>
+
+  <div id="cmdPalette" class="mf-palette" style="display:none">
+    <div class="mf-palette-box">
+      <input id="cmdSearch" placeholder="Suche: logs, anti nuke, welcome, prefix …" autocomplete="off">
+      <div id="cmdResults"></div>
+    </div>
+  </div>
+
+  <nav class="mf-bottom-nav">
+    <a href="{{ dash_base }}" {% if active=='overview' %}class="active"{% endif %}>📊<span>Home</span></a>
+    <a href="{{ dash_base }}/security" {% if active=='security' %}class="active"{% endif %}>🛡️<span>Security</span></a>
+    <a href="{{ dash_base }}/logs" {% if active=='logs' %}class="active"{% endif %}>📢<span>Logs</span></a>
+    <a href="{{ dash_base }}/members" {% if active=='members' %}class="active"{% endif %}>👥<span>Member</span></a>
+    <a href="{{ dash_base }}/settings" {% if active=='settings' %}class="active"{% endif %}>⚙️<span>Settings</span></a>
+  </nav>
+
+  <script>
+    let _dirty = false;
+    let _saving = false;
+
+    /* ── Save Bar ── */
+    function showSaveBar() {
+      if (_saving) return;
+      _dirty = true;
+      const bar = document.getElementById('saveBar');
+      bar.style.display = 'block';
+      requestAnimationFrame(() => { 
+        bar.style.transform = 'translateY(0)'; 
+        bar.style.transition = 'transform .4s cubic-bezier(.18,.89,.32,1.28)'; 
+      });
+    }
+
+    function hideSaveBar() {
+      const bar = document.getElementById('saveBar');
+      bar.style.transform = 'translateY(100%)';
+      setTimeout(() => { bar.style.display = 'none'; }, 400);
+    }
+
+    function discardChanges() {
+      _dirty = false;
+      hideSaveBar();
+      showToast('↩️ Änderungen verworfen', 'info');
+      setTimeout(() => location.reload(), 500);
+    }
+
+    /* ── Toast System ── */
+    function showToast(msg, type) {
+      const colors = {
+        ok: { bg: 'rgba(34,197,94,0.15)', border: 'rgba(34,197,94,0.3)', text: '#4ade80', icon: '✅' },
+        err: { bg: 'rgba(239,68,68,0.15)', border: 'rgba(239,68,68,0.3)', text: '#f87171', icon: '❌' },
+        info: { bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.3)', text: '#60a5fa', icon: 'ℹ️' },
+        warn: { bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.3)', text: '#fbbf24', icon: '⚠️' },
+        save: { bg: 'rgba(96,165,250,0.15)', border: 'rgba(96,165,250,0.3)', text: '#a78bfa', icon: '💾' },
+      };
+      const c = colors[type] || colors.ok;
+      const container = document.getElementById('mfToast');
+      const toast = document.createElement('div');
+      toast.style.cssText = `padding:14px 22px;border-radius:16px;background:${c.bg};border:1px solid ${c.border};color:${c.text};font-size:.85rem;font-weight:700;margin-top:10px;pointer-events:auto;display:flex;align-items:center;gap:10px;animation:fadeUp .3s ease,fadeOut .4s ease 3.5s forwards;box-shadow:0 10px 40px rgba(0,0,0,0.4);backdrop-filter:blur(20px)`;
+      toast.innerHTML = `<span style="font-size:1.1rem">${c.icon}</span><span style="flex:1">${msg}</span><span class="mf-toast-progress" style="position:absolute;left:10px;right:10px;bottom:5px;height:2px;background:${c.text};opacity:.65;border-radius:99px;animation:toastProgress 3.8s linear forwards"></span>`;
+      toast.style.position = 'relative';
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 4000);
+    }
+
+    /* ── Mark Saved ── */
+    function markSaved() {
+      _dirty = false;
+      _saving = false;
+      hideSaveBar();
+      showToast('Einstellungen erfolgreich übernommen!', 'save');
+    }
+
+    function markError(msg) {
+      _saving = false;
+      showToast(msg || 'Fehler beim Speichern', 'err');
+    }
+
+    /* ── Modal ── */
+    function showModal(html) {
+      document.getElementById('mfModalBody').innerHTML = html;
+      const m = document.getElementById('mfModal');
+      m.style.display = 'flex';
+      m.style.animation = 'fadeIn .2s ease';
+    }
+
+    function closeModal() {
+      const m = document.getElementById('mfModal');
+      m.style.animation = 'fadeOut .2s ease forwards';
+      setTimeout(() => { m.style.display = 'none'; }, 200);
+    }
+
+    document.getElementById('mfModal').addEventListener('click', function(e) {
+      if (e.target === this) closeModal();
+    });
+
+    /* ── Navigation Guard ── */
+    function showUnsavedModal() {
+      showModal(`
+        <div style="text-align:center;margin-bottom:24px">
+          <div style="font-size:3rem;margin-bottom:14px;filter:drop-shadow(0 0 10px rgba(245,158,11,0.5))">⚠️</div>
+          <div style="font-weight:900;font-size:1.3rem;margin-bottom:8px;color:#fff">Ungespeicherte Änderungen</div>
+          <div style="color:var(--muted);font-size:.9rem;line-height:1.6">Du hast Einstellungen verändert, aber noch nicht gespeichert. Willst du sie jetzt sichern oder verwerfen?</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <button onclick="closeModal();saveConfig()" style="width:100%;padding:14px;border-radius:14px;background:linear-gradient(135deg,var(--v),var(--p));border:1px solid rgba(255,255,255,0.1);color:#fff;font-size:.9rem;font-weight:800;cursor:pointer;font-family:inherit;transition:.2s;box-shadow:0 4px 15px rgba(59,130,246,0.3)">💾 Jetzt Speichern</button>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <button onclick="closeModal()" style="padding:12px;border-radius:14px;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--fg);font-size:.85rem;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s">Weiter bearbeiten</button>
+            <button onclick="closeModal();discardChanges()" style="padding:12px;border-radius:14px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#f87171;font-size:.85rem;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s">❌ Verwerfen</button>
+          </div>
+        </div>
+      `);
+    }
+
+    const MF_GID = "{{ guild.id }}";
+    const MF_BASE = "{{ dash_base }}";
+    const MF_WIZARD_SERVER_SEEN = {{ 'true' if cfg.get('dashboard_onboarding', {}).get('wizard_popup_seen') else 'false' }};
+    const MF_SHOULD_AUTO_WIZARD = {{ 'true' if (not has_logs and not cfg.get('dashboard_onboarding', {}).get('wizard_popup_seen')) else 'false' }};
+    const MF_COMMANDS = [
+      ['Open Logs','📢','logs', MF_BASE + '/logs'], ['Open Security','🛡️','anti nuke security', MF_BASE + '/security'],
+      ['Open Welcome','👋','welcome leave', MF_BASE + '/welcome'], ['Open Prefix','⚙️','prefix settings', MF_BASE + '/settings'],
+      ['Open Members','👥','members user', MF_BASE + '/members'], ['Open Embed Builder','🎨','embed preview', MF_BASE + '/embed'],
+      ['Open Audit','🔍','audit roles permissions', MF_BASE + '/audit'], ['Save Config','💾','save speichern', 'save']
+    ];
+    const _mfChanges = new Set();
+    function registerChange(el){
+      if(!el) return;
+      const label = el.id || el.name || el.dataset.key || el.dataset.field || el.closest('.cfg-row')?.innerText?.slice(0,40) || 'Einstellung';
+      _mfChanges.add(label);
+    }
+    function showChangeCenter(){
+      const items = Array.from(_mfChanges).slice(0,20).map(x=>`<div class="mf-change-item">• ${x}</div>`).join('') || '<div class="mf-change-item">Noch keine einzelnen Felder erfasst.</div>';
+      showModal(`<div style="font-weight:900;font-size:1.2rem;margin-bottom:10px">🧾 Save Center</div><p style="color:var(--muted);font-size:.85rem">${_mfChanges.size} Änderung(en) offen.</p><div style="display:grid;gap:6px;margin:14px 0">${items}</div><button class="btn-glass btn-glass-primary" onclick="closeModal();saveConfig()">💾 Alles speichern</button>`);
+    }
+    async function markWizardSeen(){
+      try { await fetch(`/api/guild/${MF_GID}/onboarding/wizard_seen`, {method:'POST'}); }
+      catch(e) { console.debug('wizard_seen failed', e); }
+    }
+    function openQuickWizard(auto=false){
+      if(auto) markWizardSeen();
+      showModal(`
+        <div class="mf-wizard-modal">
+          <div class="mf-wizard-icon">✨</div>
+          <h2>Quick-Setup für ${document.querySelector('.db-server-name')?.textContent || 'diesen Server'}</h2>
+          <p>Wir haben gesehen, dass wichtige Basics noch fehlen. Dieses Popup erscheint serverweit nur einmal – egal auf welchem Gerät.</p>
+          <div class="mf-wizard-benefits">
+            <span>📢 Logs setzen</span><span>🛡️ Security-Level</span><span>🤖 AutoMod</span><span>👋 Welcome/Verify vorbereiten</span>
+          </div>
+          <div class="mf-wizard-grid">
+            <button class="mf-wizard-card" onclick="runQuickSetup('easy')"><b>🟢 Einfach</b><small>kleine Server, sanfter Schutz</small></button>
+            <button class="mf-wizard-card primary" onclick="runQuickSetup('safe')"><b>🛡️ Sicher</b><small>empfohlen für die meisten Server</small></button>
+            <button class="mf-wizard-card danger" onclick="runQuickSetup('hardcore')"><b>🚨 Hardcore</b><small>Raid-Gefahr, maximale Regeln</small></button>
+          </div>
+          <div class="mf-wizard-actions">
+            <button class="btn-glass btn-sm" onclick="closeModal()">Später manuell einstellen</button>
+            <button class="btn-glass btn-sm btn-glass-ghost" onclick="markWizardSeen();closeModal();showToast('Quick-Setup wird für diesen Server nicht mehr automatisch angezeigt.', 'info')">Nicht nochmal anzeigen</button>
+          </div>
+        </div>`);
+    }
+    async function runQuickSetup(profile){
+      try{ const r=await fetch(`/api/guild/${MF_GID}/quick_setup`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile})}); const d=await r.json(); if(d.ok){showToast(`✅ Quick-Setup fertig · Score ${d.score}%`,'ok'); closeModal(); setTimeout(()=>location.reload(),700)} else showToast('❌ '+(d.error||'Fehler'),'err'); } catch(e){showToast('❌ Netzwerkfehler','err')}
+    }
+    async function runEmergencyMode(){
+      if(!confirm('Emergency Mode aktivieren? Alle Textkanäle werden gesperrt.')) return;
+      try{ const r=await fetch(`/api/guild/${MF_GID}/emergency`,{method:'POST'}); const d=await r.json(); if(d.ok) showToast(`🚨 Emergency aktiv · ${d.locked} Kanäle gesperrt`,'ok'); else showToast('❌ '+(d.error||'Fehler'),'err'); } catch(e){showToast('❌ Netzwerkfehler','err')}
+    }
+    function openPalette(){
+      const pal=document.getElementById('cmdPalette'), inp=document.getElementById('cmdSearch');
+      pal.style.display='flex'; renderPalette(''); setTimeout(()=>inp.focus(),20);
+    }
+    function closePalette(){ document.getElementById('cmdPalette').style.display='none'; }
+    function renderPalette(q){
+      q=(q||'').toLowerCase();
+      const box=document.getElementById('cmdResults');
+      box.innerHTML=MF_COMMANDS.filter(c=>!q || (c[0]+' '+c[2]).toLowerCase().includes(q)).map(c=>`<button class="mf-pal-item" data-action="${c[3]}"><span>${c[1]}</span><b>${c[0]}</b></button>`).join('') || '<div class="mf-pal-empty">Nichts gefunden</div>';
+      box.querySelectorAll('.mf-pal-item').forEach(btn=>btn.onclick=()=>{ const a=btn.dataset.action; if(a==='save'){ closePalette(); saveConfig(); } else location.href=a; });
+    }
+
+    // Only track elements that are not explicitly ignored
+    document.addEventListener('change', e => {
+      if (e.target.closest('.cfg-input, .cfg-select, .toggle input') && !e.target.closest('.ignore-dirty')) {
+        registerChange(e.target);
+        showSaveBar();
+      }
+    });
+    document.addEventListener('input', e => {
+      if (e.target.closest('.cfg-input, .cfg-select, textarea') && !e.target.closest('.ignore-dirty')) {
+        registerChange(e.target);
+        showSaveBar();
+      }
+    });
+
+    // Block browser navigation
+    window.addEventListener('beforeunload', function(e) {
+      if (_dirty) { e.preventDefault(); e.returnValue = ''; }
+    });
+
+    // Block sidebar navigation with modal
+    document.querySelectorAll('.db-nav a').forEach(link => {
+      link.addEventListener('click', function(e) {
+        if (_dirty) {
+          const targetHref = this.getAttribute('href');
+          if (targetHref && targetHref !== window.location.pathname) {
+            e.preventDefault();
+            showUnsavedModal();
+          }
+        }
+      });
+    });
+  </script>
+
+  <style>
+    @keyframes fadeOut { to { opacity: 0; transform: translateY(8px); } }
+    @media(max-width:900px) { #saveBar > div { margin: 0 8px 12px; } }
+  </style>
+  <script>
+  /* ── Theme + Design-Preferences (Global Loader) ──
+     Werte landen in localStorage, damit jede Dashboard-Seite sie kennt:
+       mf-theme   → "purple" | "blue" | "green" | "amoled" | "midnight" | "rose" | "emerald" | "sunset" | "custom"
+       mf-accent  → CSS-Color (für "custom")
+       mf-density → "comfy" | "compact" | "cozy"
+       mf-radius  → "rounded" | "soft" | "sharp"
+       mf-anim    → "on" | "off"
+       mf-sidebar → "expanded" | "compact"
+       mf-anim-preset → "calm" | "smooth" | "cyber" | "minimal" | "performance"
+  */
+  function setTheme(t){
+    if(!t) return;
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('mf-theme', t);
+    document.querySelectorAll('.theme-dot').forEach(d=>{d.classList.toggle('active', d.dataset.t===t)});
+  }
+  function setAccent(color){
+    if(!color){
+      document.documentElement.style.removeProperty('--accent');
+      document.documentElement.style.removeProperty('--accent-l');
+      localStorage.removeItem('mf-accent');
+      return;
+    }
+    document.documentElement.style.setProperty('--accent', color);
+    // Helle Variante (für active-Borders/Hovers) – simple HSL-Lighten
+    document.documentElement.style.setProperty('--accent-l', color);
+    localStorage.setItem('mf-accent', color);
+  }
+  function setDensity(v){
+    document.documentElement.setAttribute('data-density', v || 'comfy');
+    localStorage.setItem('mf-density', v || 'comfy');
+  }
+  function setRadius(v){
+    document.documentElement.setAttribute('data-radius', v || 'rounded');
+    localStorage.setItem('mf-radius', v || 'rounded');
+  }
+  function setAnim(v){
+    document.documentElement.setAttribute('data-anim', v || 'on');
+    localStorage.setItem('mf-anim', v || 'on');
+  }
+  function setSidebar(v){
+    document.documentElement.setAttribute('data-sidebar', v || 'expanded');
+    localStorage.setItem('mf-sidebar', v || 'expanded');
+  }
+  function setAnimPreset(v){
+    document.documentElement.setAttribute('data-anim-preset', v || 'smooth');
+    localStorage.setItem('mf-anim-preset', v || 'smooth');
+  }
+  (function applyStoredDesign(){
+    setTheme  (localStorage.getItem('mf-theme')   || '{{ cfg.get("dashboard_theme") }}'   || 'purple');
+    setAccent (localStorage.getItem('mf-accent')  || '');
+    setDensity(localStorage.getItem('mf-density') || 'comfy');
+    setRadius (localStorage.getItem('mf-radius')  || 'rounded');
+    setAnim   (localStorage.getItem('mf-anim')    || 'on');
+    setSidebar(localStorage.getItem('mf-sidebar') || 'expanded');
+    setAnimPreset(localStorage.getItem('mf-anim-preset') || 'smooth');
+  })();
+  </script>
+  <script>
+  // ── Dashboard UX Polish: Shortcuts, active-nav focus, micro-ripple ──
+  (function dashboardPolish(){
+    function ready(fn){
+      if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, {once:true});
+      else fn();
+    }
+    ready(function(){
+      document.body.classList.add('mf-dashboard-ready');
+      if(MF_SHOULD_AUTO_WIZARD){
+        setTimeout(() => openQuickWizard(true), 450);
+      }
+      const active = document.querySelector('.db-nav a.active');
+      if(active) active.scrollIntoView({block:'center', inline:'nearest'});
+
+      document.addEventListener('keydown', function(e){
+        const key = (e.key || '').toLowerCase();
+        if((e.ctrlKey || e.metaKey) && key === 's'){
+          if(typeof saveConfig === 'function'){ e.preventDefault(); saveConfig(); }
+        }
+        if((e.ctrlKey || e.metaKey) && key === 'k'){ e.preventDefault(); openPalette(); }
+        if(key === 'escape'){ if(document.getElementById('cmdPalette')?.style.display==='flex') closePalette(); else if(typeof closeModal === 'function') closeModal(); }
+      });
+
+      const cmdSearch = document.getElementById('cmdSearch');
+      if(cmdSearch) cmdSearch.addEventListener('input', e => renderPalette(e.target.value));
+      document.getElementById('cmdPalette')?.addEventListener('click', e => { if(e.target.id==='cmdPalette') closePalette(); });
+
+      document.querySelectorAll('button, .btn-glass, .db-nav a').forEach(el => {
+        if(el.dataset.rippleReady) return;
+        el.dataset.rippleReady = '1';
+        el.addEventListener('pointerdown', function(ev){
+          const r = this.getBoundingClientRect();
+          this.style.setProperty('--rx', ((ev.clientX - r.left) / Math.max(r.width,1) * 100) + '%');
+          this.style.setProperty('--ry', ((ev.clientY - r.top) / Math.max(r.height,1) * 100) + '%');
+          this.classList.remove('mf-ripple');
+          void this.offsetWidth;
+          this.classList.add('mf-ripple');
+        });
+      });
+
+      document.querySelectorAll('.db-card, .ov-stat, .cfg-row').forEach((el, i) => {
+        el.style.animationDelay = Math.min(i * 0.018, 0.22) + 's';
+      });
+    });
+  })();
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,65 @@
+{% extends "admin/_base.html" %}
+{% set active = 'guilds' %}
+{% block title %}Server{% endblock %}
+{% block page_title %}🏠 Server-Verwaltung{% endblock %}
+{% block page_desc %}{{ guilds|length }} bekannte Server · aktive Bot-Server + gespeicherte Dashboard-Logins{% endblock %}
+{% block content %}
+<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap">
+  <input type="text" id="guildSearch" class="cfg-input" placeholder="🔍 Server suchen…" style="max-width:400px;width:100%" oninput="filterGuilds()">
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a href="{{ invite_all_url }}" target="_blank" class="btn-glass btn-glass-primary btn-sm">➕ Bot zu neuem Server hinzufügen</a>
+    <a href="/admin/users" class="btn-glass btn-sm btn-glass-ghost">👥 Dashboard-Logins</a>
+  </div>
+</div>
+
+<div class="db-card" style="margin-bottom:16px;padding:14px 18px;color:var(--muted);font-size:.8rem">
+  <b style="color:var(--fg)">Hinweis:</b> Discord erlaubt Bots nicht heimlich/automatisch auf alle Server zu setzen. Der Button öffnet den offiziellen Discord-Invite. Bei einzelnen Servern ist der Server vorausgewählt.
+</div>
+
+<div id="guildList" style="display:flex;flex-direction:column;gap:10px">
+  {% for g in guilds %}
+  <div class="cfg-row guild-item" style="text-decoration:none">
+    <a href="{% if g.bot_active %}/admin/server/{{ g.id }}{% else %}{{ g.invite_url }}{% endif %}" {% if not g.bot_active %}target="_blank"{% endif %} style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;text-decoration:none;color:inherit">
+      {% if g.icon %}
+      <img src="{{ g.icon }}" style="width:42px;height:42px;border-radius:50%;object-fit:cover" alt="">
+      {% else %}
+      <div style="width:42px;height:42px;border-radius:50%;background:rgba(59,130,246,0.2);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--vl);font-size:.85rem;flex-shrink:0">{{ g.name[0] }}</div>
+      {% endif %}
+      <div style="min-width:0">
+        <div class="cfg-label" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ g.name }}</div>
+        <div class="cfg-desc">ID: {{ g.id }} · Owner: {{ g.owner_id }} · Quelle: {{ g.known_from }}</div>
+        {% if g.managers %}<div class="cfg-desc">Manager: {{ g.managers[:3]|join(', ') }}{% if g.managers|length > 3 %} +{{ g.managers|length-3 }}{% endif %}</div>{% endif %}
+      </div>
+    </a>
+    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
+      {% if g.bot_active %}
+        <span style="padding:4px 9px;border-radius:999px;background:rgba(74,222,128,.10);color:var(--green);font-size:.68rem;font-weight:700">✅ Bot aktiv</span>
+        <a href="/admin/server/{{ g.id }}" class="btn-glass btn-sm btn-glass-ghost">Öffnen</a>
+      {% else %}
+        <span style="padding:4px 9px;border-radius:999px;background:rgba(245,158,11,.10);color:#fbbf24;font-size:.68rem;font-weight:700">➕ Bot fehlt</span>
+        <a href="{{ g.invite_url }}" target="_blank" class="btn-glass btn-sm btn-glass-primary">Hinzufügen</a>
+      {% endif %}
+      <span style="font-size:.82rem;color:var(--muted);font-weight:600;font-family:'Geist Mono',monospace">{{ g.members }}</span>
+      <span style="font-size:.7rem;color:var(--muted)">Members</span>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if not guilds %}
+<div class="db-card" style="text-align:center;padding:40px">
+  <div style="font-size:2.5rem;margin-bottom:12px">🤖</div>
+  <p style="color:var(--muted)">Noch keine Server bekannt. Melde dich im Dashboard an oder lade den Bot ein.</p>
+  <a href="{{ invite_all_url }}" target="_blank" class="btn-glass btn-glass-primary">Bot einladen</a>
+</div>
+{% endif %}
+
+<script>
+function filterGuilds(){
+  const q=document.getElementById('guildSearch').value.toLowerCase();
+  document.querySelectorAll('.guild-item').forEach(el=>{
+    el.style.display=el.textContent.toLowerCase().includes(q)?'':'none';
+  });
+}
+</script>
+{% endblock %}

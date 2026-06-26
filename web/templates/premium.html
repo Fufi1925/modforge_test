@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BotForge Plus – ModForge</title>
+
+<link rel="stylesheet" href="/static/style.css">
+<script defer src="/static/script.js"></script>
+</head>
+
+<body class="page-bg">
+
+<!-- NAVBAR -->
+<div class="topnav">
+  <a class="brand" href="/">
+    <div class="brand-icon">👑</div>
+    <span class="grad">ModForge</span>
+  </a>
+
+  <div class="nav-links" style="gap:14px">
+    <span style="font-size:.8rem;color:var(--muted)">
+      👤 {{ user.username if user else "Gast" }}
+    </span>
+
+    <a href="/pricing" class="btn btn-ghost btn-sm">
+      Preise
+    </a>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="dash-main">
+
+  <!-- HEADER -->
+  <div class="dash-sec-head" style="text-align:center;margin-bottom:34px">
+
+    <div style="
+      width:82px;
+      height:82px;
+      border-radius:24px;
+      margin:auto;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:2.5rem;
+      background:linear-gradient(135deg,#f59e0b,#ea580c);
+      box-shadow:0 10px 40px rgba(245,158,11,.35);
+      margin-bottom:20px;
+    ">
+      👑
+    </div>
+
+    <div style="
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 14px;
+      border-radius:999px;
+      background:rgba(245,158,11,.12);
+      border:1px solid rgba(245,158,11,.3);
+      color:#fcd34d;
+      font-size:.75rem;
+      font-weight:700;
+      margin-bottom:20px;
+    ">
+      BOTFORGE PLUS
+    </div>
+
+    <h1 style="font-size:3.5rem;font-weight:900;margin-bottom:16px">
+      Dein eigener Bot.
+      <span class="grad">
+        Dein Branding.
+      </span>
+    </h1>
+
+    <p style="
+      max-width:760px;
+      margin:auto;
+      color:var(--muted);
+      font-size:1.05rem;
+      line-height:1.7;
+    ">
+      Für nur <strong>{{ plus_price }}</strong>€/Monat bekommst du
+      einen komplett personalisierten Discord Bot mit
+      eigenem Namen, Avatar und Branding.
+    </p>
+
+  </div>
+
+  <!-- MAIN CARD -->
+  <div class="srv-card" style="
+    padding:34px;
+    border:1px solid rgba(245,158,11,.22);
+    background:
+      linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
+    margin-bottom:28px;
+  ">
+
+    <div style="
+      display:grid;
+      grid-template-columns:1fr 360px;
+      gap:34px;
+      align-items:center;
+    " class="premium-grid">
+
+      <!-- FEATURES -->
+      <div>
+
+        <div style="
+          font-size:.8rem;
+          text-transform:uppercase;
+          letter-spacing:.12em;
+          color:#fcd34d;
+          margin-bottom:10px;
+          font-weight:700;
+        ">
+          Plus Vorteile
+        </div>
+
+        <h2 style="
+          font-size:2rem;
+          margin-bottom:24px;
+          font-weight:900;
+        ">
+          Alles, was du brauchst.
+        </h2>
+
+        <div style="
+          display:flex;
+          flex-direction:column;
+          gap:14px;
+        ">
+
+          <div class="glass">
+            ✅ Eigener Bot mit deinem Namen
+          </div>
+
+          <div class="glass">
+            ✅ Eigener Avatar & Branding
+          </div>
+
+          <div class="glass">
+            ✅ Kein ModForge-Logo mehr
+          </div>
+
+          <div class="glass">
+            ✅ Web-Personalisierung
+          </div>
+
+          <div class="glass">
+            ✅ Premium-Support (15 Min Antwort)
+          </div>
+
+          <div class="glass">
+            ✅ Premium-Badge im Server
+          </div>
+
+        </div>
+      </div>
+
+      <!-- PRICE -->
+      <div class="glass" style="
+        padding:28px;
+        border-radius:28px;
+        text-align:center;
+      ">
+
+        <div style="
+          color:var(--muted);
+          text-transform:uppercase;
+          font-size:.75rem;
+          margin-bottom:12px;
+        ">
+          Preis
+        </div>
+
+        <div style="
+          display:flex;
+          align-items:flex-end;
+          justify-content:center;
+          gap:4px;
+          margin-bottom:8px;
+        ">
+          <span style="
+            font-size:4rem;
+            font-weight:900;
+            line-height:1;
+          ">
+            {{ plus_price }}
+          </span>
+
+          <span style="
+            font-size:2rem;
+            color:var(--muted);
+            margin-bottom:6px;
+          ">
+            €
+          </span>
+        </div>
+
+        <div style="
+          color:var(--muted);
+          font-size:.9rem;
+          margin-bottom:24px;
+        ">
+          pro Monat · jederzeit kündbar
+        </div>
+
+        <a href="/upgrade"
+           class="btn btn-primary"
+           style="
+             width:100%;
+             justify-content:center;
+             font-size:1rem;
+             padding:14px;
+             background:linear-gradient(90deg,#f59e0b,#ea580c);
+             border:none;
+           ">
+          👑 Jetzt upgraden →
+        </a>
+
+        <a href="/pricing"
+           style="
+             display:block;
+             margin-top:14px;
+             color:var(--muted);
+             font-size:.8rem;
+             text-decoration:none;
+           ">
+          ← Zurück zu allen Plänen
+        </a>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- PARTNER -->
+  <div class="srv-card" style="
+    text-align:center;
+    padding:30px;
+  ">
+
+    <div style="
+      font-size:2rem;
+      margin-bottom:12px;
+    ">
+      ❤️
+    </div>
+
+    <h3 style="
+      font-size:1.35rem;
+      margin-bottom:10px;
+      font-weight:800;
+    ">
+      Tipp: Werde Partner und spare alles
+    </h3>
+
+    <p style="
+      color:var(--muted);
+      max-width:650px;
+      margin:auto;
+      line-height:1.7;
+      margin-bottom:20px;
+    ">
+      Als verifizierter BotForge-Partner bekommst du
+      BotForge Plus komplett kostenlos.
+      Lebenslang.
+    </p>
+
+    <a href="/partners"
+       class="btn btn-ghost">
+      ⭐ Mehr erfahren
+    </a>
+
+  </div>
+
+</div>
+
+</body>
+</html>

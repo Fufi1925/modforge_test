@@ -1,0 +1,93 @@
+{% extends "dashboard/_base.html" %}
+{% set active = 'backup' %}
+{% block title %}Backup Command Center{% endblock %}
+{% block page_title %}💾 Backup Command Center{% endblock %}
+{% block page_desc %}Backups anzeigen · Preview · Health · Restore-Check · Timeline · Auto-Backup{% endblock %}
+{% block head %}
+<style>
+.bkcc-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;margin-bottom:16px}.bkcc-stat{padding:16px;border-radius:16px;border:1px solid var(--border);background:rgba(255,255,255,.03);text-align:center}.bkcc-v{font-size:1.25rem;font-weight:900;font-family:'Geist Mono',monospace}.bkcc-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;align-items:start}.bkcc-card{padding:16px;border-radius:18px;border:1px solid var(--border);background:rgba(255,255,255,.028);margin-bottom:14px}.bk-list{display:grid;gap:10px}.bk-item{padding:14px;border-radius:16px;border:1px solid var(--border);background:rgba(255,255,255,.03);transition:.16s}.bk-item:hover{border-color:rgba(96,165,250,.28);background:rgba(255,255,255,.048);transform:translateY(-1px)}.bk-item.selected{border-color:var(--v);box-shadow:0 0 0 1px rgba(96,165,250,.22)}.bk-title{font-weight:850;font-size:.9rem}.bk-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}.bk-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid var(--border);font-size:.62rem;color:var(--muted)}.bk-health{width:48px;height:48px;border-radius:999px;display:grid;place-items:center;background:conic-gradient(var(--green) calc(var(--score)*1%),rgba(255,255,255,.08) 0);position:relative;flex-shrink:0}.bk-health:after{content:'';position:absolute;inset:6px;border-radius:999px;background:#0b0b1a}.bk-health b{position:relative;z-index:1;font-size:.75rem;font-family:'Geist Mono',monospace}.bk-search{padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.045);border:1px solid var(--border);color:var(--fg);outline:none;font-size:.8rem;min-width:210px}.bk-preview-box{min-height:230px}.bk-change-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:10px 0}.bk-change{padding:10px;border-radius:12px;border:1px solid var(--border);background:rgba(255,255,255,.035);text-align:center}.bk-risk-low{color:var(--green)}.bk-risk-medium{color:var(--amberl)}.bk-risk-high{color:#f87171}.bk-timeline{position:relative;display:grid;gap:8px}.bk-timeline:before{content:'';position:absolute;left:14px;top:0;bottom:0;width:1px;background:var(--border)}.bk-time-row{position:relative;padding:9px 10px 9px 38px;border-radius:12px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.04);font-size:.76rem}.bk-time-row:before{content:'💾';position:absolute;left:4px;top:8px;width:22px;height:22px;border-radius:999px;background:rgba(59,130,246,.12);display:grid;place-items:center}.bk-empty{text-align:center;padding:40px;border-radius:16px;background:rgba(255,255,255,.02);border:1px dashed var(--border)}.bk-actions{display:flex;gap:6px;flex-wrap:wrap}.bk-actions button,.bk-actions a{font-family:inherit}@media(max-width:980px){.bkcc-grid{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+{% block content %}
+<div class="bkcc-stats">
+  <div class="bkcc-stat"><div class="bkcc-v" style="color:var(--vl)">{{ backups|length }}</div><div class="ov-sl">Backups</div></div>
+  <div class="bkcc-stat"><div class="bkcc-v" style="color:{% if auto_enabled %}var(--green){% else %}var(--muted){% endif %}">{% if auto_enabled %}AN{% else %}AUS{% endif %}</div><div class="ov-sl">Auto-Backup</div></div>
+  <div class="bkcc-stat"><div class="bkcc-v" style="color:var(--cl)">{{ auto_interval }}h</div><div class="ov-sl">Intervall</div></div>
+  <div class="bkcc-stat"><div class="bkcc-v" style="color:var(--amberl)">{{ auto_max }}</div><div class="ov-sl">Max Slots</div></div>
+  <div class="bkcc-stat"><div class="bkcc-v" style="color:var(--p2)">{{ (total_size_bytes / 1024)|round(1) if total_size_bytes else 0 }} KB</div><div class="ov-sl">Gesamtgröße</div></div>
+</div>
+
+{% if not bot_ready %}<div class="bkcc-card" style="border-color:rgba(239,68,68,.22);background:rgba(239,68,68,.055);color:#fca5a5">⚠️ Bot offline – Erstellen/Restore benötigt den Bot. Anzeigen/Download/Löschen funktioniert mit DB.</div>{% endif %}
+
+<div class="bkcc-grid">
+  <section>
+    <div class="bkcc-card">
+      <div class="db-card-header"><span class="db-card-title">➕ Backup erstellen</span><button class="btn-glass btn-sm" onclick="refreshBackups()">🔄 Neu laden</button></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><input id="bkLabel" class="cfg-input" placeholder="Label, z.B. Vor großem Umbau" maxlength="80" style="flex:1;min-width:220px;max-width:100%"><button class="btn-glass btn-glass-primary" onclick="createBackup()" {% if not bot_ready %}disabled style="opacity:.4"{% endif %}>💾 Backup erstellen</button></div>
+    </div>
+
+    <div class="bkcc-card">
+      <div class="db-card-header"><span class="db-card-title">📦 Gespeicherte Backups</span><span class="tag" id="bkCount">{{ backups|length }}</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><input id="bkSearch" class="bk-search ignore-dirty" placeholder="🔍 Label, ID, Server …" oninput="filterBackups()"><select id="bkFilter" class="cfg-select ignore-dirty" onchange="filterBackups()"><option value="">Alle</option><option value="public">Public</option><option value="private">Private</option><option value="healthy">Health 80+</option><option value="warn">Mit Warnungen</option></select></div>
+      {% if backups %}<div class="bk-list" id="bkList">{% for b in backups %}
+        <div class="bk-item" id="bk-{{ b.id }}" data-id="{{ b.id }}" data-search="{{ (b.label ~ ' ' ~ b.id ~ ' ' ~ b.guild_name)|lower }}" data-public="{{ b.is_public|int }}" data-health="{{ b.health_score }}" data-warn="{{ (b.warnings|length > 0)|int }}" onclick="selectBackup('{{ b.id }}')">
+          <div style="display:flex;gap:12px;align-items:center"><div class="bk-health" style="--score:{{ b.health_score }}"><b>{{ b.health_score }}</b></div><div style="flex:1;min-width:0"><div class="bk-title">{{ b.label }}</div><div class="cfg-desc"><span class="ts-rel" data-ts="{{ b.created_ts }}">—</span> · <code>{{ b.id }}</code></div><div class="bk-meta"><span class="bk-pill">🏷️ {{ b.roles }}</span><span class="bk-pill">📁 {{ b.channels }}</span><span class="bk-pill">📂 {{ b.categories }}</span><span class="bk-pill">💽 {{ b.size_label }}</span>{% if b.is_public %}<span class="bk-pill">🌐 Public</span>{% endif %}{% if b.has_password %}<span class="bk-pill">🔒 PW</span>{% endif %}</div></div></div>
+        </div>{% endfor %}</div>{% else %}<div class="bk-empty"><div style="font-size:3rem">💾</div><b>Noch keine Backups gefunden</b><p style="color:var(--muted);font-size:.82rem;line-height:1.6">Falls du in Discord ein Backup erstellt hast, lade neu. Die Webseite sucht jetzt nach alten String-IDs und neuen Int-IDs.</p></div>{% endif %}
+    </div>
+  </section>
+
+  <aside>
+    <div class="bkcc-card bk-preview-box">
+      <div class="db-card-header"><span class="db-card-title">👁️ Restore Preview</span></div>
+      <div id="bkPreview"><p style="color:var(--muted);font-size:.85rem">Wähle links ein Backup aus. Dann siehst du Health, Risiko und was beim Restore verändert wird.</p></div>
+    </div>
+
+    <div class="bkcc-card">
+      <div class="db-card-header"><span class="db-card-title">🤖 Auto-Backup Kalender</span></div>
+      <div class="cfg-row"><div><span class="cfg-label">Auto-Backup</span><div class="cfg-desc">Regelmäßig automatisch sichern</div></div><label class="toggle"><input id="abOn" type="checkbox" {% if auto_enabled %}checked{% endif %} onchange="showSaveBar()"><span class="slider"></span></label></div>
+      <div class="cfg-row"><div><span class="cfg-label">Intervall</span></div><input id="abI" type="number" class="cfg-input" min="1" max="168" value="{{ auto_interval }}" oninput="showSaveBar()"><span class="cfg-desc">Stunden</span></div>
+      <div class="cfg-row"><div><span class="cfg-label">Max Backups</span></div><input id="abM" type="number" class="cfg-input" min="1" max="20" value="{{ auto_max }}" oninput="showSaveBar()"></div>
+      {% if last_backup_ts %}<div class="cfg-desc">Letztes Auto-Backup: <span class="ts-rel" data-ts="{{ last_backup_ts }}">—</span></div>{% endif %}
+      <button class="btn-glass btn-sm btn-glass-primary" onclick="saveConfig()" style="margin-top:10px">💾 Auto-Backup speichern</button>
+    </div>
+
+    <div class="bkcc-card">
+      <div class="db-card-header"><span class="db-card-title">🧹 Cleanup Assistant</span></div>
+      <p style="color:var(--muted);font-size:.82rem;line-height:1.6">Zeigt dir schnell alte/kleine/ungesunde Backups. Löschen musst du bewusst einzeln.</p>
+      <button class="btn-glass btn-sm" onclick="showCleanup()">🧹 Analyse anzeigen</button>
+      <div id="cleanupBox" style="margin-top:10px"></div>
+    </div>
+
+    <div class="bkcc-card">
+      <div class="db-card-header"><span class="db-card-title">🕒 Timeline</span></div>
+      <div class="bk-timeline">{% for b in backups[:8] %}<div class="bk-time-row"><b>{{ b.label }}</b><div class="cfg-desc"><span class="ts-rel" data-ts="{{ b.created_ts }}">—</span> · {{ b.roles }} Rollen · {{ b.channels }} Kanäle</div></div>{% else %}<p style="color:var(--muted);font-size:.8rem">Noch keine Timeline.</p>{% endfor %}</div>
+    </div>
+  </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const GID='{{ guild.id }}';
+const BACKUPS={{ backups|tojson|safe }};
+let selectedBackup=null;
+function relTime(ts){if(!ts)return'—';const diff=Math.floor(Date.now()/1000)-Number(ts);if(diff<60)return'gerade eben';if(diff<3600)return Math.floor(diff/60)+' min';if(diff<86400)return Math.floor(diff/3600)+' h';if(diff<604800)return Math.floor(diff/86400)+' d';return new Date(Number(ts)*1000).toLocaleDateString('de-DE')}
+document.querySelectorAll('.ts-rel').forEach(el=>{if(el.dataset.ts)el.textContent='vor '+relTime(el.dataset.ts)});
+async function postJSON(url,body){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});let d={};try{d=await r.json()}catch(e){} if(!r.ok)throw new Error(d.error||('HTTP '+r.status));return d;}
+function filterBackups(){const q=(bkSearch.value||'').toLowerCase().trim();const f=bkFilter.value;let c=0;document.querySelectorAll('.bk-item').forEach(card=>{let ok=!q||card.dataset.search.includes(q);if(f==='public')ok=ok&&card.dataset.public==='1';if(f==='private')ok=ok&&card.dataset.public!=='1';if(f==='healthy')ok=ok&&Number(card.dataset.health)>=80;if(f==='warn')ok=ok&&card.dataset.warn==='1';card.style.display=ok?'block':'none';if(ok)c++});bkCount.textContent=c}
+function backupCardHtml(b){return `<div class="bk-item" id="bk-${b.id}" data-id="${b.id}" data-search="${(b.label+' '+b.id+' '+b.guild_name).toLowerCase()}" data-public="${b.is_public?1:0}" data-health="${b.health_score||0}" data-warn="${(b.warnings||[]).length?1:0}" onclick="selectBackup('${b.id}')"><div style="display:flex;gap:12px;align-items:center"><div class="bk-health" style="--score:${b.health_score||0}"><b>${b.health_score||0}</b></div><div style="flex:1;min-width:0"><div class="bk-title">${b.label}</div><div class="cfg-desc">${b.created_ts?('vor '+relTime(b.created_ts)):'—'} · <code>${b.id}</code></div><div class="bk-meta"><span class="bk-pill">🏷️ ${b.roles}</span><span class="bk-pill">📁 ${b.channels}</span><span class="bk-pill">📂 ${b.categories}</span><span class="bk-pill">💽 ${b.size_label||'—'}</span>${b.is_public?'<span class="bk-pill">🌐 Public</span>':''}${b.has_password?'<span class="bk-pill">🔒 PW</span>':''}</div></div></div></div>`}
+function renderBackupList(list){const box=document.getElementById('bkList'); if(!box)return; box.innerHTML=(list||[]).map(backupCardHtml).join('')||'<div class="bk-empty">Keine Backups gefunden.</div>'; document.getElementById('bkCount').textContent=(list||[]).length; filterBackups();}
+async function refreshBackups(silent=false){try{const d=await fetch(`/api/guild/${GID}/backup/list`).then(r=>r.json()); if(d.ok){renderBackupList(d.backups); if(!silent)showToast(`Gefunden: ${d.count} Backups`,'ok')}else showToast(d.error||'Fehler','err')}catch(e){showToast('Netzwerkfehler','err')}}
+async function selectBackup(id){selectedBackup=id;document.querySelectorAll('.bk-item').forEach(x=>x.classList.toggle('selected',x.dataset.id===id));bkPreview.innerHTML='⏳ Lade Preview…';try{const d=await fetch(`/api/guild/${GID}/backup/${id}/preview`).then(r=>r.json());if(!d.ok)throw new Error(d.error);renderPreview(d.preview)}catch(e){bkPreview.innerHTML='<span style="color:#f87171">'+e.message+'</span>'}}
+function renderPreview(p){const s=p.summary,m=p.meta;bkPreview.innerHTML=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div class="bk-health" style="--score:${m.health_score||0}"><b>${m.health_score||0}</b></div><div><b>${m.label}</b><div class="cfg-desc">Risk: <span class="bk-risk-${p.risk}">${p.risk}</span> · ${m.size_label}</div></div></div><div class="bk-change-grid"><div class="bk-change"><b>${s.roles_new}</b><div class="cfg-desc">neue Rollen</div></div><div class="bk-change"><b>${s.channels_new}</b><div class="cfg-desc">neue Kanäle</div></div><div class="bk-change"><b>${s.categories_total}</b><div class="cfg-desc">Kategorien</div></div><div class="bk-change"><b>${s.emojis_total}</b><div class="cfg-desc">Emojis</div></div></div>${(p.warnings||[]).map(w=>`<div class="bk-change bk-risk-${p.risk}">⚠️ ${w}</div>`).join('')}<div class="bk-actions" style="margin-top:12px"><button class="btn-glass btn-sm" onclick="copyId('${p.id}')">📋 ID</button><a class="btn-glass btn-sm btn-glass-cyan" href="/api/guild/${GID}/backup/${p.id}/download">⬇ Download</a><button class="btn-glass btn-sm btn-glass-ghost" onclick="shareBackup('${p.id}','${(m.label||'Backup').replace(/'/g,'')}')">🌐 Teilen</button><button class="btn-glass btn-sm btn-glass-primary" onclick="restoreBackup('${p.id}','${(m.label||'Backup').replace(/'/g,'')}')">♻ Restore</button><button class="btn-glass btn-sm btn-glass-danger" onclick="deleteBackup('${p.id}','${(m.label||'Backup').replace(/'/g,'')}')">🗑 Löschen</button></div>`}
+function copyId(id){navigator.clipboard.writeText(id);showToast('ID kopiert: '+id,'ok')}
+async function createBackup(){showToast('Backup wird erstellt…','info');try{const d=await postJSON(`/api/guild/${GID}/backup/create`,{label:bkLabel.value.trim()});showToast('Backup erstellt: '+d.backup_id,'ok');bkLabel.value='';await refreshBackups(true);setTimeout(()=>selectBackup(d.backup_id),150)}catch(e){showToast(e.message,'err')}}
+function restoreBackup(id,label){showModal(`<div style="text-align:center"><div style="font-size:2.5rem">⚠️</div><h3>Backup wiederherstellen?</h3><p style="color:var(--muted);line-height:1.6"><b>${label}</b><br>Das kann Rollen/Kanäle/Kategorien erstellen. Prüfe die Preview.</p><div style="display:flex;gap:8px"><button class="btn-glass" onclick="closeModal()">Abbrechen</button><button class="btn-glass btn-glass-danger" onclick="closeModal();doRestore('${id}')">Restore starten</button></div></div>`)}
+async function doRestore(id){showToast('Restore läuft…','info');try{const d=await postJSON(`/api/guild/${GID}/backup/${id}/restore`);const r=d.report||{};showToast(`Restore fertig · Rollen ${r.roles_created||0} · Kanäle ${r.channels_created||0}`,'ok')}catch(e){showToast(e.message,'err')}}
+function deleteBackup(id,label){if(!confirm(`Backup "${label}" wirklich löschen?`))return;postJSON(`/api/guild/${GID}/backup/${id}/delete`).then(()=>{showToast('Backup gelöscht','ok');setTimeout(()=>location.reload(),500)}).catch(e=>showToast(e.message,'err'))}
+function shareBackup(id,label){showModal(`<div style="font-weight:900;font-size:1.1rem;margin-bottom:8px">🌐 Template teilen</div><input id="shName" class="cfg-input" style="max-width:100%;width:100%;margin-bottom:8px" value="${label||''}" placeholder="Name"><textarea id="shDesc" class="wc-textarea" placeholder="Beschreibung" style="min-height:90px"></textarea><select id="shCat" class="cfg-select" style="width:100%;margin-top:8px"><option value="general">Allgemein</option><option value="gaming">Gaming</option><option value="community">Community</option><option value="security">Security</option><option value="support">Support</option></select><button class="btn-glass btn-glass-primary" style="margin-top:10px" onclick="doShare('${id}')">Teilen</button>`)}
+async function doShare(id){try{await postJSON(`/api/guild/${GID}/templates/share`,{backup_id:id,name:shName.value,description:shDesc.value,category:shCat.value});closeModal();showToast('Template geteilt','ok');setTimeout(()=>location.reload(),600)}catch(e){showToast(e.message,'err')}}
+async function saveConfig(){try{await postJSON(`/api/guild/${GID}/config`,{backup_system:{auto_enabled:abOn.checked,auto_interval_hours:Number(abI.value||24),auto_max_backups:Number(abM.value||5)}});markSaved()}catch(e){markError(e.message)}}
+function showCleanup(){const old=BACKUPS.filter(b=>b.created_ts&&((Date.now()/1000)-Number(b.created_ts)>60*60*24*30));const unhealthy=BACKUPS.filter(b=>(b.health_score||0)<70);cleanupBox.innerHTML=`<div class="bk-change">🕒 Älter als 30 Tage: ${old.length}</div><div class="bk-change">⚠️ Health unter 70: ${unhealthy.length}</div><div class="cfg-desc" style="margin-top:8px">Tipp: öffne einzelne Backups und lösche bewusst, statt Massen-Löschung.</div>`}
+</script>
+{% endblock %}

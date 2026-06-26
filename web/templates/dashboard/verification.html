@@ -1,0 +1,113 @@
+{% extends "dashboard/_base.html" %}
+{% set active = 'verification' %}
+{% block title %}Verifizierung{% endblock %}
+{% block page_title %}✅ Verifizierung Studio{% endblock %}
+{% block page_desc %}Panel senden · Rollen · CAPTCHA · Math · Quiz · Timer · Trust-Score{% endblock %}
+{% block head %}
+<style>
+.vf-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:18px;align-items:start}.vf-card{padding:18px;border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.028);margin-bottom:14px}.vf-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:16px}.vf-stat{padding:16px;border-radius:16px;border:1px solid var(--border);background:rgba(255,255,255,.03);text-align:center}.vf-v{font-size:1.1rem;font-weight:900;font-family:'Geist Mono',monospace}.vf-select-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:240px;overflow:auto}.vf-role-option{display:flex;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.025);font-size:.76rem}.vf-preview{background:#36393f;border-radius:12px;padding:14px}.vf-msg{display:flex;gap:10px}.vf-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--v),var(--p));display:grid;place-items:center;flex-shrink:0}.vf-embed{margin-top:6px;background:#2f3136;border-left:4px solid var(--vf-color,#4169e1);border-radius:0 6px 6px 0;padding:12px 14px;max-width:520px}.vf-title{font-weight:800;color:#fff;font-size:.92rem;margin-bottom:5px}.vf-desc{color:#dcddde;font-size:.82rem;line-height:1.5;white-space:pre-wrap}.vf-button{display:inline-flex;margin-top:10px;padding:7px 12px;border-radius:8px;background:#22c55e;color:#fff;font-size:.75rem;font-weight:800}.vf-health{display:grid;gap:7px}.vf-health-row{display:flex;justify-content:space-between;gap:8px;padding:9px 11px;border-radius:12px;border:1px solid var(--border);background:rgba(255,255,255,.03);font-size:.76rem}.vf-health-row.ok{border-color:rgba(34,197,94,.2);background:rgba(34,197,94,.055)}.vf-health-row.bad{border-color:rgba(239,68,68,.22);background:rgba(239,68,68,.055)}.vf-q{display:flex;justify-content:space-between;gap:8px;padding:9px 11px;border-radius:12px;border:1px solid var(--border);background:rgba(255,255,255,.03);margin-bottom:7px}.vf-textarea{width:100%;box-sizing:border-box;padding:10px 14px;border-radius:12px;background:rgba(255,255,255,.045);border:1px solid var(--border);color:var(--fg);font-family:inherit;font-size:.82rem;resize:vertical;outline:none}@media(max-width:980px){.vf-grid{grid-template-columns:1fr}.vf-select-list{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+{% block content %}
+<div class="vf-stats">
+  <div class="vf-stat"><div class="vf-v" style="color:{% if verify_stats.enabled %}var(--green){% else %}var(--muted){% endif %}">{% if verify_stats.enabled %}AN{% else %}AUS{% endif %}</div><div class="ov-sl">System</div></div>
+  <div class="vf-stat"><div class="vf-v" style="color:var(--vl)">{{ verify_stats.mode }}</div><div class="ov-sl">Modus</div></div>
+  <div class="vf-stat"><div class="vf-v" style="color:var(--green)">{{ verify_stats.add_roles }}</div><div class="ov-sl">Add-Rollen</div></div>
+  <div class="vf-stat"><div class="vf-v" style="color:var(--amberl)">{{ verify_stats.remove_roles }}</div><div class="ov-sl">Remove-Rollen</div></div>
+  <div class="vf-stat"><div class="vf-v" style="color:var(--cl)">{{ verify_stats.quiz_questions }}</div><div class="ov-sl">Quiz-Fragen</div></div>
+</div>
+
+<div class="vf-grid">
+<section>
+  <div class="vf-card">
+    <div class="db-card-header"><span class="db-card-title">⚙️ Grundsetup</span><button class="btn-glass btn-sm btn-glass-primary" onclick="saveConfig()">💾 Speichern</button></div>
+    <div class="cfg-row"><div><span class="cfg-label">Verifizierung aktiv</span><div class="cfg-desc">Neue User können Rollen per Panel erhalten</div></div><label class="toggle"><input id="vEnabled" type="checkbox" {% if vs.get('enabled') %}checked{% endif %} onchange="showSaveBar()"><span class="slider"></span></label></div>
+    <div class="cfg-row"><div><span class="cfg-label">Modus</span></div><select id="vMode" class="cfg-select" onchange="syncMode();showSaveBar()">{% for m in ['one_click','captcha','math','quiz'] %}<option value="{{ m }}" {% if vs.get('mode','one_click')==m %}selected{% endif %}>{{ m }}</option>{% endfor %}</select></div>
+    <div class="cfg-row"><div><span class="cfg-label">Verify-Kanal</span><div class="cfg-desc">Dort wird das Panel gesendet</div></div><select id="vChannel" class="cfg-select" onchange="showSaveBar()"><option value="">— wählen —</option>{% for ch in channels %}<option value="{{ ch.id }}" {% if vs.get('verify_channel')|string == ch.id|string %}selected{% endif %}>#{{ ch.name }}</option>{% endfor %}</select></div>
+    <div class="cfg-row"><div><span class="cfg-label">CAPTCHA Schwierigkeit</span></div><select id="vCaptcha" class="cfg-select" onchange="showSaveBar()">{% for d in ['easy','medium','hard'] %}<option value="{{ d }}" {% if vs.get('captcha_difficulty','medium')==d %}selected{% endif %}>{{ d }}</option>{% endfor %}</select></div>
+  </div>
+
+  <div class="vf-card">
+    <div class="db-card-header"><span class="db-card-title">🏷️ Rollen</span></div>
+    <div class="cfg-desc" style="margin-bottom:8px">Add-Rollen werden nach Erfolg gegeben. Remove-Rollen werden entfernt (z.B. Unverified).</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div><b style="font-size:.8rem">✅ Nach Verify geben</b><div class="vf-select-list" id="addRoleList">{% for r in roles %}<label class="vf-role-option"><input type="checkbox" value="{{ r.id }}" {% if r.id|int in vs.get('add_roles',[]) %}checked{% endif %} onchange="showSaveBar()"> @{{ r.name }}</label>{% endfor %}</div></div>
+      <div><b style="font-size:.8rem">➖ Nach Verify entfernen</b><div class="vf-select-list" id="removeRoleList">{% for r in roles %}<label class="vf-role-option"><input type="checkbox" value="{{ r.id }}" {% if r.id|int in vs.get('remove_roles',[]) %}checked{% endif %} onchange="showSaveBar()"> @{{ r.name }}</label>{% endfor %}</div></div>
+    </div>
+  </div>
+
+  <div class="vf-card">
+    <div class="db-card-header"><span class="db-card-title">🎨 Panel-Embed</span></div>
+    <div class="cfg-row"><div><span class="cfg-label">Titel</span></div><input id="eTitle" class="cfg-input" value="{{ ve.get('embed_title','✅ Verifizierung') }}" style="min-width:280px" oninput="updatePreview();showSaveBar()"></div>
+    <div class="cfg-row" style="flex-direction:column;align-items:stretch"><span class="cfg-label">Beschreibung</span><textarea id="eDesc" class="vf-textarea" rows="3" oninput="updatePreview();showSaveBar()">{{ ve.get('embed_description','Klicke den Button, um dich zu verifizieren.') }}</textarea></div>
+    <div class="cfg-row"><div><span class="cfg-label">Farbe</span></div><input id="eColor" type="color" value="{{ ve.get('embed_color','#4169E1') if ve.get('embed_color','#4169E1').startswith('#') else '#4169E1' }}" oninput="updatePreview();showSaveBar()" style="width:48px;height:34px;border:0;border-radius:8px;background:transparent"></div>
+  </div>
+
+  <div class="vf-card">
+    <div class="db-card-header"><span class="db-card-title">🔐 Schutz & Timer</span></div>
+    <div class="cfg-row"><div><span class="cfg-label">Auto-Kick/Ban Timer</span></div><label class="toggle"><input id="timerEnabled" type="checkbox" {% if ve.get('timer_enabled') %}checked{% endif %} onchange="showSaveBar()"><span class="slider"></span></label></div>
+    <div class="cfg-row"><div><span class="cfg-label">Timer Minuten</span></div><input id="timerMinutes" type="number" min="0" max="1440" value="{{ ve.get('timer_minutes',10) }}" class="cfg-input" oninput="showSaveBar()"><select id="timerAction" class="cfg-select" onchange="showSaveBar()"><option value="kick" {% if ve.get('timer_action','kick')=='kick' %}selected{% endif %}>kick</option><option value="ban" {% if ve.get('timer_action')=='ban' %}selected{% endif %}>ban</option></select></div>
+    <div class="cfg-row"><div><span class="cfg-label">Anti-Alt Account</span></div><label class="toggle"><input id="antiAlt" type="checkbox" {% if ve.get('anti_alt_account') %}checked{% endif %} onchange="showSaveBar()"><span class="slider"></span></label></div>
+    <div class="cfg-row"><div><span class="cfg-label">Min. Account-Alter Stunden</span></div><input id="altHours" type="number" min="0" max="720" value="{{ ve.get('anti_alt_min_age_hours',24) }}" class="cfg-input" oninput="showSaveBar()"></div>
+    <div class="cfg-row"><div><span class="cfg-label">Trust Score</span></div><label class="toggle"><input id="trustOn" type="checkbox" {% if ve.get('trust_score_enabled') %}checked{% endif %} onchange="showSaveBar()"><span class="slider"></span></label><input id="trustMin" type="number" min="0" max="100" value="{{ ve.get('trust_score_min',30) }}" class="cfg-input" oninput="showSaveBar()"></div>
+    <div class="cfg-row"><div><span class="cfg-label">Rate-Limit pro Minute</span></div><input id="rateLimit" type="number" min="1" max="20" value="{{ ve.get('rate_limit_per_minute',3) }}" class="cfg-input" oninput="showSaveBar()"></div>
+  </div>
+
+  <div class="vf-card">
+    <div class="db-card-header"><span class="db-card-title">🧾 Ausnahmen & Team-Freigabe</span></div>
+    <div class="cfg-row"><div><span class="cfg-label">Team-Freigabe erforderlich</span><div class="cfg-desc">Neue User werden erst zur Prüfung gemeldet.</div></div><label class="toggle"><input id="approvalOn" type="checkbox" {% if ve.get('admin_approval_required') %}checked{% endif %} onchange="showSaveBar()"><span class="slider"></span></label></div>
+    <div class="cfg-row"><div><span class="cfg-label">Freigabe-Kanal</span></div><select id="approvalChannel" class="cfg-select" onchange="showSaveBar()"><option value="">— wählen —</option>{% for ch in channels %}<option value="{{ ch.id }}" {% if ve.get('admin_approval_channel')|string == ch.id|string %}selected{% endif %}>#{{ ch.name }}</option>{% endfor %}</select></div>
+    <div class="cfg-row" style="flex-direction:column;align-items:stretch"><span class="cfg-label">Whitelist User-IDs</span><div class="cfg-desc">Diese User dürfen die Prüfung überspringen. Komma oder Zeile getrennt.</div><textarea id="whiteIds" class="vf-textarea" rows="2" oninput="showSaveBar()">{{ (ve.get('whitelist_ids') or [])|join('
+') }}</textarea></div>
+    <div class="cfg-row" style="flex-direction:column;align-items:stretch"><span class="cfg-label">Blacklist User-IDs</span><div class="cfg-desc">Diese User können sich nicht verifizieren.</div><textarea id="blackIds" class="vf-textarea" rows="2" oninput="showSaveBar()">{{ (ve.get('blacklist_ids') or [])|join('
+') }}</textarea></div>
+  </div>
+
+  <div class="vf-card" id="quizCard">
+    <div class="db-card-header"><span class="db-card-title">❓ Quiz-Fragen</span><button class="btn-glass btn-sm" onclick="addQuizQuestion()">+ Frage</button></div>
+    <div id="quizList">{% for q in ve.get('quiz_questions',[]) %}<div class="vf-q"><div><b>{{ q.question }}</b><div class="cfg-desc">Antwort: {{ q.answer }}</div></div><button class="btn-glass btn-sm btn-glass-danger" onclick="deleteQuiz({{ loop.index0 }})">🗑️</button></div>{% else %}<p style="color:var(--muted);font-size:.8rem">Keine Quiz-Fragen. Bei Quiz-Modus wird dann One-Click genutzt.</p>{% endfor %}</div>
+  </div>
+</section>
+
+<aside>
+  <div class="vf-card" style="position:sticky;top:20px">
+    <div class="db-card-header"><span class="db-card-title">👁️ Panel Preview</span></div>
+    <div class="vf-preview"><div class="vf-msg"><div class="vf-avatar">🛡️</div><div style="flex:1"><div><b style="color:#fff">ModForge</b><span class="discord-bot">BOT</span><span class="discord-time">Heute</span></div><div class="vf-embed" id="prevEmbed"><div class="vf-title" id="prevTitle"></div><div class="vf-desc" id="prevDesc"></div><div class="vf-button">✅ Verifizieren</div></div></div></div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn-glass btn-sm btn-glass-primary" onclick="sendPanel(false)">📨 Panel senden</button><button class="btn-glass btn-sm" onclick="sendPanel(true)">♻️ Bestehendes aktualisieren</button><button class="btn-glass btn-sm" onclick="runHealth()">🩺 Check</button></div>
+    <div class="cfg-desc" style="margin-top:8px">Panel-ID, Kanal und Rollen werden in der Datenbank gespeichert.</div>
+  </div>
+
+  <div class="vf-card">
+    <div class="db-card-header"><span class="db-card-title">🩺 Panel & Rollen Health</span></div>
+    <div class="vf-health" id="healthBox">
+      <div class="vf-health-row {% if panel_status.channel_ok %}ok{% else %}bad{% endif %}"><span>Panel-Kanal</span><span>{{ panel_status.reason }}</span></div>
+      {% for r in role_health %}<div class="vf-health-row {% if r.ok %}ok{% else %}bad{% endif %}"><span>{% if r.kind=='add' %}✅{% else %}➖{% endif %} @{{ r.name }}</span><span>{{ r.reason }}</span></div>{% else %}<div class="cfg-desc">Noch keine Rollen gewählt.</div>{% endfor %}
+    </div>
+  </div>
+
+  <div class="vf-card">
+    <div class="db-card-header"><span class="db-card-title">🧾 Gespeichert in DB</span></div>
+    <div class="cfg-desc" style="line-height:1.6">Gespeichert werden <code>verify_system</code> und <code>verify_extended</code>: Kanal, Message-ID, Rollen, Modus, Timer, Trust und Quiz.</div>
+    <div style="margin-top:10px"><span class="tag">Message-ID: {{ vs.get('message_id') or '—' }}</span></div>
+  </div>
+</aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const GID='{{ guild.id }}';
+function vals(selector){return Array.from(document.querySelectorAll(selector+' input:checked')).map(x=>Number(x.value));}
+function updatePreview(){prevTitle.textContent=eTitle.value||'✅ Verifizierung';prevDesc.textContent=eDesc.value||'Klicke den Button, um dich zu verifizieren.';prevEmbed.style.setProperty('--vf-color',eColor.value);}
+function syncMode(){quizCard.style.display=vMode.value==='quiz'?'block':'none';}
+function payload(){return {enabled:vEnabled.checked,mode:vMode.value,verify_channel:vChannel.value||null,captcha_difficulty:vCaptcha.value,add_roles:vals('#addRoleList'),remove_roles:vals('#removeRoleList'),embed_title:eTitle.value,embed_description:eDesc.value,embed_color:eColor.value,timer_enabled:timerEnabled.checked,timer_minutes:Number(timerMinutes.value||0),timer_action:timerAction.value,anti_alt_account:antiAlt.checked,anti_alt_min_age_hours:Number(altHours.value||0),trust_score_enabled:trustOn.checked,trust_score_min:Number(trustMin.value||0),rate_limit_per_minute:Number(rateLimit.value||3),admin_approval_required:approvalOn.checked,admin_approval_channel:approvalChannel.value||null,whitelist_ids:whiteIds.value,blacklist_ids:blackIds.value};}
+async function saveConfig(){const r=await fetch(`/api/guild/${GID}/verification/save`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload())});const d=await r.json();if(d.ok)markSaved();else markError(d.error)}
+async function sendPanel(update){await saveConfig(); if(!vChannel.value)return showToast('Verify-Kanal wählen','err'); showToast('Sende Verify-Panel…','info');const r=await fetch(`/api/guild/${GID}/verification/panel`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({channel_id:vChannel.value,update})});const d=await r.json();if(d.ok){showToast('Panel gespeichert · Message '+d.message_id,'ok');setTimeout(()=>location.reload(),700)}else showToast(d.error||'Fehler','err')}
+async function runHealth(){const r=await fetch(`/api/guild/${GID}/verification/test`,{method:'POST'});const d=await r.json();if(!d.ok)return showToast(d.error||'Check Fehler','err');healthBox.innerHTML=`<div class="vf-health-row ${d.panel_status.channel_ok?'ok':'bad'}"><span>Panel-Kanal</span><span>${d.panel_status.reason}</span></div>`+(d.role_health||[]).map(x=>`<div class="vf-health-row ${x.ok?'ok':'bad'}"><span>${x.kind==='add'?'✅':'➖'} @${x.name}</span><span>${x.reason}</span></div>`).join('');showToast('Check fertig','ok')}
+function addQuizQuestion(){showModal(`<div style="font-weight:900;font-size:1.1rem;margin-bottom:10px">Quiz-Frage hinzufügen</div><input id="qQ" class="cfg-input" style="width:100%;max-width:100%;margin-bottom:8px" placeholder="Frage"><input id="qA" class="cfg-input" style="width:100%;max-width:100%;margin-bottom:10px" placeholder="Richtige Antwort"><button class="btn-glass btn-glass-primary" onclick="saveQuizQuestion()">Speichern</button>`)}
+async function saveQuizQuestion(){const r=await fetch(`/api/guild/${GID}/verification/quiz`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:qQ.value,answer:qA.value})});const d=await r.json();if(d.ok){closeModal();showToast('Frage gespeichert','ok');setTimeout(()=>location.reload(),500)}else showToast(d.error||'Fehler','err')}
+async function deleteQuiz(index){if(!confirm('Quiz-Frage löschen?'))return;const r=await fetch(`/api/guild/${GID}/verification/quiz`,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({index})});const d=await r.json();if(d.ok){showToast('Frage gelöscht','ok');setTimeout(()=>location.reload(),400)}else showToast(d.error||'Fehler','err')}
+const vEnabled=document.getElementById('vEnabled'),vMode=document.getElementById('vMode'),vChannel=document.getElementById('vChannel'),vCaptcha=document.getElementById('vCaptcha'),eTitle=document.getElementById('eTitle'),eDesc=document.getElementById('eDesc'),eColor=document.getElementById('eColor'),timerEnabled=document.getElementById('timerEnabled'),timerMinutes=document.getElementById('timerMinutes'),timerAction=document.getElementById('timerAction'),antiAlt=document.getElementById('antiAlt'),altHours=document.getElementById('altHours'),trustOn=document.getElementById('trustOn'),trustMin=document.getElementById('trustMin'),rateLimit=document.getElementById('rateLimit'),approvalOn=document.getElementById('approvalOn'),approvalChannel=document.getElementById('approvalChannel'),whiteIds=document.getElementById('whiteIds'),blackIds=document.getElementById('blackIds'),prevTitle=document.getElementById('prevTitle'),prevDesc=document.getElementById('prevDesc'),prevEmbed=document.getElementById('prevEmbed'),quizCard=document.getElementById('quizCard'),healthBox=document.getElementById('healthBox');
+updatePreview();syncMode();window._dirty=false;
+</script>
+{% endblock %}

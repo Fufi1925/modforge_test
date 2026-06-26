@@ -1,0 +1,417 @@
+{% extends "dashboard/_base.html" %}
+{% set active = 'warns' %}
+{% block title %}Warn-System{% endblock %}
+{% block page_title %}⚠️ Warn-System{% endblock %}
+{% block page_desc %}{{ sorted_th | length }} Schwellen · {{ total_warns }} Warns insgesamt{% endblock %}
+
+{% block head %}
+<style>
+.warn-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.th-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  margin-bottom: 8px;
+  transition: border-color .15s;
+}
+.th-card:hover { border-color: rgba(59,130,246,0.25); }
+
+.th-num {
+  width: 38px; height: 38px;
+  border-radius: 11px;
+  background: rgba(59,130,246,0.1);
+  border: 1px solid rgba(59,130,246,0.2);
+  color: var(--vl);
+  font-weight: 900;
+  font-size: .9rem;
+  font-family: 'Geist Mono', monospace;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.warn-action-badge {
+  padding: 4px 10px;
+  border-radius: 7px;
+  font-size: .65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.wa-warn    { background: rgba(234,179,8,0.1);   color: #fcd34d; }
+.wa-timeout { background: rgba(167,139,250,0.1); color: #c4b5fd; }
+.wa-kick    { background: rgba(249,115,22,0.1);  color: #fdba74; }
+.wa-ban     { background: rgba(239,68,68,0.12);  color: #fca5a5; }
+
+.top-warned-bar {
+  flex: 1;
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(255,255,255,0.05);
+  overflow: hidden;
+  margin: 0 8px;
+}
+.top-warned-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--v), var(--cl));
+}
+
+.recent-warn-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  margin-bottom: 5px;
+  font-size: .76rem;
+  transition: border-color .1s;
+}
+.recent-warn-row:hover { border-color: rgba(234,179,8,0.2); }
+
+.add-th-grid {
+  display: grid;
+  grid-template-columns: 120px 1fr auto;
+  gap: 8px;
+  align-items: end;
+}
+@media(max-width: 600px) {
+  .add-th-grid { grid-template-columns: 1fr; }
+}
+
+.pun-select-grid {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.pun-sel-btn {
+  padding: 7px 13px;
+  border-radius: 8px;
+  font-size: .7rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.03);
+  color: var(--muted);
+  transition: .15s;
+  font-family: inherit;
+}
+.pun-sel-btn.active-warn    { background: rgba(234,179,8,0.12);   color: #fcd34d; border-color: rgba(234,179,8,0.3); }
+.pun-sel-btn.active-timeout { background: rgba(167,139,250,0.12); color: #c4b5fd; border-color: rgba(167,139,250,0.3); }
+.pun-sel-btn.active-kick    { background: rgba(249,115,22,0.12);  color: #fdba74; border-color: rgba(249,115,22,0.3); }
+.pun-sel-btn.active-ban     { background: rgba(239,68,68,0.15);   color: #fca5a5; border-color: rgba(239,68,68,0.3); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── STATS ── #}
+<div class="warn-stats">
+  <div class="ov-stat">
+    <div class="ov-sv" style="color:#fcd34d">{{ total_warns }}</div>
+    <div class="ov-sl">⚠️ Gesamt</div>
+  </div>
+  <div class="ov-stat">
+    <div class="ov-sv" style="color:var(--cl)">{{ warns_7d }}</div>
+    <div class="ov-sl">📅 Diese Woche</div>
+  </div>
+  <div class="ov-stat">
+    <div class="ov-sv" style="color:var(--vl)">{{ sorted_th | length }}</div>
+    <div class="ov-sl">🎯 Schwellen</div>
+  </div>
+  <div class="ov-stat">
+    <div class="ov-sv" style="color:{% if decay.get('enabled') %}var(--green){% else %}var(--muted){% endif %}">
+      {% if decay.get('enabled') %}{{ decay.get('decay_days', 30) }}d{% else %}AUS{% endif %}
+    </div>
+    <div class="ov-sl">⏳ Decay</div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 320px;gap:14px;align-items:start">
+<div>
+
+{# ── SCHWELLEN ── #}
+<div class="db-card" style="padding:16px;margin-bottom:14px">
+  <div style="font-weight:700;font-size:.86rem;margin-bottom:4px">🎯 Warn-Schwellen</div>
+  <div class="cfg-desc" style="margin-bottom:14px">
+    Wenn ein User genau diese Anzahl aktiver Warns erreicht, wird die Aktion automatisch ausgeführt.
+    <strong style="color:var(--fg)">Erste passende Schwelle gewinnt.</strong>
+  </div>
+
+  <div id="thresholdList">
+  {% for th in sorted_th %}
+  <div class="th-card">
+    <div class="th-num">{{ th.count }}</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:.8rem;font-weight:700;margin-bottom:4px">
+        Bei <strong style="color:var(--vl)">{{ th.count }}</strong> Warns
+      </div>
+      <div class="pun-select-grid" id="pun-{{ th.count }}">
+        {% for opt in ['warn', 'timeout', 'kick', 'ban'] %}
+        <button class="pun-sel-btn {% if th.action == opt %}active-{{ opt }}{% endif %}"
+                data-count="{{ th.count }}"
+                data-action="{{ opt }}"
+                onclick="selectThAction({{ th.count }}, '{{ opt }}', this)">
+          {{ {'warn':'⚠️ Warn','timeout':'⏳ Timeout','kick':'👢 Kick','ban':'🔨 Bann'}.get(opt, opt) }}
+        </button>
+        {% endfor %}
+      </div>
+      <input type="hidden" id="th-val-{{ th.count }}" data-count="{{ th.count }}" value="{{ th.action }}">
+    </div>
+    <button class="btn-glass btn-sm btn-glass-danger"
+            onclick="delThreshold({{ th.count }})"
+            style="padding:6px 10px!important;flex-shrink:0">🗑️</button>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:30px;color:var(--muted);font-size:.8rem">
+    <div style="font-size:2rem;margin-bottom:8px">🎯</div>
+    Noch keine Schwellen – füge unten deine erste hinzu.
+  </div>
+  {% endfor %}
+  </div>
+
+  {# Neue Schwelle #}
+  <div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.05)">
+    <div style="font-size:.7rem;color:var(--muted);font-weight:700;margin-bottom:8px;
+                text-transform:uppercase;letter-spacing:.05em">➕ Neue Schwelle</div>
+    <div class="add-th-grid">
+      <div>
+        <label style="font-size:.62rem;color:var(--muted);display:block;margin-bottom:3px">Anzahl Warns</label>
+        <input type="number" id="newThCount" class="cfg-input"
+               placeholder="z.B. 3" min="1" max="99"
+               style="width:100%;max-width:100%">
+      </div>
+      <div>
+        <label style="font-size:.62rem;color:var(--muted);display:block;margin-bottom:3px">Aktion</label>
+        <div class="pun-select-grid">
+          {% for opt in ['warn', 'timeout', 'kick', 'ban'] %}
+          <button class="pun-sel-btn {% if loop.first %}active-warn{% endif %}"
+                  data-new-action="{{ opt }}"
+                  onclick="selectNewAction('{{ opt }}', this)">
+            {{ {'warn':'⚠️ Warn','timeout':'⏳ Timeout','kick':'👢 Kick','ban':'🔨 Bann'}.get(opt, opt) }}
+          </button>
+          {% endfor %}
+        </div>
+        <input type="hidden" id="newThAction" value="warn">
+      </div>
+      <div style="align-self:flex-end">
+        <button class="btn-glass btn-glass-primary btn-sm" onclick="addThreshold()"
+                style="white-space:nowrap">➕ Hinzufügen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── DECAY ── #}
+<div class="db-card" style="padding:16px">
+  <div style="font-weight:700;font-size:.86rem;margin-bottom:4px;display:flex;align-items:center;gap:8px">
+    ⏳ Warn-Decay
+    <span style="padding:2px 8px;border-radius:999px;font-size:.58rem;font-weight:800;
+      background:{% if decay.get('enabled') %}rgba(34,197,94,0.1){% else %}rgba(100,116,139,0.1){% endif %};
+      color:{% if decay.get('enabled') %}#4ade80{% else %}var(--muted){% endif %}">
+      {% if decay.get('enabled') %}Aktiv{% else %}Inaktiv{% endif %}
+    </span>
+  </div>
+  <div class="cfg-desc" style="margin-bottom:14px">
+    Warns verfallen automatisch nach X Tagen und zählen nicht mehr zur Schwellen-Berechnung.
+    Gibt Usern eine zweite Chance und spart langfristig Mod-Arbeit.
+  </div>
+
+  <div class="cfg-row">
+    <div>
+      <span class="cfg-label">Decay aktivieren</span>
+      <div class="cfg-desc">Warns werden nach der eingestellten Zeit ignoriert</div>
+    </div>
+    <label class="toggle">
+      <input type="checkbox" id="decayOn"
+             {% if decay.get('enabled') %}checked{% endif %}
+             onchange="showSaveBar()">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="cfg-row">
+    <div>
+      <span class="cfg-label">Verfallszeit</span>
+      <div class="cfg-desc">Warn zählt nach dieser Zeit nicht mehr</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <input type="number" id="decayDays" class="cfg-input"
+             value="{{ decay.get('decay_days', 30) }}"
+             min="1" max="365"
+             style="width:80px;text-align:center"
+             oninput="showSaveBar()">
+      <span style="font-size:.72rem;color:var(--muted)">Tage</span>
+    </div>
+  </div>
+</div>
+
+</div>
+
+{# ── SIDEBAR: Stats ── #}
+<div style="display:flex;flex-direction:column;gap:12px">
+
+  {# Top Warned #}
+  <div class="db-card" style="padding:16px">
+    <div style="font-weight:700;font-size:.83rem;margin-bottom:12px">🏆 Meist verwarnt</div>
+    {% if top_warned %}
+    {% set max_c = top_warned[0].count %}
+    {% for tw in top_warned %}
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 0;
+                border-bottom:1px solid rgba(255,255,255,0.03);font-size:.75rem">
+      <span style="font-size:.7rem;font-weight:800;min-width:16px;
+        color:{% if loop.first %}#fbbf24{% elif loop.index==2 %}#94a3b8{% else %}#fb923c{% endif %}">
+        {{ loop.index }}
+      </span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600">
+        {{ tw.name or tw.id }}
+      </span>
+      <div class="top-warned-bar">
+        <div class="top-warned-fill"
+             style="width:{{ ((tw.count / max_c) * 100) | int }}%"></div>
+      </div>
+      <span style="font-family:'Geist Mono',monospace;font-size:.7rem;
+                   color:#fcd34d;font-weight:700;flex-shrink:0">{{ tw.count }}</span>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div style="text-align:center;padding:20px;color:var(--muted);font-size:.75rem">
+      Noch keine Daten
+    </div>
+    {% endif %}
+  </div>
+
+  {# Letzte Warns #}
+  <div class="db-card" style="padding:16px">
+    <div style="font-weight:700;font-size:.83rem;margin-bottom:12px">🕐 Letzte Warns</div>
+    {% if recent_warns %}
+    {% for w in recent_warns %}
+    <div class="recent-warn-row">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:.75rem;
+                    overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          {{ w.user_name or w.user_id }}
+        </div>
+        <div style="font-size:.6rem;color:var(--muted);margin-top:1px;
+                    overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          {{ w.reason or 'Kein Grund' }}
+        </div>
+      </div>
+      <span style="font-size:.58rem;color:var(--muted);
+                   font-family:'Geist Mono',monospace;flex-shrink:0">
+        {{ w.ts_str[:10] if w.ts_str else '—' }}
+      </span>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div style="text-align:center;padding:16px;color:var(--muted);font-size:.75rem">
+      Keine Warns
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const GID = "{{ guild.id }}";
+
+async function postCfg(body) {
+  try {
+    const r = await fetch(`/api/guild/${GID}/config`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+// Schwellen-Aktion auswählen
+function selectThAction(count, action, btn) {
+  document.querySelectorAll(`#pun-${count} .pun-sel-btn`).forEach(b => {
+    b.className = 'pun-sel-btn';
+  });
+  btn.className = `pun-sel-btn active-${action}`;
+  const hidden = document.getElementById(`th-val-${count}`);
+  if (hidden) hidden.value = action;
+  showSaveBar();
+}
+
+// Neue Schwelle Aktion
+function selectNewAction(action, btn) {
+  document.querySelectorAll('[data-new-action]').forEach(b => {
+    b.className = 'pun-sel-btn';
+  });
+  btn.className = `pun-sel-btn active-${action}`;
+  document.getElementById('newThAction').value = action;
+}
+
+async function addThreshold() {
+  const count  = parseInt(document.getElementById('newThCount').value, 10);
+  const action = document.getElementById('newThAction').value;
+
+  if (!count || count < 1) {
+    showToast('❌ Anzahl muss mindestens 1 sein', 'err');
+    return;
+  }
+
+  const d = await postCfg({ _warn_thresholds_add: { [String(count)]: action } });
+  if (d.ok) {
+    showToast('✅ Schwelle hinzugefügt', 'ok');
+    setTimeout(() => location.reload(), 500);
+  } else {
+    showToast('❌ ' + (d.error || 'Fehler'), 'err');
+  }
+}
+
+async function delThreshold(count) {
+  if (!confirm(`Schwelle bei ${count} Warns wirklich löschen?`)) return;
+  const d = await postCfg({ _warn_thresholds_remove: [String(count)] });
+  if (d.ok) {
+    showToast('🗑️ Schwelle gelöscht', 'ok');
+    setTimeout(() => location.reload(), 450);
+  } else {
+    showToast('❌ ' + (d.error || 'Fehler'), 'err');
+  }
+}
+
+async function saveConfig() {
+  // Alle aktuellen Schwellen sammeln
+  const thresholds = {};
+  document.querySelectorAll('input[type="hidden"][data-count]').forEach(el => {
+    thresholds[el.dataset.count] = el.value;
+  });
+
+  const d = await postCfg({
+    _warn_thresholds: thresholds,
+    _warn_decay: {
+      enabled:    document.getElementById('decayOn').checked,
+      decay_days: Math.max(1, parseInt(document.getElementById('decayDays').value, 10) || 30),
+    },
+  });
+
+  if (d.ok) markSaved();
+  else showToast('❌ ' + (d.error || 'Fehler'), 'err');
+}
+
+window._dirty = false;
+</script>
+{% endblock %}

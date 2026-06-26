@@ -1,0 +1,734 @@
+{% extends "dashboard/_base.html" %}
+{% set active = 'cases' %}
+{% block title %}Cases – {{ guild.name }}{% endblock %}
+{% block page_title %}📋 Case-Explorer{% endblock %}
+{% block page_desc %}{{ stats.total }} Fälle insgesamt · {{ cases_7d }} diese Woche · {{ cases_30d }} in den letzten 30 Tagen{% endblock %}
+
+{% block head %}
+<style>
+  /* ── Stats ── */
+  .case-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .case-stat-card {
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.02);
+    text-align: center;
+  }
+  .case-stat-num {
+    font-size: 1.4rem;
+    font-weight: 800;
+    font-family: 'Geist Mono', monospace;
+  }
+
+  /* ── Filters ── */
+  .filters-container {
+    background: rgba(255,255,255,0.015);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .filters-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .af-btn {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: .68rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.03);
+    color: var(--muted);
+    transition: .15s;
+    font-family: inherit;
+  }
+  .af-btn:hover { color: var(--fg); border-color: rgba(59,130,246,0.3); }
+  .af-btn.active { color: #fff; }
+  .af-btn.af-all.active    { background: rgba(59,130,246,0.15); border-color: var(--v); }
+  .af-btn.af-ban.active    { background: rgba(239,68,68,0.15);  border-color: #ef4444; color: #fca5a5; }
+  .af-btn.af-kick.active   { background: rgba(249,115,22,0.12); border-color: #f97316; color: #fdba74; }
+  .af-btn.af-warn.active   { background: rgba(234,179,8,0.12);  border-color: #eab308; color: #fcd34d; }
+  .af-btn.af-timeout.active{ background: rgba(167,139,250,0.12);border-color: #a78bfa; color: #c4b5fd; }
+  .af-btn.af-other.active  { background: rgba(56,189,248,0.1);  border-color: #38bdf8; color: #7dd3fc; }
+
+  /* ── Table & Layout ── */
+  .cases-table-wrap {
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    overflow-x: auto;
+    background: rgba(255, 255, 255, 0.01);
+  }
+  .cases-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 700px;
+  }
+  .cases-table thead tr {
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--border);
+  }
+  .cases-table th {
+    padding: 12px 14px;
+    font-size: .65rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    text-align: left;
+  }
+  .cases-table tbody tr {
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    transition: background .15s;
+    cursor: pointer;
+  }
+  .cases-table tbody tr:last-child { border-bottom: none; }
+  .cases-table tbody tr:hover { background: rgba(96, 165, 250, 0.04); }
+  .cases-table td {
+    padding: 10px 14px;
+    font-size: .8rem;
+    vertical-align: middle;
+  }
+
+  /* Badges */
+  .action-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: .6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    border: 1px solid transparent;
+  }
+  .ab-ban     { background: rgba(239,68,68,0.12);  color: #fca5a5; border-color: rgba(239,68,68,0.2); }
+  .ab-kick    { background: rgba(249,115,22,0.1);  color: #fdba74; border-color: rgba(249,115,22,0.2); }
+  .ab-warn    { background: rgba(234,179,8,0.1);   color: #fcd34d; border-color: rgba(234,179,8,0.2); }
+  .ab-timeout { background: rgba(167,139,250,0.1); color: #c4b5fd; border-color: rgba(167,139,250,0.2); }
+  .ab-other   { background: rgba(56,189,248,0.08); color: #7dd3fc; border-color: rgba(56,189,248,0.15); }
+
+  /* Details Panel / Sidebar */
+  .case-panel {
+    display: none;
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    width: 440px;
+    background: rgba(8, 8, 20, 0.98);
+    backdrop-filter: blur(40px);
+    border-left: 1px solid var(--border);
+    z-index: 10001;
+    flex-direction: column;
+    box-shadow: -20px 0 60px rgba(0,0,0,0.4);
+  }
+  .case-panel.open {
+    display: flex;
+    animation: slideIn .25s cubic-bezier(0.16,1,0.3,1);
+  }
+  @keyframes slideIn {
+    from { transform: translateX(100%); }
+    to   { transform: translateX(0); }
+  }
+  .case-panel-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 10000;
+    backdrop-filter: blur(2px);
+  }
+  .case-panel-overlay.open { display: block; }
+
+  .cp-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .cp-close {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .cp-close:hover {
+    background: rgba(239,68,68,0.15);
+    color: #f87171;
+    border-color: rgba(239,68,68,0.3);
+    transform: rotate(90deg);
+  }
+
+  .cp-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+  }
+  .cp-body::-webkit-scrollbar { width: 4px; }
+  .cp-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+  .cp-section-title {
+    font-size: .65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    font-weight: 700;
+    margin: 18px 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cp-section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--border), transparent);
+  }
+
+  .cp-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    font-size: 0.8rem;
+  }
+  .cp-row:last-child { border-bottom: none; }
+  .cp-lbl { color: var(--muted); font-size: 0.75rem; }
+  .cp-val { font-weight: 600; color: #fff; }
+
+  /* User timeline in panel */
+  .timeline-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .timeline-compact-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: rgba(255,255,255,0.01);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.72rem;
+  }
+
+  .cp-actions {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .cp-action-btn {
+    width: 100%;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: .78rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: .15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    font-family: inherit;
+  }
+  .cp-action-btn.copy  { background: rgba(255,255,255,0.04); border-color: var(--border); color: var(--fg); }
+  .cp-action-btn.copy:hover { background: rgba(255,255,255,0.08); }
+  .cp-action-btn.edit  { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.25); color: var(--vl); }
+  .cp-action-btn.edit:hover { background: rgba(59,130,246,0.18); }
+  .cp-action-btn.del   { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.2); color: #f87171; }
+  .cp-action-btn.del:hover { background: rgba(239,68,68,0.15); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── STATS ── #}
+<div class="case-stats">
+  <div class="case-stat-card">
+    <div class="case-stat-num" style="color:var(--vl)">{{ stats.total }}</div>
+    <div class="ov-sl">Gesamt Cases</div>
+  </div>
+  <div class="case-stat-card">
+    <div class="case-stat-num" style="color:#f87171">{{ stats.ban }}</div>
+    <div class="ov-sl">🔨 Bans</div>
+  </div>
+  <div class="case-stat-card">
+    <div class="case-stat-num" style="color:#fdba74">{{ stats.kick }}</div>
+    <div class="ov-sl">👢 Kicks</div>
+  </div>
+  <div class="case-stat-card">
+    <div class="case-stat-num" style="color:#fcd34d">{{ stats.warn }}</div>
+    <div class="ov-sl">⚠️ Warns</div>
+  </div>
+  <div class="case-stat-card">
+    <div class="case-stat-num" style="color:#c4b5fd">{{ stats.timeout }}</div>
+    <div class="ov-sl">⏳ Timeouts</div>
+  </div>
+  <div class="case-stat-card">
+    <div class="case-stat-num" style="color:var(--cl)">{{ cases_7d }}</div>
+    <div class="ov-sl">📅 Diese Woche</div>
+  </div>
+</div>
+
+{# ── SEARCH & FILTERS ── #}
+<div class="filters-container">
+  <div style="position:relative; width:100%;">
+    <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none;">🔍</span>
+    <input type="text" id="searchInput" class="cfg-input ignore-dirty" placeholder="Suche nach User-ID, Mod-ID, Username, Moderator oder Grund..." style="width:100%; max-width:100%; padding-left:36px; border-radius:12px; box-sizing:border-box" oninput="applyFilters()">
+  </div>
+
+  <div class="filters-row" style="justify-content: space-between;">
+    <div class="action-filters">
+      <button class="af-btn af-all active" onclick="setFilter('', this)">✨ Alle</button>
+      <button class="af-btn af-ban" onclick="setFilter('ban', this)">🔨 Ban</button>
+      <button class="af-btn af-kick" onclick="setFilter('kick', this)">👢 Kick</button>
+      <button class="af-btn af-warn" onclick="setFilter('warn', this)">⚠️ Warn</button>
+      <button class="af-btn af-timeout" onclick="setFilter('timeout', this)">⏳ Timeout</button>
+      <button class="af-btn af-other" onclick="setFilter('other', this)">📋 Andere</button>
+    </div>
+
+    <div style="display:flex; gap:8px; align-items:center;">
+      <a class="af-btn" href="/api/guild/{{ guild.id }}/cases/export?format=html">💾 HTML Export</a>
+      <a class="af-btn" href="/api/guild/{{ guild.id }}/cases/export?format=json">💾 JSON Export</a>
+      <span style="font-size:0.75rem; color:var(--muted);" id="visibleCount">{{ cases|length }} / {{ cases|length }} sichtbar</span>
+    </div>
+  </div>
+</div>
+
+{# ── CASES TABLE ── #}
+{% if cases %}
+<div class="cases-table-wrap">
+  <table class="cases-table">
+    <thead>
+      <tr>
+        <th style="width:70px">Case #</th>
+        <th style="width:120px">Aktion</th>
+        <th>Betroffener User</th>
+        <th>Moderator</th>
+        <th>Grund</th>
+        <th style="width:130px">Zeitstempel</th>
+      </tr>
+    </thead>
+    <tbody id="casesTableBody">
+      {% for c in cases %}
+        {% set a = c.action|lower %}
+        {% set risk_cls = 'ab-ban' if a in ('ban', 'tempban') else 'ab-kick' if a=='kick' else 'ab-warn' if a=='warn' else 'ab-timeout' if a=='timeout' else 'ab-other' %}
+        {% set icon = '🔨' if a in ('ban', 'tempban') else '👢' if a=='kick' else '⚠️' if a=='warn' else '⏳' if a=='timeout' else '📋' %}
+        
+        <tr class="case-row"
+            data-action="{{ a }}"
+            data-search="{{ (c.user_id|string) ~ ' ' ~ (c.mod_id|default(c.moderator_id, true)|default('')|string) ~ ' ' ~ (c.user_name|default('')|lower) ~ ' ' ~ (c.mod_name|default('')|lower) ~ ' ' ~ (c.reason|default('')|lower) }}"
+            data-idx="{{ loop.index0 }}"
+            onclick="openCase({{ loop.index0 }})">
+            
+          <td class="case-id">#{{ c.case_id }}</td>
+          <td>
+            <span class="action-badge {{ risk_cls }}">{{ icon }} {{ c.action|upper }}</span>
+          </td>
+          <td>
+            <div class="user-cell">
+              <span class="user-name">{{ c.user_name|default('Unbekannter User') }}</span>
+              <span class="user-id">{{ c.user_id }}</span>
+            </div>
+          </td>
+          <td>
+            <div class="user-cell">
+              <span class="user-name">{{ c.mod_name|default('System / ModForge') }}</span>
+              <span class="user-id">{{ c.mod_id|default(c.moderator_id, true)|default('—') }}</span>
+            </div>
+          </td>
+          <td class="reason-cell" title="{{ c.reason|default('—') }}">
+            {{ c.reason|default('Kein Grund angegeben')|truncate(60) }}
+          </td>
+          <td class="date-cell">{{ c.ts_str|default('Vor kurzem') }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{# Pagination #}
+<div class="pagination" id="pagination" style="margin-top: 15px;"></div>
+
+{% else %}
+<div class="cases-empty">
+  <div class="cases-empty-icon">📋</div>
+  <div style="font-weight:700;font-size:1.1rem;margin-bottom:6px; color:#fff;">Keine Moderationsfälle vorhanden</div>
+  <p class="cfg-desc">Cases werden hier protokolliert, sobald Moderationsentscheidungen über den Bot getroffen werden.</p>
+</div>
+{% endif %}
+
+{# ── DETAIL SIDEBAR PANEL ── #}
+<div class="case-panel-overlay" id="caseOverlay" onclick="closeCase()"></div>
+
+<div class="case-panel" id="casePanel">
+  <div class="cp-header">
+    <div>
+      <div style="font-size:.65rem;color:var(--muted);margin-bottom:3px">Case Explorer</div>
+      <div style="font-weight:900;font-size:1.2rem;color:#fff" id="cpTitle">Case Details</div>
+    </div>
+    <button class="cp-close" onclick="closeCase()">✕</button>
+  </div>
+
+  <div class="cp-body" id="cpBody">
+    <!-- Dynamic JS inject -->
+  </div>
+
+  <div class="cp-actions" id="cpActions">
+    <!-- Dynamic JS inject -->
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CASES = {{ cases | tojson | safe }} || [];
+const GID = "{{ guild.id }}";
+const PER_PAGE = 40;
+
+let filteredRows = [];
+let currentPage = 1;
+let activeFilter = '';
+let currentCase = null;
+
+function setFilter(action, btn) {
+  activeFilter = action;
+  document.querySelectorAll('.af-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+
+function applyFilters() {
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  const rows = document.querySelectorAll('.case-row');
+
+  filteredRows = [];
+  rows.forEach(row => {
+    const action = row.dataset.action;
+    const search = row.dataset.search;
+
+    const matchAction = !activeFilter || 
+      (activeFilter === 'other' 
+        ? !['ban', 'kick', 'warn', 'timeout', 'softban', 'tempban'].includes(action) 
+        : action === activeFilter);
+        
+    const matchSearch = !q || search.includes(q);
+
+    if (matchAction && matchSearch) {
+      filteredRows.push(row);
+    }
+  });
+
+  document.getElementById('visibleCount').textContent = `${filteredRows.length} / ${rows.length} sichtbar`;
+  renderPage(1);
+}
+
+function renderPage(page) {
+  currentPage = page;
+  const start = (page - 1) * PER_PAGE;
+  const end = start + PER_PAGE;
+
+  document.querySelectorAll('.case-row').forEach(r => r.style.display = 'none');
+  filteredRows.slice(start, end).forEach(r => r.style.display = '');
+
+  const totalPages = Math.ceil(filteredRows.length / PER_PAGE);
+  const pg = document.getElementById('pagination');
+  if (!pg) return;
+
+  if (totalPages <= 1) {
+    pg.innerHTML = '';
+    return;
+  }
+
+  let html = '';
+  html += `<button class="page-btn" onclick="renderPage(${page - 1})" ${page === 1 ? 'disabled' : ''}>‹</button>`;
+  
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || (i >= page - 2 && i <= page + 2)) {
+      html += `<button class="page-btn ${i === page ? 'active' : ''}" onclick="renderPage(${i})">${i}</button>`;
+    } else if (i === page - 3 || i === page + 3) {
+      html += `<span style="color:var(--muted); font-size:.75rem; padding:0 2px">…</span>`;
+    }
+  }
+
+  html += `<button class="page-btn" onclick="renderPage(${page + 1})" ${page === totalPages ? 'disabled' : ''}>›</button>`;
+  pg.innerHTML = html;
+}
+
+function openCase(idx) {
+  const c = CASES[idx];
+  if (!c) return;
+  currentCase = c;
+
+  // Highlight active row
+  document.querySelectorAll('.case-row').forEach(r => r.style.background = '');
+  const row = document.querySelector(`[data-idx="${idx}"]`);
+  if (row) row.style.background = 'rgba(96,165,250,0.08)';
+
+  // Find other cases of the same user for chronological User Timeline
+  const userTimelineCases = CASES.filter(x => String(x.user_id) === String(c.user_id) && x.case_id !== c.case_id)
+                                  .sort((a,b) => b.case_id - a.case_id);
+                                  
+  let timelineHtml = '<p class="cfg-desc">Keine weiteren Fälle für diesen User protokolliert.</p>';
+  if (userTimelineCases.length > 0) {
+    timelineHtml = `
+      <div class="timeline-compact">
+        ${userTimelineCases.slice(0, 5).map(x => `
+          <div class="timeline-compact-item">
+            <span>Case #${x.case_id} · <b>${x.action.toUpperCase()}</b></span>
+            <span style="color:var(--muted); font-size:0.65rem;">${x.ts_str || 'Vor kurzem'}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  // Generate evidence items
+  let evidenceHtml = '<p class="cfg-desc">Keine Anhänge oder Beweise hinterlegt.</p>';
+  if (c.evidence && c.evidence.length > 0) {
+    evidenceHtml = c.evidence.map(ev => `
+      <div style="padding:10px; border-radius:8px; border:1px solid var(--border); background:rgba(255,255,255,0.01); margin-bottom:6px;">
+        <a href="${ev.url}" target="_blank" style="color:var(--vl); text-decoration:none; font-weight:700; font-size:0.75rem;">🔗 Link öffnen</a>
+        ${ev.note ? `<div style="font-size:0.72rem; color:var(--muted); margin-top:2px;">${ev.note}</div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  // Populate Sidebar Body
+  document.getElementById('cpTitle').textContent = `Case #${c.case_id}`;
+  document.getElementById('cpBody').innerHTML = `
+    <!-- Top summary card -->
+    <div style="display:flex; align-items:center; gap:12px; padding:12px; border-radius:12px; background:rgba(255,255,255,0.02); border:1px solid var(--border); margin-bottom:16px;">
+      <span style="font-size:1.5rem;">🚨</span>
+      <div>
+        <span class="action-badge ab-${c.action.toLowerCase() === 'ban' ? 'ban' : c.action.toLowerCase() === 'kick' ? 'kick' : c.action.toLowerCase() === 'warn' ? 'warn' : c.action.toLowerCase() === 'timeout' ? 'timeout' : 'other'}">${c.action.toUpperCase()}</span>
+        <div style="font-size:0.65rem; color:var(--muted); margin-top:3px;">Erstellt am: ${c.ts_str || 'Vor kurzem'}</div>
+      </div>
+    </div>
+
+    <!-- Details -->
+    <div class="cp-section-title">👤 Betroffener User</div>
+    <div class="cp-row"><span class="cp-lbl">Tag / Name</span><span class="cp-val">${c.user_name || 'Unbekannt'}</span></div>
+    <div class="cp-row"><span class="cp-lbl">User-ID</span><span class="cp-val" style="font-family:'Geist Mono',monospace; font-size:0.75rem;">${c.user_id}</span></div>
+
+    <div class="cp-section-title">🛡️ Moderator</div>
+    <div class="cp-row"><span class="cp-lbl">Name</span><span class="cp-val">${c.mod_name || 'System / ModForge'}</span></div>
+    <div class="cp-row"><span class="cp-lbl">Mod-ID</span><span class="cp-val" style="font-family:'Geist Mono',monospace; font-size:0.75rem;">${c.mod_id || 'System'}</span></div>
+
+    <div class="cp-section-title">📝 Begründung</div>
+    <div style="padding:10px; border-radius:8px; border:1px solid var(--border); background:rgba(255,255,255,0.015); font-size:0.8rem; line-height:1.4; color:#fff; word-break:break-all;" id="currentReasonBox">
+      ${c.reason || 'Kein Grund angegeben'}
+    </div>
+
+    <div class="cp-section-title">🖼️ Beweise / Evidence</div>
+    <div id="evidenceListContainer">${evidenceHtml}</div>
+
+    <!-- Evidence form -->
+    <div style="margin-top:12px; padding:12px; border-radius:10px; border:1px dashed var(--border); background:rgba(255,255,255,0.01);">
+      <b style="font-size:0.75rem; color:#fff; display:block; margin-bottom:6px;">Beweis hinzufügen:</b>
+      <input id="addEvUrl" class="cfg-input ignore-dirty" placeholder="https://..." style="max-width:100%; margin-bottom:6px; font-size:0.72rem;">
+      <input id="addEvNote" class="cfg-input ignore-dirty" placeholder="Kurze Notiz" style="max-width:100%; margin-bottom:8px; font-size:0.72rem;">
+      <button class="btn-glass btn-sm btn-glass-primary" style="width:100%; font-size:0.7rem;" onclick="addEvidence(${idx})">➕ Link anhängen</button>
+    </div>
+
+    <div class="cp-section-title">⏳ User Timeline (Chronologisch)</div>
+    ${timelineHtml}
+  `;
+
+  // Action Buttons Footer
+  document.getElementById('cpActions').innerHTML = `
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+      <button class="cp-action-btn copy" onclick="copyToClip('${c.user_id}', 'User-ID')">📋 ID User</button>
+      <button class="cp-action-btn copy" onclick="copyToClip('${c.mod_id || ''}', 'Mod-ID')">📋 ID Mod</button>
+    </div>
+    <button class="cp-action-btn copy" onclick="exportSingleCaseHTML(${idx})">⬇ Einzelfall als HTML exportieren</button>
+    <button class="cp-action-btn edit" onclick="editReason(${idx})">✏️ Fall-Grund bearbeiten</button>
+    <button class="cp-action-btn del" onclick="deleteCase(${idx})">🗑️ Fall permanent löschen</button>
+  `;
+
+  document.getElementById('caseOverlay').classList.add('open');
+  document.getElementById('casePanel').classList.add('open');
+}
+
+function closeCase() {
+  document.getElementById('casePanel').classList.remove('open');
+  document.getElementById('caseOverlay').classList.remove('open');
+  document.querySelectorAll('.case-row').forEach(r => r.style.background = '');
+  currentCase = null;
+}
+
+function copyToClip(text, label) {
+  navigator.clipboard.writeText(text).then(() => {
+    showToast(`${label} erfolgreich kopiert!`, 'ok');
+  }).catch(() => showToast('Fehler beim Kopieren', 'err'));
+}
+
+async function addEvidence(idx) {
+  const c = CASES[idx];
+  const urlIn = document.getElementById('addEvUrl');
+  const noteIn = document.getElementById('addEvNote');
+  
+  if (!urlIn.value.trim()) return showToast('Bitte gib eine gültige URL ein!', 'err');
+  
+  try {
+    const r = await fetch(`/api/guild/${GID}/case/${c.case_id}/evidence`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ url: urlIn.value.trim(), note: noteIn.value.trim() })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      if (!c.evidence) c.evidence = [];
+      c.evidence.push({ url: urlIn.value.trim(), note: noteIn.value.trim() });
+      showToast('Beweis erfolgreich hinterlegt!', 'ok');
+      openCase(idx);
+    } else {
+      showToast(d.error || 'Fehler beim Sichern', 'err');
+    }
+  } catch(e) {
+    showToast('Fehler bei der Übertragung', 'err');
+  }
+}
+
+async function editReason(idx) {
+  const c = CASES[idx];
+  const currentReason = c.reason || '';
+  const newReason = prompt('Gib den neuen Grund für diesen Fall ein:', currentReason);
+  
+  if (newReason === null) return; // Prompt cancelled
+  
+  try {
+    const r = await fetch(`/api/guild/${GID}/case/${c.case_id}/reason`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ reason: newReason })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      CASES[idx].reason = newReason;
+      showToast('Fall-Begründung aktualisiert!', 'ok');
+      openCase(idx);
+    } else {
+      showToast(d.error || 'Fehler beim Aktualisieren', 'err');
+    }
+  } catch(e) {
+    showToast('Netzwerk-Übertragungsfehler', 'err');
+  }
+}
+
+async function deleteCase(idx) {
+  const c = CASES[idx];
+  if (!confirm(`Möchtest du den Case #${c.case_id} wirklich dauerhaft löschen?`)) return;
+  
+  try {
+    const r = await fetch(`/api/guild/${GID}/case/${c.case_id}`, {
+      method: 'DELETE'
+    });
+    const d = await r.json();
+    if (d.ok) {
+      showToast('Moderationsfall erfolgreich gelöscht!', 'ok');
+      closeCase();
+      setTimeout(() => location.reload(), 600);
+    } else {
+      showToast(d.error || 'Löschen fehlgeschlagen', 'err');
+    }
+  } catch(e) {
+    showToast('Netzwerk-Verbindungsfehler', 'err');
+  }
+}
+
+function exportSingleCaseHTML(idx) {
+  const c = CASES[idx];
+  const evidenceList = (c.evidence || []).map(e => `<li><a href="${e.url}">${e.url}</a> ${e.note ? `(${e.note})` : ''}</li>`).join('') || 'Keine Beweise';
+  
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="de">
+    <head>
+      <meta charset="UTF-8">
+      <title>ModForge Case Export - #${c.case_id}</title>
+      <style>
+        body { font-family: sans-serif; padding: 30px; background: #0f172a; color: #f1f5f9; }
+        .box { background: #1e293b; padding: 20px; border-radius: 8px; border: 1px solid #334155; max-width: 600px; margin: 0 auto; }
+        h1 { color: #3b82f6; margin-top: 0; }
+        .label { color: #94a3b8; font-size: 0.85em; font-weight: bold; }
+        .val { font-size: 1.1em; margin-bottom: 12px; }
+      </style>
+    </head>
+    <body>
+      <div class="box">
+        <h1>Case #${c.case_id} (${c.action.toUpperCase()})</h1>
+        <div>
+          <div class="label">Betroffener User:</div>
+          <div class="val">${c.user_name || 'Unbekannt'} (ID: ${c.user_id})</div>
+        </div>
+        <div>
+          <div class="label">Moderator:</div>
+          <div class="val">${c.mod_name || 'System / ModForge'} (ID: ${c.mod_id || 'System'})</div>
+        </div>
+        <div>
+          <div class="label">Begründung:</div>
+          <div class="val">${c.reason || 'Kein Grund'}</div>
+        </div>
+        <div>
+          <div class="label">Zeitpunkt:</div>
+          <div class="val">${c.ts_str || 'Vor kurzem'}</div>
+        </div>
+        <div>
+          <div class="label">Beweise:</div>
+          <ul>${evidenceHtml}</ul>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+  
+  const blob = new Blob([htmlContent], {type: 'text/html;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `case-${c.case_id}.html`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast('Einzelfall-Export abgeschlossen!', 'ok');
+}
+
+// Keyboard ESC bind
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeCase();
+});
+
+// Initial collection
+document.querySelectorAll('.case-row').forEach(row => filteredRows.push(row));
+renderPage(1);
+</script>
+{% endblock %}

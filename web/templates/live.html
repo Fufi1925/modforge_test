@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Live – ModForge{% endblock %}
+{% block content %}
+<section class="container" style="max-width:1100px;padding-top:60px;padding-bottom:90px">
+  <div class="sec-head reveal" style="text-align:center;margin-bottom:38px">
+    <div class="sec-badge" style="margin-bottom:12px">⚡ Live Center</div>
+    <h1 style="font-size:clamp(2rem,5vw,3.2rem);font-weight:900;margin-bottom:12px">ModForge Live-Aktivität</h1>
+    <p style="color:var(--muted);max-width:700px;margin:0 auto;line-height:1.7">Echter Systemstatus, Schutzmetriken und letzte Aktivitäten – schlank, schnell und übersichtlich.</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin-bottom:24px">
+    <div class="stat-card"><div class="stat-value" style="color:var(--green)">{{ uptime_pct }}%</div><div class="stat-label">Uptime</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--cl)">{{ api_latency }}ms</div><div class="stat-label">API-Latenz</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--vl)">{{ guild_count }}</div><div class="stat-label">Server</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--amberl)">{{ member_count }}</div><div class="stat-label">Mitglieder</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--p2)">{{ cases_count }}</div><div class="stat-label">Cases</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--orange)">{{ archive_count }}</div><div class="stat-label">Archiv</div></div>
+  </div>
+
+  <div class="db-card">
+    <div class="db-card-header"><span class="db-card-title">📡 Letzte Events</span><span class="tag">Shard {{ shard_count }}</span></div>
+    {% if recent_activities %}
+      <div style="display:grid;gap:10px">
+        {% for a in recent_activities %}
+          <div class="cfg-row" style="margin:0">
+            <div>
+              <div class="cfg-label">{{ a.kind or 'event' }}</div>
+              <div class="cfg-desc">{{ a.text }}</div>
+            </div>
+            <span class="tag">{{ a.guild_name or 'System' }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p style="color:var(--muted);margin:0">Noch keine Live-Events vorhanden.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

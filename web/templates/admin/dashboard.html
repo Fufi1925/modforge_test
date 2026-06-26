@@ -1,0 +1,46 @@
+{% extends "admin/_base.html" %}
+{% set active = 'dashboard' %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}📊 Dashboard{% endblock %}
+{% block page_desc %}Bot-Status und Übersicht{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px;margin-bottom:28px">
+  <div class="db-stat"><div class="db-stat-val" style="color:var(--vl)">{{ gc }}</div><div class="db-stat-label">Server</div></div>
+  <div class="db-stat"><div class="db-stat-val" style="color:var(--cl)">{{ mc }}</div><div class="db-stat-label">Mitglieder</div></div>
+  <div class="db-stat"><div class="db-stat-val" style="color:var(--green)">{{ lat }}ms</div><div class="db-stat-label">Latenz</div></div>
+  <div class="db-stat"><div class="db-stat-val" style="color:var(--amberl)">{{ shard_count }}</div><div class="db-stat-label">Shards</div></div>
+  <div class="db-stat"><div class="db-stat-val" style="color:var(--p2)">{{ cases_count }}</div><div class="db-stat-label">Cases</div></div>
+  <div class="db-stat"><div class="db-stat-val" style="color:var(--orange)">{{ archive_count }}</div><div class="db-stat-label">Archiviert</div></div>
+</div>
+
+<div class="cfg-row" style="{% if bot_ready %}border-color:rgba(74,222,128,0.25);background:rgba(74,222,128,0.04){% else %}border-color:rgba(239,68,68,0.25);background:rgba(239,68,68,0.04){% endif %}">
+  <div>
+    <span class="cfg-label">Bot-Status</span>
+    <div class="cfg-desc">{% if bot_ready %}✅ Online{% if bot_user %} als {{ bot_user.name }}{% endif %}{% else %}❌ Offline{% endif %}</div>
+  </div>
+  <span style="font-size:.82rem;font-weight:700;color:{% if bot_ready %}var(--green){% else %}var(--red){% endif %}">{{ 'ONLINE' if bot_ready else 'OFFLINE' }}</span>
+</div>
+
+<div class="db-grid" style="margin-top:20px">
+  <a href="/admin/guilds" class="db-card" style="text-decoration:none">
+    <div style="font-size:1.5rem;margin-bottom:8px">🏠</div>
+    <div class="db-card-title" style="color:var(--fg)">Server verwalten</div>
+    <p style="color:var(--muted);font-size:.78rem;margin-top:4px">Alle verbundenen Server konfigurieren</p>
+  </a>
+  <a href="/admin/stats" class="db-card" style="text-decoration:none">
+    <div style="font-size:1.5rem;margin-bottom:8px">📈</div>
+    <div class="db-card-title" style="color:var(--fg)">Statistiken</div>
+    <p style="color:var(--muted);font-size:.78rem;margin-top:4px">Detaillierte System-Metriken</p>
+  </a>
+  <a href="/admin/logs" class="db-card" style="text-decoration:none">
+    <div style="font-size:1.5rem;margin-bottom:8px">📄</div>
+    <div class="db-card-title" style="color:var(--fg)">System-Logs</div>
+    <p style="color:var(--muted);font-size:.78rem;margin-top:4px">Bot-Logs durchsuchen und filtern</p>
+  </a>
+  <a href="/" class="db-card" style="text-decoration:none" target="_blank">
+    <div style="font-size:1.5rem;margin-bottom:8px">⚡</div>
+    <div class="db-card-title" style="color:var(--fg)">Live Activity</div>
+    <p style="color:var(--muted);font-size:.78rem;margin-top:4px">Echtzeit Bot-Aktivität ansehen</p>
+  </a>
+</div>
+{% endblock %}

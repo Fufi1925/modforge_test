@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% block title %}Features – ModForge{% endblock %}
+{% block content %}
+
+<!-- Custom Styles for Features Page -->
+<style>
+  .feat-hero {
+    text-align: center;
+    padding: 80px 20px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .feat-hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: -1;
+  }
+  
+  .feat-title {
+    font-size: clamp(2.5rem, 6vw, 4rem);
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 24px;
+    letter-spacing: -0.02em;
+  }
+  
+  .feat-title span {
+    background: linear-gradient(135deg, var(--vl), var(--c));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  .feat-subtitle {
+    font-size: 1.15rem;
+    color: var(--muted);
+    max-width: 650px;
+    margin: 0 auto 40px;
+    line-height: 1.6;
+  }
+
+  /* BENTO GRID SYSTEM */
+  .bento-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    grid-auto-rows: minmax(180px, auto);
+    gap: 24px;
+    max-width: 1200px;
+    margin: 0 auto 80px;
+    padding: 0 20px;
+  }
+  
+  .bento-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .bento-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(59,130,246,0.3);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+  }
+  
+  .bento-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    margin-bottom: 24px;
+  }
+  
+  .bento-title {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--fg);
+    margin-bottom: 12px;
+    letter-spacing: -0.01em;
+  }
+  
+  .bento-desc {
+    font-size: 0.95rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* Grid Sizes */
+  .span-12 { grid-column: span 12; }
+  .span-8  { grid-column: span 8; }
+  .span-6  { grid-column: span 6; }
+  .span-4  { grid-column: span 4; }
+  
+  @media (max-width: 992px) {
+    .span-4 { grid-column: span 6; }
+    .span-8 { grid-column: span 12; }
+  }
+  @media (max-width: 768px) {
+    .span-6, .span-4, .span-8 { grid-column: span 12; }
+  }
+
+  /* Visual Accents in Cards */
+  .feat-bg-glow {
+    position: absolute;
+    bottom: -20%;
+    right: -10%;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    filter: blur(50px);
+    opacity: 0.4;
+    z-index: 0;
+    pointer-events: none;
+  }
+  
+  .card-content {
+    position: relative;
+    z-index: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Big Card Graphic */
+  .big-card-graphic {
+    flex: 1;
+    margin-top: 24px;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+</style>
+
+<div class="feat-hero reveal">
+  <div class="sec-badge" style="margin-bottom:20px;background:rgba(59,130,246,0.1);color:var(--vl);border-color:rgba(59,130,246,0.25)">✨ Alles inklusive</div>
+  <h1 class="feat-title">Mächtige Tools.<br><span>Kinderleichte Bedienung.</span></h1>
+  <p class="feat-subtitle">ModForge ersetzt bis zu 6 andere Bots. Von KI-gestützter Auto-Moderation bis hin zu Server-Backups – alles an einem Ort, perfekt aufeinander abgestimmt.</p>
+</div>
+
+<div class="bento-grid">
+
+  <!-- 1. AutoMod (Large) -->
+  <div class="bento-card span-8 reveal">
+    <div class="feat-bg-glow" style="background:var(--v)"></div>
+    <div class="card-content">
+      <div class="bento-icon" style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3)">🤖</div>
+      <h3 class="bento-title">Smart AutoMod 2.0</h3>
+      <p class="bento-desc" style="max-width: 90%;">Die nächste Generation der Moderation. Unser AutoMod scannt Nachrichten in Echtzeit auf Spam, toxisches Verhalten, Scam-Links, Zalgo-Text und Phishing-Versuche. Bei Verstößen greifen sofort automatisierte Strafen (Mute, Kick, Ban) nach deinem Regelwerk.</p>
+      
+      <div class="big-card-graphic" style="padding:20px;flex-direction:column;gap:12px;align-items:flex-start">
+        <div style="font-size:0.8rem;color:var(--muted)"># general</div>
+        <div style="display:flex;align-items:center;gap:12px;opacity:0.5">
+          <div style="width:32px;height:32px;border-radius:50%;background:#374151"></div>
+          <div><div style="width:100px;height:12px;background:#374151;border-radius:4px;margin-bottom:6px"></div><div style="width:180px;height:10px;background:#1f2937;border-radius:4px"></div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;background:rgba(239,68,68,0.1);padding:10px 16px;border-radius:8px;border-left:3px solid var(--err);width:100%">
+          <div style="font-size:1.2rem">🛑</div>
+          <div><div style="font-size:0.8rem;font-weight:700;color:var(--redl)">Phishing-Link blockiert</div><div style="font-size:0.75rem;color:var(--muted)">Nachricht gelöscht und User stummgeschaltet.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Dashboard -->
+  <div class="bento-card span-4 reveal" style="transition-delay:0.1s">
+    <div class="feat-bg-glow" style="background:var(--c)"></div>
+    <div class="card-content">
+      <div class="bento-icon" style="background:rgba(34,211,238,0.15);border:1px solid rgba(34,211,238,0.3)">📊</div>
+      <h3 class="bento-title">Web-Dashboard</h3>
+      <p class="bento-desc">Kein lästiges Tippen von Setup-Commands mehr. Konfiguriere deinen gesamten Server blitzschnell und übersichtlich direkt im Browser.</p>
+    </div>
+  </div>
+
+  <!-- 3. Anti-Nuke -->
+  <div class="bento-card span-4 reveal">
+    <div class="feat-bg-glow" style="background:var(--err)"></div>
+    <div class="card-content">
+      <div class="bento-icon" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3)">💣</div>
+      <h3 class="bento-title">Anti-Nuke Schutz</h3>
+      <p class="bento-desc">Schützt deinen Server vor unberechtigten Massen-Bans, Kanal-Löschungen oder dem Zerstören von Rollen. Ein Admin dreht durch? ModForge greift sofort ein und entzieht Rechte.</p>
+    </div>
+  </div>
+
+  <!-- 4. Anti-Raid -->
+  <div class="bento-card span-4 reveal" style="transition-delay:0.1s">
+    <div class="feat-bg-glow" style="background:var(--orange)"></div>
+    <div class="card-content">
+      <div class="bento-icon" style="background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.3)">🚨</div>
+      <h3 class="bento-title">Anti-Raid System</h3>
+      <p class="bento-desc">Treten extrem viele User (Bots) in wenigen Sekunden bei? Das Anti-Raid System verriegelt den Server ("Lockdown"), sperrt neue Accounts und schlägt Alarm.</p>
+    </div>
+  </div>
+
+  <!-- 5. Logging -->
+  <div class="bento-card span-4 reveal" style="transition-delay:0.2s">
+    <div class="feat-bg-glow" style="background:var(--p)"></div>
+    <div class="card-content">
+      <div class="bento-icon" style="background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.3)">📝</div>
+      <h3 class="bento-title">Präzise Logs</h3>
+      <p class="bento-desc">Behalte den kompletten Überblick. Gelöschte Nachrichten, geänderte Rollen oder Voice-Aktivitäten werden strukturiert, übersichtlich und fehlerfrei protokolliert.</p>
+    </div>
+  </div>
+
+  <!-- 6. Ticket-System & Verify -->
+  <div class="bento-card span-6 reveal">
+    <div class="card-content">
+      <div class="bento-icon" style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3)">🎫</div>
+      <h3 class="bento-title">Tickets & Verifizierung</h3>
+      <p class="bento-desc">Biete professionellen Support über Dropdown-Panels für verschiedene Ticket-Kategorien. Zusätzlich filterst du Bots mit unserem Bild-CAPTCHA Verify-System sicher heraus, bevor sie den Server betreten dürfen.</p>
+    </div>
+  </div>
+
+  <!-- 7. Backups -->
+  <div class="bento-card span-6 reveal" style="transition-delay:0.1s">
+    <div class="card-content">
+      <div class="bento-icon" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3)">💾</div>
+      <h3 class="bento-title">Server Backups</h3>
+      <p class="bento-desc">Speichere ein komplettes Abbild deines Servers (Rollen, Kanäle, Kategorien, Rechte) in unserer Datenbank. Mit einem Klick kannst du im Notfall alles 1:1 wiederherstellen oder Klone erstellen.</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="reveal" style="text-align:center;padding-bottom:100px;">
+  <h2 style="font-size:1.8rem;font-weight:800;margin-bottom:20px;">Bereit für die Zukunft?</h2>
+  <a href="/login" class="btn-glass btn-glass-primary btn-xl magnetic">Jetzt Dashboard öffnen →</a>
+</div>
+
+{% endblock %}

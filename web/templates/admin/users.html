@@ -1,0 +1,39 @@
+{% extends "admin/_base.html" %}
+{% set active = 'users' %}
+{% block title %}Dashboard-Logins{% endblock %}
+{% block page_title %}👥 Dashboard-Logins{% endblock %}
+{% block page_desc %}Persistente Discord-OAuth Sessions aus MongoDB{% endblock %}
+{% block content %}
+<div class="db-card" style="margin-bottom:18px">
+  <div class="db-card-title">💾 Persistente Logins</div>
+  <p style="color:var(--muted);font-size:.82rem;margin-top:8px">Diese Sessions bleiben nach Web-/Bot-Neustarts erhalten, solange der Browser-Cookie und die DB-Session gültig sind.</p>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+  {% for s in sessions %}
+  {% set u = s.user or {} %}
+  <div class="cfg-row" style="align-items:flex-start">
+    <div style="display:flex;gap:12px;align-items:flex-start;min-width:0">
+      <img src="{{ u.avatar_url or 'https://cdn.discordapp.com/embed/avatars/0.png' }}" style="width:42px;height:42px;border-radius:50%;object-fit:cover">
+      <div style="min-width:0">
+        <div class="cfg-label">{{ u.username or 'Discord User' }} <span style="color:var(--muted);font-family:'Geist Mono',monospace;font-size:.72rem">{{ u.id }}</span></div>
+        <div class="cfg-desc">Server gespeichert: {{ (s.guilds or [])|length }} · Last seen: {{ s.last_seen_fmt }}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+          {% for g in (s.guilds or [])[:12] %}
+            <span style="padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid var(--border);font-size:.66rem">{{ g.name }}</span>
+          {% endfor %}
+          {% if (s.guilds or [])|length > 12 %}<span style="font-size:.7rem;color:var(--muted)">+{{ (s.guilds or [])|length - 12 }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-shrink:0">
+      <a href="/admin/guilds" class="btn-glass btn-sm btn-glass-ghost">Server anzeigen</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if not sessions %}
+<div class="db-card" style="text-align:center;padding:40px;color:var(--muted)">Noch keine persistenten Dashboard-Logins vorhanden.</div>
+{% endif %}
+{% endblock %}

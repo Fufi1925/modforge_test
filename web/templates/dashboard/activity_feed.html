@@ -1,0 +1,33 @@
+{% extends "dashboard/_base.html" %}
+{% set active = 'livefeed' %}
+{% block title %}Live Activity Feed{% endblock %}
+{% block page_title %}📡 Live Activity Feed{% endblock %}
+{% block page_desc %}Echtzeit-Aktivitäten des Servers (erweitert).{% endblock %}
+
+{% block content %}
+<div class="premium-card">
+    <div style="margin-bottom:16px;">
+        <div class="filter-bar">
+            <div class="filter-chip active" onclick="filterActivity('all')">Alle</div>
+            <div class="filter-chip" onclick="filterActivity('voice')">Voice</div>
+            <div class="filter-chip" onclick="filterActivity('message')">Messages</div>
+            <div class="filter-chip" onclick="filterActivity('join')">Joins</div>
+            <div class="filter-chip" onclick="filterActivity('moderation')">Moderation</div>
+        </div>
+    </div>
+
+    {% for event in events %}
+    <div class="event-row" data-type="{{ event.event_type }}">
+        <div>
+            <span class="event-type {{ event.event_type }}">{{ event.event_type }}</span>
+        </div>
+        <div style="flex:1;">
+            <div style="font-weight:700;">{{ event.data.action or event.data.description or event.event_type }}</div>
+            <div style="font-size:0.75rem;color:var(--muted);">{{ event.timestamp }}</div>
+        </div>
+    </div>
+    {% else %}
+    <div style="padding:40px;text-align:center;color:var(--muted);">Noch keine Aktivitäten.</div>
+    {% endfor %}
+</div>
+{% endblock %}

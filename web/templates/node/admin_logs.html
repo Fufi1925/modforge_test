@@ -1,0 +1,5 @@
+{% extends "node/base.html" %}
+{% block content %}
+<div class="row" style="justify-content:space-between;margin-bottom:18px"><div><h1>📄 Admin Logs</h1><p class="muted">Letzte Admin-/Login-/Pull-Events</p></div><a class="btn" href="/admin/dashboard">Dashboard</a></div>
+<table class="table"><tr><th>Zeit</th><th>Event</th><th>IP</th><th>Stadt</th><th>User Agent</th><th>Daten</th></tr>{% for e in events %}<tr><td class="mono">{{ e.time }}</td><td><span class="badge">{{ e.type }}</span></td><td class="mono">{{ e.ip }}</td><td>{{ e.city }}{% if e.country %}, {{ e.country }}{% endif %}</td><td class="mono">{{ e.user_agent }}</td><td class="mono">{{ e.data }}</td></tr>{% else %}<tr><td colspan="6" class="muted">Keine Logs.</td></tr>{% endfor %}</table>
+{% endblock %}

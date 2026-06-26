@@ -1,0 +1,83 @@
+{% extends "dashboard/_base.html" %}
+{% set active = 'badges' %}
+{% block title %}Badge Studio{% endblock %}
+{% block page_title %}🏅 Badge Studio{% endblock %}
+{% block page_desc %}Nur Bot-Developer · Badge-Katalog, Automation, Rollen-Link, History und krasse Styles.{% endblock %}
+{% block head %}
+<style>
+.badge-studio-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;align-items:start}.badge-def-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}.badge-def-card{padding:14px;border-radius:16px;border:1px solid var(--border);background:rgba(255,255,255,.035)}.badge-big{font-size:1.1rem;font-weight:900}.badge-meta{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}.badge-meta span{font-size:.58rem;padding:3px 7px;border-radius:999px;background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--border)}.badge-form-grid{display:grid;grid-template-columns:80px 1fr;gap:8px}.badge-user-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border-radius:12px;background:rgba(255,255,255,.025);border:1px solid var(--border);margin-bottom:7px}@media(max-width:900px){.badge-studio-grid{grid-template-columns:1fr}.badge-form-grid{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+{% block content %}
+<div class="badge-studio-grid">
+  <div>
+    <div class="db-card" style="margin-bottom:16px">
+      <div class="db-card-header"><span class="db-card-title">✨ Custom Badge erstellen / bearbeiten</span></div>
+      <div class="badge-form-grid">
+        <input id="bdEmoji" class="cfg-input ignore-dirty" placeholder="Emoji" maxlength="8" value="🏆" style="max-width:100%">
+        <input id="bdId" class="cfg-input ignore-dirty" placeholder="badge_id" maxlength="48" style="max-width:100%">
+        <input id="bdColor" type="color" value="#94a3b8" style="height:38px;border:0;border-radius:10px;background:transparent">
+        <input id="bdName" class="cfg-input ignore-dirty" placeholder="Name" maxlength="64" style="max-width:100%">
+        <select id="bdCategory" class="cfg-select ignore-dirty"><option>general</option><option>team</option><option>premium</option><option>event</option><option>moderation</option><option>community</option><option>activity</option><option>loyalty</option><option>support</option></select>
+        <select id="bdRarity" class="cfg-select ignore-dirty"><option>common</option><option>rare</option><option>epic</option><option>legendary</option><option>mythic</option></select>
+        <select id="bdStyle" class="cfg-select ignore-dirty"><option>solid</option><option>outline</option><option>glow</option><option>shine</option><option>pulse</option><option>legendary</option></select>
+        <input id="bdLevel" type="number" min="1" max="999" value="1" class="cfg-input ignore-dirty" style="max-width:100%">
+        <select id="bdRole" class="cfg-select ignore-dirty" style="grid-column:span 2"><option value="">Keine Rollen-Verknüpfung</option>{% for r in role_options %}<option value="{{ r.id }}">@{{ r.name }}</option>{% endfor %}</select>
+        <input id="bdDesc" class="cfg-input ignore-dirty" placeholder="Beschreibung" maxlength="256" style="grid-column:span 2;max-width:100%">
+      </div>
+      <button class="btn-glass btn-glass-primary" style="margin-top:12px" onclick="saveBadgeDef()">💾 Badge speichern</button>
+    </div>
+
+    <div class="db-card">
+      <div class="db-card-header"><span class="db-card-title">🏷️ Badge-Katalog</span><span class="tag">{{ definitions|length }}</span></div>
+      <div class="badge-def-grid" id="badgeDefs">
+        {% for b in definitions %}
+        <div class="badge-def-card">
+          <div class="mf-user-badge mf-badge-{{ b.style|default('solid') }} mf-rarity-{{ b.rarity|default('common') }}" style="--bc:{{ b.color }}">{{ b.emoji }} {{ b.name }}</div>
+          <div class="badge-meta"><span>{{ b.id }}</span><span>{{ b.category|default('general') }}</span><span>{{ b.rarity|default('common') }}</span><span>Lvl {{ b.level|default(1) }}</span>{% if b.role_id %}<span>Role {{ b.role_id }}</span>{% endif %}</div>
+          <p style="color:var(--muted);font-size:.72rem;line-height:1.5">{{ b.desc }}</p>
+          {% if b.custom %}<button class="btn-glass btn-sm btn-glass-danger" onclick="deleteDef('{{ b.id }}')">Löschen</button>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="db-card" style="margin-bottom:16px">
+      <div class="db-card-header"><span class="db-card-title">🤖 Automation</span></div>
+      {% set ba = cfg.get('badge_automation', {}) %}
+      <div class="cfg-row"><div><span class="cfg-label">Badge-Automation</span><div class="cfg-desc">Messages, Invites, 1 Jahr, Booster</div></div><label class="toggle"><input id="autoOn" type="checkbox" {% if ba.get('enabled', True) %}checked{% endif %} onchange="showSaveBar()"><span class="slider"></span></label></div>
+      <div class="cfg-row"><div><span class="cfg-label">Nachrichten-Schwelle</span></div><input id="msgTh" type="number" class="cfg-input" value="{{ ba.get('message_threshold',100) }}" oninput="showSaveBar()"></div>
+      <div class="cfg-row"><div><span class="cfg-label">Invite-Schwelle</span></div><input id="invTh" type="number" class="cfg-input" value="{{ ba.get('invite_threshold',10) }}" oninput="showSaveBar()"></div>
+      <div class="cfg-row"><div><span class="cfg-label">1-Jahr Tage</span></div><input id="yearDays" type="number" class="cfg-input" value="{{ ba.get('one_year_days',365) }}" oninput="showSaveBar()"></div>
+      <button class="btn-glass btn-glass-primary" onclick="saveConfig()">💾 Automation speichern</button>
+    </div>
+
+    <div class="db-card" style="margin-bottom:16px">
+      <div class="db-card-header"><span class="db-card-title">👥 User mit Badges</span><span class="tag">{{ users_with_badges|length }}</span></div>
+      {% for u in users_with_badges[:30] %}
+      <div class="badge-user-row"><div><b>{{ u.name }}</b><div style="font-size:.65rem;color:var(--muted)">{{ u.id }}</div></div><div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">{% for b in u.badges[:5] %}<span class="mf-user-badge mf-badge-{{ b.style|default('solid') }} mf-rarity-{{ b.rarity|default('common') }}" style="--bc:{{ b.color }}">{{ b.emoji }} {{ b.name }}</span>{% endfor %}</div></div>
+      {% else %}<p style="color:var(--muted)">Noch keine Badges vergeben.</p>{% endfor %}
+    </div>
+
+    <div class="db-card">
+      <div class="db-card-header"><span class="db-card-title">🧾 Badge-Historie</span><span class="tag">{{ history|length }}</span></div>
+      <div style="display:grid;gap:7px;max-height:360px;overflow:auto">
+        {% for h in history %}<div class="cfg-row" style="margin:0"><div><span class="cfg-label">{{ h.action }} · {{ h.badge_id }}</span><div class="cfg-desc">User {{ h.user_id }} · Actor {{ h.actor_id }}</div></div><span class="tag">{{ h.created_at|string|truncate(19, True, '') }}</span></div>{% else %}<p style="color:var(--muted)">Noch keine Historie.</p>{% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const GID='{{ guild.id }}';
+async function saveBadgeDef(){
+  const body={id:bdId.value,name:bdName.value,emoji:bdEmoji.value,color:bdColor.value,desc:bdDesc.value,category:bdCategory.value,rarity:bdRarity.value,style:bdStyle.value,level:Number(bdLevel.value||1),role_id:bdRole.value||null};
+  const r=await fetch(`/api/guild/${GID}/badges/definitions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); const d=await r.json(); if(d.ok){showToast('Badge gespeichert','ok');setTimeout(()=>location.reload(),700)}else showToast(d.error||'Fehler','err');
+}
+async function deleteDef(id){ if(!confirm('Badge '+id+' löschen? Alle Vergaben werden entfernt.'))return; const r=await fetch(`/api/guild/${GID}/badges/definitions/${id}`,{method:'DELETE'}); const d=await r.json(); if(d.ok){showToast('Badge gelöscht','ok');setTimeout(()=>location.reload(),700)}else showToast(d.error||'Fehler','err'); }
+async function saveConfig(){ const body={badge_automation:{enabled:autoOn.checked,message_threshold:Number(msgTh.value||100),invite_threshold:Number(invTh.value||10),one_year_days:Number(yearDays.value||365)}}; const r=await fetch(`/api/guild/${GID}/config`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); const d=await r.json(); if(d.ok)markSaved(); else markError(d.error); }
+</script>
+{% endblock %}

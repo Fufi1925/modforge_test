@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ guild_name }} – ModForge Dashboard</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="dash-wrap">
+  <aside class="sidebar">
+    <div class="sb-top">
+      <div class="sb-logo"><div class="brand-icon" style="width:26px;height:26px;font-size:.8rem">🛡️</div>
+        <a href="/dashboard" class="grad" style="font-weight:900;font-size:.95rem">ModForge</a></div>
+      <div class="sb-guild-card"><div class="sb-av">{{ guild_name[0] }}</div>
+        <div><div class="sb-guild-name">{{ guild_name }}</div><div class="sb-guild-sub">Dashboard</div></div></div>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-sec-label">Übersicht</div>
+      <a class="sb-link {% if section=='overview' %}act{% endif %}" href="/dashboard/{{ guild_id }}/overview">📊 Übersicht</a>
+      <div class="sb-sec-label" style="margin-top:6px">🛡️ Sicherheit</div>
+      <a class="sb-link {% if section=='antispam' %}act{% endif %}" href="/dashboard/{{ guild_id }}/antispam">⚡ Anti-Spam</a>
+      <a class="sb-link {% if section=='antinuke' %}act{% endif %}" href="/dashboard/{{ guild_id }}/antinuke">💥 Anti-Nuke</a>
+      <a class="sb-link {% if section=='antiraid' %}act{% endif %}" href="/dashboard/{{ guild_id }}/antiraid">🚨 Anti-Raid</a>
+      <a class="sb-link {% if section=='antimention' %}act{% endif %}" href="/dashboard/{{ guild_id }}/antimention">🔔 Anti-Mention</a>
+      <a class="sb-link {% if section=='antiscam' %}act{% endif %}" href="/dashboard/{{ guild_id }}/antiscam">🎣 Anti-Scam</a>
+      <a class="sb-link {% if section=='automod' %}act{% endif %}" href="/dashboard/{{ guild_id }}/automod">🤖 AutoMod</a>
+      <div class="sb-sec-label" style="margin-top:6px">✨ Features</div>
+      <a class="sb-link {% if section=='welcome' %}act{% endif %}" href="/dashboard/{{ guild_id }}/welcome">👋 Welcome &amp; Leave</a>
+      <a class="sb-link {% if section=='verify' %}act{% endif %}" href="/dashboard/{{ guild_id }}/verify">✅ Verifizierung</a>
+      <a class="sb-link {% if section=='tickets' %}act{% endif %}" href="/dashboard/{{ guild_id }}/tickets">🎫 Tickets</a>
+      <a class="sb-link {% if section=='autorole' %}act{% endif %}" href="/dashboard/{{ guild_id }}/autorole">🏷️ Auto-Rolle</a>
+      <div class="sb-sec-label" style="margin-top:6px">📋 Verwaltung</div>
+      <a class="sb-link {% if section=='logs' %}act{% endif %}" href="/dashboard/{{ guild_id }}/logs">📢 Log-Kanäle</a>
+      <a class="sb-link {% if section=='warns' %}act{% endif %}" href="/dashboard/{{ guild_id }}/warns">⚠️ Warn-System</a>
+    </nav>
+    <div class="sb-foot">
+      <div class="sb-user-row">
+        <div class="sb-av">{{ user.username[0] }}</div>
+        <div><div class="uname">{{ user.username }}</div><div class="urole">Administrator</div></div>
+        <a href="/logout" title="Logout" style="color:var(--err);font-size:.8rem;padding:4px">⏏</a>
+      </div>
+    </div>
+  </aside>
+  <div class="main-area">
+    <div class="topbar">
+      <div><h1>{{ page_title }}</h1><p>{{ guild_name }} · Dashboard</p></div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <a href="/dashboard" class="btn btn-ghost btn-sm">← Server wechseln</a>
+      </div>
+    </div>
+    <div class="content-scroll">
+      <div class="dash-main" style="padding-top:0">
+        {% if section == 'overview' %}{{ overview_content|safe }}{% endif %}
+        {% if section == 'welcome' %}{{ welcome_content|safe }}{% endif %}
+        {% if section == 'antispam' %}{{ module_content|safe }}{% endif %}
+        {% if section == 'antinuke' %}{{ module_content|safe }}{% endif %}
+        {% if section == 'antiraid' %}{{ module_content|safe }}{% endif %}
+        {% if section == 'antimention' %}{{ module_content|safe }}{% endif %}
+        {% if section == 'antiscam' %}{{ module_content|safe }}{% endif %}
+        {% if section == 'automod' %}{{ module_content|safe }}{% endif %}
+        {% if section == 'verify' %}{{ module_content|safe }}{% endif %}
+        {% if section == 'tickets' %}{{ module_content|safe }}{% endif %}
+        {% if section == 'autorole' %}{{ module_content|safe }}{% endif %}
+        {% if section == 'logs' %}{{ module_content|safe }}{% endif %}
+        {% if section == 'warns' %}{{ module_content|safe }}{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/static/script.js"></script>
+<script>
+function getToggle(id){var el=document.getElementById(id);return el?el.checked:false;}
+function getVal(id){var el=document.getElementById(id);return el?el.value:'';}
+function getInt(id){var v=parseInt(getVal(id));return isNaN(v)?0:v;}
+async function saveMod(module,data){
+  var btn=document.getElementById('save-'+module);
+  if(btn){btn.textContent='Wird gespeichert…';btn.classList.add('saving');btn.disabled=true;}
+  try{
+    var r=await fetch('/dashboard/{{ guild_id }}/api/save',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({module:module,settings:data})});
+    var d=await r.json();
+    if(btn){
+      btn.textContent=d.ok?'✅ Gespeichert!':'❌ Fehler';
+      setTimeout(function(){if(btn){btn.textContent='Änderungen speichern';btn.classList.remove('saving');btn.disabled=false;}},2000);}
+  }catch(ex){
+    if(btn){btn.textContent='❌ Fehler';setTimeout(function(){if(btn){btn.textContent='Änderungen speichern';btn.classList.remove('saving');btn.disabled=false;}},2000);}
+  }
+}
+</script>
+</body>
+</html>

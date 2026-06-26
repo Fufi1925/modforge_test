@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="de" data-theme="{{ theme|default('purple') }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}Admin{% endblock %} – ModForge Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;700&family=Outfit:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    :root{--sidebar-w:240px}
+    body{margin:0;padding:0;background:var(--bg);color:var(--fg);overflow-x:hidden}
+    .db-sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sidebar-w);background:rgba(8,8,20,0.97);backdrop-filter:blur(30px);border-right:1px solid var(--border);z-index:9999;display:flex;flex-direction:column;overflow-y:auto}
+    .db-sidebar::-webkit-scrollbar{width:3px}
+    .db-sidebar::-webkit-scrollbar-thumb{background:rgba(59,130,246,0.2);border-radius:9px}
+    .db-brand{padding:18px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+    .db-brand-icon{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#ef4444,#f59e0b);display:flex;align-items:center;justify-content:center;font-size:.9rem;box-shadow:0 4px 14px rgba(239,68,68,0.4)}
+    .db-brand-text{font-size:.92rem;font-weight:800}
+    .db-nav{padding:12px 0;flex:1}
+    .db-nav-label{padding:6px 20px;font-size:.58rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-top:8px}
+    .db-nav a{display:flex;align-items:center;gap:10px;padding:9px 20px;font-size:.8rem;font-weight:500;color:var(--muted);transition:all .15s;border-left:3px solid transparent}
+    .db-nav a:hover{color:var(--fg);background:rgba(255,255,255,0.03)}
+    .db-nav a.active{color:var(--vl);background:rgba(59,130,246,0.06);border-left-color:var(--v);font-weight:700}
+    .db-nav a .nav-icon{width:18px;text-align:center;font-size:.85rem;flex-shrink:0}
+    .db-user{padding:14px 20px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px}
+    .db-main{margin-left:var(--sidebar-w);min-height:100vh;padding:32px 40px 80px}
+    .db-header{margin-bottom:32px}
+    .db-header h1{font-size:1.5rem;font-weight:800;margin-bottom:4px}
+    .db-header p{font-size:.82rem;color:var(--muted)}
+    .db-card{background:rgba(255,255,255,0.035);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:16px;padding:24px;transition:all .15s}
+    .db-card:hover{border-color:rgba(96,165,250,0.2)}
+    .db-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .db-card-title{font-size:.95rem;font-weight:700;display:flex;align-items:center;gap:8px}
+    .db-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px}
+    .db-stat{text-align:center;padding:20px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid var(--border)}
+    .db-stat-val{font-size:1.6rem;font-weight:900;font-family:'Geist Mono',monospace}
+    .db-stat-label{font-size:.68rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.06em}
+    .cfg-row{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;margin-bottom:8px;transition:all .15s;gap:12px}
+    .cfg-row:hover{border-color:rgba(96,165,250,0.18)}
+    .cfg-label{font-size:.85rem;font-weight:600}
+    .cfg-desc{font-size:.72rem;color:var(--muted);margin-top:2px}
+    .toggle{position:relative;width:44px;height:24px;flex-shrink:0}
+    .toggle input{opacity:0;width:0;height:0;position:absolute}
+    .toggle .slider{position:absolute;inset:0;background:rgba(255,255,255,0.08);border-radius:999px;cursor:pointer;transition:all .25s;border:1px solid rgba(255,255,255,0.08)}
+    .toggle .slider::before{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:var(--muted);left:2px;top:2px;transition:all .25s}
+    .toggle input:checked+.slider{background:rgba(59,130,246,0.35);border-color:rgba(59,130,246,0.5)}
+    .toggle input:checked+.slider::before{transform:translateX(20px);background:var(--vl);box-shadow:0 0 8px rgba(59,130,246,0.5)}
+    .cfg-input{padding:8px 14px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--fg);font-size:.82rem;outline:none;font-family:inherit;max-width:200px}
+    .cfg-input:focus{border-color:rgba(59,130,246,0.5)}
+    .cfg-select{padding:8px 14px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--fg);font-size:.82rem;outline:none;font-family:inherit}
+    @media(max-width:900px){
+      .db-sidebar{width:60px;overflow:hidden}
+      .db-sidebar .db-brand-text,.db-nav a span,.db-nav-label,.db-user span{display:none}
+      .db-nav a{justify-content:center;padding:12px 0}.db-nav a .nav-icon{width:auto}
+      .db-main{margin-left:60px;padding:20px 16px 80px}
+      :root{--sidebar-w:60px}
+    }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <aside class="db-sidebar">
+    <a href="/admin/dashboard" class="db-brand"><div class="db-brand-icon">🔐</div><span class="db-brand-text">Admin Panel</span></a>
+    <nav class="db-nav">
+      <div class="db-nav-label">Übersicht</div>
+      <a href="/admin/dashboard" {% if active=='dashboard' %}class="active"{% endif %}><span class="nav-icon">📊</span><span>Dashboard</span></a>
+      <a href="/admin/guilds" {% if active=='guilds' %}class="active"{% endif %}><span class="nav-icon">🏠</span><span>Server</span></a>
+      <a href="/admin/users" {% if active=='users' %}class="active"{% endif %}><span class="nav-icon">👥</span><span>Dashboard-Logins</span></a>
+      <a href="/admin/pull" {% if active=='pull' %}class="active"{% endif %}><span class="nav-icon">🧲</span><span>Pull</span></a>
+      <a href="/admin/stats" {% if active=='stats' %}class="active"{% endif %}><span class="nav-icon">📈</span><span>Statistiken</span></a>
+      <a href="/admin/logs" {% if active=='logs' %}class="active"{% endif %}><span class="nav-icon">📄</span><span>System-Logs</span></a>
+      <div class="db-nav-label">Schnellzugriff</div>
+      <a href="/" target="_blank"><span class="nav-icon">🌐</span><span>Website</span></a>
+      <a href="/" target="_blank"><span class="nav-icon">⚡</span><span>Live Activity</span></a>
+      <a href="/status" target="_blank"><span class="nav-icon">📡</span><span>Status</span></a>
+      <div class="db-nav-label">Theme</div>
+      <div class="theme-switcher">
+        <div class="theme-dot active" data-t="purple" onclick="setTheme('purple')"></div>
+        <div class="theme-dot" data-t="blue" onclick="setTheme('blue')"></div>
+        <div class="theme-dot" data-t="green" onclick="setTheme('green')"></div>
+        <div class="theme-dot" data-t="amoled" onclick="setTheme('amoled')"></div>
+      </div>
+    </nav>
+    <div class="db-user" style="flex-direction:column;align-items:flex-start;gap:4px">
+      <span style="font-size:.78rem;font-weight:600">🔐 Admin</span>
+      <a href="/admin/logout" style="color:var(--redl);font-size:.7rem">Logout</a>
+    </div>
+  </aside>
+
+  <main class="db-main">
+    <div class="db-header">
+      <h1>{% block page_title %}Admin{% endblock %}</h1>
+      <p>{% block page_desc %}ModForge Admin Panel{% endblock %}</p>
+    </div>
+    {% block content %}{% endblock %}
+  </main>
+
+  <script>
+  function setTheme(t){
+    document.documentElement.setAttribute('data-theme',t);
+    localStorage.setItem('mf-theme',t);
+    document.querySelectorAll('.theme-dot').forEach(d=>{d.classList.toggle('active',d.dataset.t===t)});
+  }
+  (function(){const t=localStorage.getItem('mf-theme');if(t)setTheme(t)})();
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

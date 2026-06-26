@@ -1,0 +1,47 @@
+{% extends "dashboard/_base.html" %}
+{% set active = 'audit' %}
+{% block title %}Audit & Rechte{% endblock %}
+{% block page_title %}🔍 Audit & Rechte{% endblock %}
+{% block page_desc %}Gefährliche Rollen, Audit-Events und Security-Hinweise.{% endblock %}
+{% block content %}
+<div class="db-grid" style="margin-bottom:22px">
+  <div class="db-card">
+    <div class="db-card-header"><span class="db-card-title">🚨 Gefährliche Rollen</span><span class="tag">{{ dangerous_roles|length }}</span></div>
+    {% if dangerous_roles %}
+      <div style="display:grid;gap:8px">
+      {% for r in dangerous_roles %}
+        <div class="cfg-row" style="margin:0">
+          <div><div class="cfg-label">{{ r.name }}</div><div class="cfg-desc">{{ r.perms|join(', ') }}</div></div>
+          <span class="tag">{{ r.position }}</span>
+        </div>
+      {% endfor %}
+      </div>
+    {% else %}
+      <p style="color:var(--muted);margin:0">Keine gefährlichen Rollen gefunden.</p>
+    {% endif %}
+  </div>
+  <div class="db-card">
+    <div class="db-card-header"><span class="db-card-title">🧾 Case Export</span></div>
+    <p style="color:var(--muted);font-size:.85rem;line-height:1.6">Exportiere Moderations-Cases als Beweise für Team, Appeals oder Archiv.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="btn-glass btn-glass-primary" href="/api/guild/{{ guild.id }}/cases/export?format=html">HTML Export</a>
+      <a class="btn-glass btn-glass-ghost" href="/api/guild/{{ guild.id }}/cases/export?format=json">JSON Export</a>
+    </div>
+  </div>
+</div>
+<div class="db-card">
+  <div class="db-card-header"><span class="db-card-title">📡 Audit Timeline</span><span class="tag">{{ events|length }}</span></div>
+  {% if events %}
+    <div style="display:grid;gap:8px">
+    {% for e in events %}
+      <div class="cfg-row" style="margin:0">
+        <div><div class="cfg-label">{{ e.kind }}</div><div class="cfg-desc">{{ e.text }}</div></div>
+        <span class="tag">{{ e.ts|string|truncate(19, True, '') }}</span>
+      </div>
+    {% endfor %}
+    </div>
+  {% else %}
+    <p style="color:var(--muted);margin:0">Noch keine Audit-Events im Live-Stream.</p>
+  {% endif %}
+</div>
+{% endblock %}

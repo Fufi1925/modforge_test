@@ -1,0 +1,52 @@
+{% extends "dashboard/_base.html" %}
+{% set active = 'members' %}
+{% block title %}User Risk Profile{% endblock %}
+{% block page_title %}⚠️ User Risk Profile{% endblock %}
+{% block page_desc %}Detaillierte Risiko-Analyse eines Users.{% endblock %}
+
+{% block content %}
+<div class="premium-card">
+    <div style="display:flex;gap:20px;align-items:center;margin-bottom:20px;">
+        <img src="{{ user.avatar.url if user.avatar else '' }}" style="width:80px;height:80px;border-radius:50%;border:3px solid var(--border);">
+        <div>
+            <div style="font-size:1.4rem;font-weight:800;">{{ user }}</div>
+            <div style="color:var(--muted);">{{ user.id }}</div>
+        </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px;">
+        <div class="stat-card">
+            <div class="stat-num">{{ risk.score }}</div>
+            <div class="stat-label">Risk Score</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-num">{{ risk.cases }}</div>
+            <div class="stat-label">Cases</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-num">{{ account_age }} Tage</div>
+            <div class="stat-label">Account Alter</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-num">{{ join_age }} Tage</div>
+            <div class="stat-label">Server Mitglied seit</div>
+        </div>
+    </div>
+
+    <div style="margin-bottom:20px;">
+        <div style="font-weight:700;margin-bottom:8px;">Letzte Strafe</div>
+        <div style="padding:12px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,0.02);">
+            {{ risk.last_punishment or "Keine" }}
+        </div>
+    </div>
+
+    {% if risk.flags %}
+    <div>
+        <div style="font-weight:700;margin-bottom:8px;">Flags</div>
+        {% for flag in risk.flags %}
+        <span class="perm-pill danger">{{ flag }}</span>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

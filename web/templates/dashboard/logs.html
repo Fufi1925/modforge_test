@@ -1,0 +1,466 @@
+{% extends "dashboard/_base.html" %}
+{% set active = 'logs' %}
+{% block title %}Log-Konfiguration{% endblock %}
+{% block page_title %}📢 Log-Konfiguration{% endblock %}
+{% block page_desc %}{{ total_modules }} Module · {{ total_configured }} konfiguriert{% endblock %}
+
+{% block head %}
+<style>
+.log-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+/* ── Category ── */
+.log-category { margin-bottom: 20px; }
+
+.log-cat-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 12px 12px 0 0;
+  cursor: pointer;
+  user-select: none;
+  transition: background .1s;
+}
+.log-cat-header:hover { background: rgba(255,255,255,0.035); }
+.log-cat-header.collapsed { border-radius: 12px; }
+
+.log-cat-title { font-weight:700; font-size:.82rem; flex:1; }
+.log-cat-count {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: .55rem;
+  font-weight: 700;
+  background: rgba(59,130,246,0.08);
+  color: var(--vl);
+}
+.log-cat-status {
+  font-size: .6rem;
+  color: var(--muted);
+}
+
+.log-cat-body { border: 1px solid var(--border); border-top: none; border-radius: 0 0 12px 12px; overflow: hidden; }
+.log-cat-body.collapsed { display: none; }
+
+/* ── Module Row ── */
+.log-mod-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  transition: background .1s;
+}
+.log-mod-row:last-child { border-bottom: none; }
+.log-mod-row:hover { background: rgba(255,255,255,0.02); }
+.log-mod-row.configured { border-left: 3px solid #4ade80; }
+.log-mod-row.uses-default { border-left: 3px solid rgba(148,163,184,0.25); }
+.log-mod-row.unconfigured { border-left: 3px solid rgba(239,68,68,0.2); }
+
+.log-mod-icon { font-size: 1rem; width: 22px; text-align: center; flex-shrink: 0; }
+.log-mod-info { flex: 1; min-width: 0; }
+.log-mod-name { font-size: .78rem; font-weight: 700; }
+.log-mod-desc { font-size: .6rem; color: var(--muted); margin-top: 1px; }
+.log-mod-select { min-width: 170px; max-width: 220px; }
+.log-mod-indicator { width: 18px; text-align: center; font-size: .65rem; flex-shrink: 0; }
+
+/* ── Global Cards ── */
+.global-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.global-card.primary { background: rgba(59,130,246,0.03); border-color: rgba(59,130,246,0.12); }
+.global-card.cyan    { background: rgba(34,211,238,0.02); border-color: rgba(34,211,238,0.1); }
+
+/* ── Quick Actions ── */
+.log-quick-actions {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+/* ── Command Center ───────────────────────────────────────────── */
+.log-command-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;margin:14px 0}
+.log-command-card{padding:16px;border:1px solid var(--border);border-radius:16px;background:rgba(255,255,255,.025)}
+.log-score-ring{width:86px;height:86px;border-radius:999px;display:grid;place-items:center;background:conic-gradient(var(--green) calc(var(--score,0)*1%),rgba(255,255,255,.07) 0);position:relative;flex-shrink:0}
+.log-score-ring::after{content:'';position:absolute;inset:8px;border-radius:999px;background:rgba(8,8,22,.96);border:1px solid var(--border)}
+.log-score-ring b{position:relative;z-index:1;font-size:1.2rem;font-family:'Geist Mono',monospace}
+.log-health-list{display:grid;gap:6px;max-height:210px;overflow:auto}
+.log-health-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.04);font-size:.72rem}
+.log-health-dot{width:20px;text-align:center;font-size:.72rem;flex-shrink:0}
+.log-health-dot.ok{color:var(--green)}.log-health-dot.warn{color:var(--amberl)}.log-health-dot.bad{color:#f87171}
+.log-preset-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px}
+.log-result{margin-top:10px;padding:10px;border-radius:12px;background:rgba(0,0,0,.18);border:1px solid var(--border);font-size:.75rem;color:var(--muted);max-height:160px;overflow:auto}
+
+@media(max-width:700px) {
+  .log-mod-row { flex-wrap: wrap; }
+  .log-mod-select { min-width: 100%; max-width: 100%; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── STATS ── #}
+<div class="log-stats">
+  <div class="ov-stat">
+    <div class="ov-sv" style="color:var(--vl)">{{ total_modules }}</div>
+    <div class="ov-sl">📋 Module</div>
+  </div>
+  <div class="ov-stat">
+    <div class="ov-sv" style="color:var(--green)">{{ total_configured }}</div>
+    <div class="ov-sl">✅ Konfiguriert</div>
+  </div>
+  <div class="ov-stat">
+    <div class="ov-sv"
+         style="color:{% if default_channel %}var(--green){% else %}#f87171{% endif %}">
+      {% if default_channel %}✅{% else %}❌{% endif %}
+    </div>
+    <div class="ov-sl">📌 Standard-Kanal</div>
+  </div>
+  <div class="ov-stat">
+    <div class="ov-sv"
+         style="color:{% if webhook_enabled %}var(--cl){% else %}var(--muted){% endif %}">
+      {% if webhook_enabled %}AN{% else %}AUS{% endif %}
+    </div>
+    <div class="ov-sl">🔌 Webhooks</div>
+  </div>
+</div>
+
+{# ── GLOBAL SETTINGS ── #}
+<div class="global-card primary">
+  <div>
+    <div style="font-weight:700;font-size:.84rem;margin-bottom:3px">
+      📌 Standard-Log-Kanal
+    </div>
+    <div class="cfg-desc">Fallback für alle Module ohne eigenen Kanal</div>
+  </div>
+  <select class="cfg-select" id="defaultLog" style="min-width:190px" onchange="onChangeLocal()">
+    <option value="">— Nicht gesetzt —</option>
+    {% for ch in channels %}
+    <option value="{{ ch.id }}"
+            {% if ch.id | string == (default_channel | string if default_channel else '') %}selected{% endif %}>
+      #{{ ch.name }}
+    </option>
+    {% endfor %}
+  </select>
+</div>
+
+<div class="global-card cyan">
+  <div>
+    <div style="font-weight:700;font-size:.84rem;margin-bottom:3px">
+      🔌 Auto-Webhook Logging
+    </div>
+    <div class="cfg-desc">
+      Bot erstellt automatisch Webhooks – schneller, kein Rate-Limit, eigener Name pro Modul
+    </div>
+  </div>
+  <label class="toggle">
+    <input type="checkbox" id="webhookGlobal"
+           {% if webhook_enabled %}checked{% endif %}
+           onchange="onChangeLocal()">
+    <span class="slider"></span>
+  </label>
+</div>
+
+<div class="log-command-grid">
+  <div class="log-command-card">
+    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+      <div class="log-score-ring" id="logScoreRing" style="--score:0"><b id="logScore">…</b></div>
+      <div style="flex:1;min-width:220px">
+        <div style="font-weight:900;font-size:1rem;margin-bottom:4px">📢 Log Command Center</div>
+        <div class="cfg-desc">Prüfe Kanäle, repariere kaputte Module, teste Logs und setze Routing-Presets.</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">
+          <button class="btn-glass btn-sm btn-glass-primary" onclick="runLogHealth()">🩺 Health Check</button>
+          <button class="btn-glass btn-sm btn-glass-ghost" onclick="runLogTest()">🧪 Test senden</button>
+          <button class="btn-glass btn-sm btn-glass-amber" onclick="repairLogs('fill_missing')">🛠️ Fehlende füllen</button>
+          <button class="btn-glass btn-sm btn-glass-danger" onclick="repairLogs('remove_broken')">🧹 Kaputte entfernen</button>
+        </div>
+      </div>
+    </div>
+    <div id="logHealthSummary" class="log-result">Health Check wird geladen…</div>
+  </div>
+
+  <div class="log-command-card">
+    <div style="font-weight:800;margin-bottom:8px">⚙️ Routing Presets</div>
+    <div class="cfg-desc" style="margin-bottom:10px">Wähle einen Ziel-Kanal. Hardcore kann eigene Log-Kanäle erstellen, wenn der Bot Rechte hat.</div>
+    <select id="presetChannel" class="cfg-select" style="width:100%;margin-bottom:10px">
+      <option value="">— Ziel-Kanal wählen —</option>
+      {% for ch in channels %}<option value="{{ ch.id }}" {% if default_channel|string == ch.id|string %}selected{% endif %}>#{{ ch.name }}</option>{% endfor %}
+    </select>
+    <div class="log-preset-grid">
+      <button class="btn-glass btn-sm" onclick="applyLogPreset('simple')">📌 Einfach</button>
+      <button class="btn-glass btn-sm" onclick="applyLogPreset('security')">🛡️ Security</button>
+      <button class="btn-glass btn-sm btn-glass-primary" onclick="applyLogPreset('hardcore')">🚀 Hardcore</button>
+    </div>
+    <div id="logPresetResult" class="log-result" style="display:none"></div>
+  </div>
+</div>
+
+<div class="db-card" style="padding:16px;margin:14px 0">
+  <div class="db-card-header"><span class="db-card-title">👁️ Log Embed Live Preview</span></div>
+  <div class="embed-preview">
+    <img class="ep-thumb" src="https://cdn.discordapp.com/embed/avatars/0.png" alt="">
+    <div class="ep-title">🛡️ Beispiel-Log</div>
+    <div class="ep-desc"><b>Beschreibung</b><br>User wurde verwarnt, Modul erkannt und sauber protokolliert.</div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px;font-size:.72rem"><div><b>👤 User</b><br>Username<br><code>(123456789)</code></div><div><b>📌 Modul</b><br><code>moderation</code></div></div>
+  </div>
+</div>
+
+{# ── QUICK ACTIONS ── #}
+<div class="log-quick-actions">
+  <button class="btn-glass btn-sm btn-glass-ghost" onclick="setAllDefault()">
+    📌 Alle auf Standard
+  </button>
+  <button class="btn-glass btn-sm btn-glass-ghost" onclick="clearAllChannels()">
+    🗑️ Alle zurücksetzen
+  </button>
+  <button class="btn-glass btn-sm btn-glass-ghost" onclick="expandAllCats()">
+    ↓ Alle ausklappen
+  </button>
+  <button class="btn-glass btn-sm btn-glass-ghost" onclick="collapseAllCats()">
+    ↑ Alle einklappen
+  </button>
+</div>
+
+{# ── KATEGORIEN ── #}
+{% for cat_name, mods in categories.items() %}
+{% set configured_count = mods | selectattr('key') | list | length %}
+
+<div class="log-category">
+  <div class="log-cat-header" id="catHead-{{ loop.index }}"
+       onclick="toggleCat({{ loop.index }})">
+    <span class="log-cat-title">{{ cat_name }}</span>
+    <span class="log-cat-count">{{ mods | length }}</span>
+    <span class="log-cat-status" id="catStatus-{{ loop.index }}">
+      {% set cfg_in_cat = [] %}
+      {% for mod in mods %}{% if log_channels.get(mod.key) %}{% if cfg_in_cat.append(1) %}{% endif %}{% endif %}{% endfor %}
+      {{ cfg_in_cat | length }}/{{ mods | length }}
+    </span>
+    <span style="font-size:.65rem;color:var(--muted);margin-left:4px"
+          id="catArrow-{{ loop.index }}">▼</span>
+  </div>
+
+  <div class="log-cat-body" id="catBody-{{ loop.index }}">
+    {% for mod in mods %}
+    {% set ch_val = log_channels.get(mod.key, '') %}
+    <div class="log-mod-row
+      {% if ch_val | string == '0' %}unconfigured{% elif ch_val %}configured{% elif default_channel %}uses-default{% else %}unconfigured{% endif %}"
+         id="modrow-{{ mod.key }}">
+
+      <div class="log-mod-icon">{{ mod.icon }}</div>
+      <div class="log-mod-info">
+        <div class="log-mod-name">{{ mod.label }}</div>
+        <div class="log-mod-desc">{{ mod.desc }}</div>
+      </div>
+      <select class="cfg-select log-mod-select log-ch-select"
+              data-mod="{{ mod.key }}"
+              style="font-size:.75rem"
+              onchange="onModChannelChange(this)">
+        <option value="">📌 Standard</option>
+        <option value="0" {% if ch_val | string == "0" %}selected{% endif %}>❌ Deaktiviert</option>
+        {% for ch in channels %}
+        <option value="{{ ch.id }}"
+                {% if ch.id | string == ch_val | string %}selected{% endif %}>
+          #{{ ch.name }}
+        </option>
+        {% endfor %}
+      </select>
+      <div class="log-health-dot" id="health-{{ mod.key }}" title="Noch nicht geprüft">◌</div>
+      <div class="log-mod-indicator" id="ind-{{ mod.key }}">
+        {% if ch_val | string == "0" %}
+        <span style="color:#f87171" title="Explizit deaktiviert">⛔</span>
+        {% elif ch_val %}
+        <span style="color:#4ade80" title="Eigener Kanal">✅</span>
+        {% elif default_channel %}
+        <span style="color:var(--muted)" title="Nutzt Standard">📌</span>
+        {% else %}
+        <span style="color:#f87171" title="Nicht konfiguriert">❌</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const GID             = "{{ guild.id }}";
+const HAS_DEFAULT_CH  = {{ 'true' if default_channel else 'false' }};
+
+function logResult(el, html, show=true){ const box=document.getElementById(el); if(!box)return; box.style.display=show?'block':'none'; box.innerHTML=html; }
+function healthIcon(item){ if(item.disabled) return ['warn','⛔']; if(item.ok) return ['ok','✅']; if(item.reason==='Kein Kanal') return ['bad','❌']; return ['bad','⚠️']; }
+async function runLogHealth(){
+  try{
+    const r=await fetch(`/api/guild/${GID}/logs/health`); const d=await r.json();
+    if(!d.ok) throw new Error(d.error||'Health fehlgeschlagen');
+    document.getElementById('logScore').textContent=d.score+'%';
+    document.getElementById('logScoreRing').style.setProperty('--score', d.score);
+    d.modules.forEach(m=>{ const dot=document.getElementById('health-'+m.module); if(dot){ const [cls,ico]=healthIcon(m); dot.className='log-health-dot '+cls; dot.textContent=ico; dot.title=m.reason + (m.channel ? ' · #'+m.channel : ''); }});
+    const worst=d.modules.filter(m=>!m.ok && !m.disabled).slice(0,8);
+    logResult('logHealthSummary', `<b style="color:var(--fg)">Score ${d.score}%</b> · ✅ ${d.modules_ok}/${d.modules_total} OK · ⚠️ ${d.broken} defekt · ❌ ${d.missing} ohne Kanal · ⛔ ${d.disabled} deaktiviert` + (worst.length? `<div style="margin-top:8px">${worst.map(x=>`<div class="log-health-item"><span>${x.module}</span><span>${x.reason}</span></div>`).join('')}</div>`:''));
+  }catch(e){ logResult('logHealthSummary','❌ '+e.message); }
+}
+async function runLogTest(){
+  if(!confirm('Test-Logs in alle konfigurierten Log-Kanäle senden?')) return;
+  logResult('logHealthSummary','⏳ Test läuft…');
+  try{ const r=await fetch(`/api/guild/${GID}/logs/test`,{method:'POST'}); const d=await r.json(); if(!d.ok) throw new Error(d.error||'Test fehlgeschlagen'); logResult('logHealthSummary',`🧪 ${d.tested} Kanäle getestet<div style="margin-top:8px">${(d.results||[]).map(x=>`<div class="log-health-item"><span>${x.ok?'✅':'❌'} ${x.name||x.channel_id}</span><span>${x.reason}</span></div>`).join('')}</div>`); }catch(e){ logResult('logHealthSummary','❌ '+e.message); }
+}
+async function repairLogs(action){
+  const channel_id=document.getElementById('presetChannel').value || document.getElementById('defaultLog').value || null;
+  if((action==='fill_missing'||action==='all_to_channel') && !channel_id) return showToast('Bitte Ziel- oder Standard-Kanal wählen', 'err');
+  try{ const r=await fetch(`/api/guild/${GID}/logs/repair`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,channel_id})}); const d=await r.json(); if(d.ok){showToast(`Logs repariert: ${d.changed} Änderungen`,'ok'); await runLogHealth(); setTimeout(()=>location.reload(),900)} else showToast(d.error||'Fehler','err'); }catch(e){showToast('Netzwerkfehler','err')}
+}
+async function applyLogPreset(preset){
+  if(preset==='hardcore' && !confirm('Hardcore-Preset kann eigene Log-Kanäle erstellen. Fortfahren?')) return;
+  const channel_id=document.getElementById('presetChannel').value || document.getElementById('defaultLog').value || null;
+  try{ const r=await fetch(`/api/guild/${GID}/logs/preset`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({preset,channel_id})}); const d=await r.json(); if(d.ok){logResult('logPresetResult',`✅ Preset <b>${preset}</b> gesetzt`+(Object.keys(d.created||{}).length?`<br>Erstellt: ${Object.entries(d.created).map(([k,v])=>`${k}: <#${v}>`).join(', ')}`:'')); showToast('Preset gespeichert','ok'); setTimeout(()=>location.reload(),1000)} else logResult('logPresetResult','❌ '+(d.error||'Fehler')); }catch(e){logResult('logPresetResult','❌ Netzwerkfehler')}
+}
+
+// ─── Dirty Tracking ───────────────────────────────────────────────
+function onChangeLocal() {
+  showSaveBar();
+}
+
+function onModChannelChange(select) {
+  const key  = select.dataset.mod;
+  const val  = select.value;
+  const row  = document.getElementById('modrow-' + key);
+  const ind  = document.getElementById('ind-' + key);
+
+  if (row) {
+    if (val === "0") {
+      row.className = 'log-mod-row unconfigured';
+    } else {
+      row.className = 'log-mod-row ' +
+        (val ? 'configured' : (HAS_DEFAULT_CH ? 'uses-default' : 'unconfigured'));
+    }
+  }
+  if (ind) {
+    if (val === "0") {
+      ind.innerHTML = '<span style="color:#f87171" title="Explizit deaktiviert">⛔</span>';
+    } else {
+      ind.innerHTML = val
+        ? '<span style="color:#4ade80" title="Eigener Kanal">✅</span>'
+        : HAS_DEFAULT_CH
+          ? '<span style="color:var(--muted)" title="Nutzt Standard">📌</span>'
+          : '<span style="color:#f87171" title="Nicht konfiguriert">❌</span>';
+    }
+  }
+  showSaveBar();
+}
+
+// ─── Quick Actions ────────────────────────────────────────────────
+function setAllDefault() {
+  document.querySelectorAll('.log-ch-select').forEach(s => {
+    s.value = '';
+    onModChannelChange(s);
+  });
+  showToast('📌 Alle auf Standard gesetzt', 'info');
+}
+
+function clearAllChannels() {
+  if (!confirm('Alle Log-Kanäle zurücksetzen?')) return;
+  document.querySelectorAll('.log-ch-select').forEach(s => {
+    s.value = '';
+    onModChannelChange(s);
+  });
+  document.getElementById('defaultLog').value = '';
+  document.getElementById('webhookGlobal').checked = false;
+  showToast('🗑️ Alle zurückgesetzt', 'info');
+}
+
+// ─── Category Collapse ────────────────────────────────────────────
+function toggleCat(idx) {
+  const body  = document.getElementById('catBody-' + idx);
+  const head  = document.getElementById('catHead-' + idx);
+  const arrow = document.getElementById('catArrow-' + idx);
+  if (!body) return;
+  const collapsed = body.classList.toggle('collapsed');
+  head.classList.toggle('collapsed', collapsed);
+  if (arrow) arrow.textContent = collapsed ? '▶' : '▼';
+}
+
+function expandAllCats() {
+  document.querySelectorAll('.log-cat-body').forEach((b, i) => {
+    b.classList.remove('collapsed');
+    const head  = document.getElementById('catHead-' + (i + 1));
+    const arrow = document.getElementById('catArrow-' + (i + 1));
+    if (head)  head.classList.remove('collapsed');
+    if (arrow) arrow.textContent = '▼';
+  });
+}
+
+function collapseAllCats() {
+  document.querySelectorAll('.log-cat-body').forEach((b, i) => {
+    b.classList.add('collapsed');
+    const head  = document.getElementById('catHead-' + (i + 1));
+    const arrow = document.getElementById('catArrow-' + (i + 1));
+    if (head)  head.classList.add('collapsed');
+    if (arrow) arrow.textContent = '▶';
+  });
+}
+
+// ─── Save ─────────────────────────────────────────────────────────
+async function saveConfig() {
+  const channels = {};
+  document.querySelectorAll('.log-ch-select').forEach(el => {
+    if (el.value !== "") channels[el.dataset.mod] = el.value;
+  });
+
+  try {
+    const r = await fetch(`/api/guild/${GID}/config`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        _log_channel:    document.getElementById('defaultLog').value || null,
+        _log_channels:   channels,
+        _webhook_logging: {
+          enabled: document.getElementById('webhookGlobal').checked
+        },
+      }),
+    });
+    const d = await r.json();
+    if (d.ok) {
+      markSaved();
+      setTimeout(() => location.reload(), 800);
+    } else {
+      showToast('❌ ' + (d.error || 'Fehler'), 'err');
+    }
+  } catch (e) {
+    showToast('❌ Netzwerkfehler', 'err');
+  }
+}
+
+// ─── Init: erste Kategorie offen, rest kollabiert ─────────────────
+document.querySelectorAll('.log-cat-body').forEach((b, i) => {
+  if (i > 0) {
+    b.classList.add('collapsed');
+    const head  = document.getElementById('catHead-' + (i + 1));
+    const arrow = document.getElementById('catArrow-' + (i + 1));
+    if (head)  head.classList.add('collapsed');
+    if (arrow) arrow.textContent = '▶';
+  }
+});
+
+runLogHealth();
+window._dirty = false;
+</script>
+{% endblock %}

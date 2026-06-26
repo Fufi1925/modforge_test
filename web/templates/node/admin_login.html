@@ -1,0 +1,13 @@
+{% extends "node/base.html" %}
+{% block content %}
+<div class="card" style="max-width:440px;margin:60px auto">
+  <h1>🔐 Admin Login</h1>
+  <p class="muted">Melde dich mit ADMIN_USERNAME und ADMIN_PASSWORD an.</p>
+  {% if error %}<div class="card" style="border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.08);margin:14px 0;padding:12px;color:#fecaca">{{ error }}</div>{% endif %}
+  <form method="post" action="/admin/login">
+    <label class="muted">Username</label><input class="input" name="username" placeholder="admin" autocomplete="username" required>
+    <label class="muted">Passwort</label><input class="input" name="password" type="password" placeholder="Passwort" autocomplete="current-password" required>
+    <button class="btn primary" type="submit">Login</button>
+  </form>
+</div>
+{% endblock %}

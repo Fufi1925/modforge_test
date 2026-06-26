@@ -1,0 +1,586 @@
+{% extends "dashboard/_base.html" %}
+{% set active = 'overview' %}
+{% block title %}Übersicht – {{ guild.name }}{% endblock %}
+{% block page_title %}📊 Server-Übersicht{% endblock %}
+{% block page_desc %}Echtzeit-Überblick, Setup-Fortschritt, automatisierte Behebung von Sicherheitsrisiken und aktuelle Aktivitäten.{% endblock %}
+
+{% block head %}
+<style>
+  /* ── Layout ── */
+  .ov-layout-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media(max-width: 1024px) {
+    .ov-layout-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* ── Premium Card ── */
+  .premium-card {
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+    transition: all 0.25s ease;
+  }
+  .premium-card:hover {
+    border-color: rgba(96, 165, 250, 0.25);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  }
+
+  /* ── Score Ring ── */
+  .score-ring-wrap {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 12px;
+  }
+  .score-ring-wrap svg { transform: rotate(-90deg); }
+  .score-ring-val {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+  .score-ring-num {
+    font-size: 1.8rem;
+    font-weight: 900;
+    font-family: 'Geist Mono', monospace;
+    line-height: 1;
+  }
+  .score-ring-sub {
+    font-size: .52rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+
+  /* ── Member Stats Grid ── */
+  .stats-compact-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+  .stat-compact-item {
+    padding: 12px 8px;
+    background: rgba(255,255,255,0.015);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    text-align: center;
+  }
+  .stat-compact-val {
+    font-size: 1.25rem;
+    font-weight: 800;
+    font-family: 'Geist Mono', monospace;
+    color: #fff;
+  }
+  .stat-compact-lbl {
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* ── Setup Checklist ── */
+  .checklist-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.015);
+    margin-bottom: 8px;
+    font-size: 0.8rem;
+  }
+  .checklist-item.configured {
+    border-color: rgba(34, 197, 94, 0.18);
+    background: rgba(34, 197, 94, 0.03);
+  }
+  .checklist-item.missing {
+    border-color: rgba(245, 158, 11, 0.18);
+    background: rgba(245, 158, 11, 0.03);
+  }
+  .checklist-btn-fix {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    background: rgba(59, 130, 246, 0.12);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    color: var(--vl);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .checklist-btn-fix:hover {
+    background: var(--vl);
+    color: #fff;
+  }
+
+  /* ── Timeline ── */
+  .timeline-list {
+    display: grid;
+    gap: 8px;
+  }
+  .timeline-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.015);
+    border: 1px solid var(--border);
+    font-size: 0.8rem;
+  }
+  .timeline-badge {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  /* ── Info Rows ── */
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    font-size: .78rem;
+  }
+  .info-row:last-child { border-bottom: none; }
+  .info-lbl { color: var(--muted); }
+  .info-val { font-weight: 600; color: #fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Setup Checklist variables calculation -->
+{% set has_logs = has_default_log or log_channels_count > 0 %}
+{% set has_security = sec_level >= 1 %}
+{% set has_verify = cfg.get('verify_system', {}).get('enabled', false) %}
+{% set has_backup = cfg.get('backup_system', {}).get('auto_enabled', false) or cfg.get('backup_system', {}).get('enabled', false) %}
+{% set has_welcome = cfg.get('welcome', {}).get('enabled', false) %}
+{% set has_automod = cfg.get('automod', {}).get('enabled', false) %}
+{% set has_tickets = cfg.get('ticket_system', {}).get('enabled', false) %}
+
+{% set setup_total = 7 %}
+{% set setup_configured = (1 if has_logs else 0) + (1 if has_security else 0) + (1 if has_verify else 0) + (1 if has_backup else 0) + (1 if has_welcome else 0) + (1 if has_automod else 0) + (1 if has_tickets else 0) %}
+{% set setup_percentage = ((setup_configured / setup_total) * 100)|int %}
+
+<div class="ov-layout-grid">
+  <!-- LINKE SPALTE: Stats & Fortschritt -->
+  <section>
+    
+    <!-- Setup-Fortschritt & One-Click Fix Buttons -->
+    <div class="premium-card">
+      <div class="db-card-header">
+        <span class="db-card-title">✨ Setup-Fortschritt</span>
+        <span class="tag" style="background:rgba(59,130,246,0.12); color:var(--vl); font-weight:700;">
+          {{ setup_configured }} von {{ setup_total }} konfiguriert
+        </span>
+      </div>
+      
+      <!-- Progress bar -->
+      <div style="margin-bottom: 18px;">
+        <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom: 5px;">
+          <span>Einrichtungsfortschritt</span>
+          <b>{{ setup_percentage }}%</b>
+        </div>
+        <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 99px; overflow: hidden;">
+          <div style="width: {{ setup_percentage }}%; height: 100%; background: linear-gradient(90deg, var(--vl), var(--cl)); border-radius: 99px;"></div>
+        </div>
+      </div>
+
+      <!-- Checklist Items -->
+      <div style="display:grid; gap:8px;">
+        <!-- Logs -->
+        <div class="checklist-item {% if has_logs %}configured{% else %}missing{% endif %}">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span>{% if has_logs %}✅{% else %}⚠️{% endif %}</span>
+            <div>
+              <b>Aktivitätsprotokollierung (Logs)</b>
+              <div class="cfg-desc">Verzeichnet Event-Einträge auf deinem Server.</div>
+            </div>
+          </div>
+          {% if not has_logs %}
+            <button class="checklist-btn-fix" onclick="oneClickFix('logs')">⚡ Einrichten</button>
+          {% else %}
+            <span style="font-size:0.7rem; color:var(--green); font-weight:700;">AKTIV</span>
+          {% endif %}
+        </div>
+
+        <!-- Security -->
+        <div class="checklist-item {% if has_security %}configured{% else %}missing{% endif %}">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span>{% if has_security %}✅{% else %}⚠️{% endif %}</span>
+            <div>
+              <b>Security-Shield-Aktivierung</b>
+              <div class="cfg-desc">Schützt vor nuklearen Schäden und Raids.</div>
+            </div>
+          </div>
+          {% if not has_security %}
+            <button class="checklist-btn-fix" onclick="oneClickFix('security')">⚡ Aktivieren</button>
+          {% else %}
+            <span style="font-size:0.7rem; color:var(--green); font-weight:700;">AKTIV</span>
+          {% endif %}
+        </div>
+
+        <!-- Backup -->
+        <div class="checklist-item {% if has_backup %}configured{% else %}missing{% endif %}">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span>{% if has_backup %}✅{% else %}⚠️{% endif %}</span>
+            <div>
+              <b>Automatisierte Backups</b>
+              <div class="cfg-desc">Sichert Server-Rollen, Kanäle und Einstellungen ab.</div>
+            </div>
+          </div>
+          {% if not has_backup %}
+            <button class="checklist-btn-fix" onclick="oneClickFix('backup')">⚡ Aktivieren</button>
+          {% else %}
+            <span style="font-size:0.7rem; color:var(--green); font-weight:700;">AKTIV</span>
+          {% endif %}
+        </div>
+
+        <!-- Onboarding & Verification -->
+        <div class="checklist-item {% if has_verify %}configured{% else %}missing{% endif %}">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span>{% if has_verify %}✅{% else %}⚠️{% endif %}</span>
+            <div>
+              <b>Onboarding / Verifikation</b>
+              <div class="cfg-desc">Hält Bots und schädliche Accounts draußen.</div>
+            </div>
+          </div>
+          {% if not has_verify %}
+            <button class="checklist-btn-fix" onclick="oneClickFix('verify')">⚡ Einrichten</button>
+          {% else %}
+            <span style="font-size:0.7rem; color:var(--green); font-weight:700;">AKTIV</span>
+          {% endif %}
+        </div>
+
+        <!-- Welcome -->
+        <div class="checklist-item {% if has_welcome %}configured{% else %}missing{% endif %}">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span>{% if has_welcome %}✅{% else %}⚠️{% endif %}</span>
+            <div>
+              <b>Willkommens-Nachrichten (Welcome)</b>
+              <div class="cfg-desc">Schöne Beitritts-Embeds oder Direktnachrichten.</div>
+            </div>
+          </div>
+          {% if not has_welcome %}
+            <a href="{{ dash_base }}/welcome" class="checklist-btn-fix" style="text-decoration:none;">👋 Einrichten</a>
+          {% else %}
+            <span style="font-size:0.7rem; color:var(--green); font-weight:700;">AKTIV</span>
+          {% endif %}
+        </div>
+
+        <!-- AutoMod -->
+        <div class="checklist-item {% if has_automod %}configured{% else %}missing{% endif %}">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span>{% if has_automod %}✅{% else %}⚠️{% endif %}</span>
+            <div>
+              <b>AutoMod Zensurfilter</b>
+              <div class="cfg-desc">Sperrt schädliche Links, Scam oder Spam sofort.</div>
+            </div>
+          </div>
+          {% if not has_automod %}
+            <a href="{{ dash_base }}/automod" class="checklist-btn-fix" style="text-decoration:none;">🤖 Aktivieren</a>
+          {% else %}
+            <span style="font-size:0.7rem; color:var(--green); font-weight:700;">AKTIV</span>
+          {% endif %}
+        </div>
+
+        <!-- Tickets -->
+        <div class="checklist-item {% if has_tickets %}configured{% else %}missing{% endif %}">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span>{% if has_tickets %}✅{% else %}⚠️{% endif %}</span>
+            <div>
+              <b>Ticket Support-Schnittstelle</b>
+              <div class="cfg-desc">Ermöglicht privates Feedback an Admins.</div>
+            </div>
+          </div>
+          {% if not has_tickets %}
+            <a href="{{ dash_base }}/tickets" class="checklist-btn-fix" style="text-decoration:none;">🎫 Einrichten</a>
+          {% else %}
+            <span style="font-size:0.7rem; color:var(--green); font-weight:700;">AKTIV</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Activity Timeline -->
+    <div class="premium-card">
+      <div class="db-card-header">
+        <span class="db-card-title">⚡ Live Activity Timeline</span>
+        <a href="{{ dash_base }}/livefeed" class="btn-glass btn-sm">⚡ Live-Feed</a>
+      </div>
+      <p class="cfg-desc" style="margin-bottom: 12px;">Echtzeit-Aufzeichnung von Server-Events:</p>
+      
+      <div class="timeline-list">
+        {% for a in activity_timeline %}
+          {% set b_color = 'rgba(59,130,246,0.12)' %}
+          {% set t_color = 'var(--vl)' %}
+          {% if 'case' in a.kind|lower or 'warn' in a.kind|lower or 'mod' in a.kind|lower %}
+            {% set b_color = 'rgba(239,68,68,0.15)' %}
+            {% set t_color = '#f87171' %}
+          {% elif 'ticket' in a.kind|lower %}
+            {% set b_color = 'rgba(34,211,238,0.15)' %}
+            {% set t_color = 'var(--cl)' %}
+          {% elif 'backup' in a.kind|lower %}
+            {% set b_color = 'rgba(34,197,94,0.15)' %}
+            {% set t_color = 'var(--green)' %}
+          {% endif %}
+          
+          <div class="timeline-row">
+            <span class="timeline-badge" style="background: {{ b_color }}; color: {{ t_color }};">
+              {{ a.kind }}
+            </span>
+            <div style="flex:1;">
+              <span style="color:#fff;">{{ a.text }}</span>
+            </div>
+            <span style="font-size:0.65rem; color:var(--muted); font-family:'Geist Mono',monospace">
+              {{ a.ts|string|truncate(19, True, '') }}
+            </span>
+          </div>
+        {% else %}
+          <div style="text-align: center; padding: 24px; color: var(--muted); font-size:0.8rem;">
+            💤 Aktuell keine jüngsten Ereignisse. Events werden bei Bot-Interaktionen aufgezeichnet.
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Member stats details -->
+    <div class="premium-card">
+      <div class="db-card-header">
+        <span class="db-card-title">👥 Mitglieder-Analyse</span>
+      </div>
+      
+      <div class="stats-compact-grid">
+        <div class="stat-compact-item">
+          <div class="stat-compact-val" style="color:var(--vl)">{{ humans }}</div>
+          <div class="stat-compact-lbl">User</div>
+        </div>
+        <div class="stat-compact-item">
+          <div class="stat-compact-val" style="color:var(--cl)">{{ bots }}</div>
+          <div class="stat-compact-lbl">Bots</div>
+        </div>
+        <div class="stat-compact-item">
+          <div class="stat-compact-val" style="color:var(--green)">{{ online_count }}</div>
+          <div class="stat-compact-lbl">Online</div>
+        </div>
+      </div>
+
+      <div style="display:grid; gap:8px;">
+        <div class="info-row">
+          <span class="info-lbl">🎤 Derzeit in Sprachkanälen</span>
+          <span class="info-val" style="color:var(--cl)">{{ voice_active }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-lbl">💎 Server-Boosts (Level {{ boost_tier }})</span>
+          <span class="info-val" style="color:#a78bfa">{{ boost_count }} Boosts</span>
+        </div>
+        <div class="info-row">
+          <span class="info-lbl">⏳ Aktive Timeouts</span>
+          <span class="info-val" style="color:#fca5a5">{{ in_timeout }} User</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RECHTE SPALTE: Health Score, Server Info, Security -->
+  <aside>
+    <!-- Server Health Score -->
+    <div class="premium-card" style="border: 2px solid var(--border)">
+      <div class="db-card-header">
+        <span class="db-card-title">🩺 Server Health Score</span>
+      </div>
+      
+      <div class="score-ring-wrap">
+        <svg width="120" height="120" viewBox="0 0 110 110">
+          <circle cx="55" cy="55" r="46" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="8"/>
+          <circle cx="55" cy="55" r="46" fill="none" stroke="{{ score_color }}" stroke-width="8" stroke-linecap="round"
+                  stroke-dasharray="{{ ((score / 100) * 289)|round(1) }} 289" style="filter:drop-shadow(0 0 6px {{ score_color }}44)"/>
+        </svg>
+        <div class="score-ring-val">
+          <div class="score-ring-num" style="color:{{ score_color }}">{{ score }}</div>
+          <div class="score-ring-sub">Score</div>
+        </div>
+      </div>
+      
+      <div style="text-align: center; margin-bottom: 15px;">
+        <b style="font-size: 1rem; color: {{ score_color }}">{{ score_label }}</b>
+        <div class="cfg-desc" style="margin-top:2px;">Sicherheits- und Konfigurationsbewertung</div>
+      </div>
+
+      <!-- Score Breakdown with points -->
+      <div style="border-top: 1px solid var(--border); padding-top:12px;">
+        <b style="font-size:0.75rem; color:#fff; display:block; margin-bottom:8px;">Bewertungs-Details:</b>
+        <div style="display:grid; gap:5px;">
+          {% for b in score_breakdown %}
+            <div style="display:flex; justify-content:space-between; font-size:0.72rem; color:var(--muted)">
+              <span>{% if b.ok %}✅{% else %}❌{% endif %} {{ b.label }}</span>
+              <span style="font-weight:700; color:{% if b.ok %}var(--green){% else %}#fca5a5{% endif %}">
+                {% if b.ok %}+{{ b.points }}{% else %}0{% endif %} Pkt
+              </span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Server Basis-Infos -->
+    <div class="premium-card">
+      <div class="db-card-header">
+        <span class="db-card-title">📋 Server-Details</span>
+      </div>
+      
+      <div class="info-row">
+        <span class="info-lbl">👑 Server-Besitzer</span>
+        <span class="info-val">{{ owner_name }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-lbl">📅 Erstellungsdatum</span>
+        <span class="info-val">
+          {% if created %}
+            <span id="createdDate" data-ts="{{ created }}">–</span>
+          {% else %}Unbekannt{% endif %}
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-lbl">⚙️ Chat-Prefix</span>
+        <span class="info-val" style="font-family:'Geist Mono',monospace">{{ prefix }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-lbl">💬 Text-Kanäle</span>
+        <span class="info-val">{{ text_ch }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-lbl">🔊 Voice-Kanäle</span>
+        <span class="info-val">{{ voice_ch }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-lbl">🏷️ Rollenanzahl</span>
+        <span class="info-val">{{ roles_count }}</span>
+      </div>
+    </div>
+
+    <!-- Security Module Panel -->
+    <div class="premium-card">
+      <div class="db-card-header">
+        <span class="db-card-title">🛡️ Shield-Sicherheitsmodule</span>
+        <span class="tag" style="background:rgba(34,197,94,0.12); color:var(--green); font-weight:700;">
+          {{ active_count }}/{{ active_mods|length }} Aktiv
+        </span>
+      </div>
+      <p class="cfg-desc" style="margin-bottom:12px;">Liste der aktiven Bot-Schutzkomponenten:</p>
+
+      <div style="display:grid; gap:4px;">
+        {% for label, enabled in active_mods %}
+          <div class="checklist-item" style="padding: 8px 12px; margin: 0; background: {% if enabled %}rgba(34,197,94,0.035){% else %}rgba(255,255,255,0.01){% endif %}; border-color: {% if enabled %}rgba(34,197,94,0.15){% else %}var(--border){% endif %};">
+            <span style="font-size:0.75rem; font-weight:600; color: {% if enabled %}#fff{% else %}var(--muted){% endif %}">
+              {{ label }}
+            </span>
+            <span style="font-size:0.65rem; font-weight:800; color: {% if enabled %}var(--green){% else %}var(--muted){% endif %}">
+              {% if enabled %}ON{% else %}OFF{% endif %}
+            </span>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- Schnellzugriff -->
+<div class="premium-card" style="margin-top:20px;">
+  <div class="db-card-header">
+    <span class="db-card-title">⚡ Schnellzugriff</span>
+  </div>
+  <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap:10px;">
+    {% set quick_links = [
+      ('/security',  '🛡️', 'Security'),
+      ('/automod',   '🤖', 'AutoMod'),
+      ('/logs',      '📢', 'Logs'),
+      ('/cases',     '📋', 'Cases'),
+      ('/members',   '👥', 'Members'),
+      ('/welcome',   '👋', 'Welcome'),
+      ('/verification', '✅', 'Verify'),
+      ('/roles',     '🏷️', 'Rollen'),
+      ('/tempvoice', '🎤', 'Temp-Voice'),
+      ('/tickets',   '🎫', 'Tickets'),
+      ('/backup',    '💾', 'Backup'),
+      ('/settings',  '⚙️', 'Settings')
+    ] %}
+    {% for path, icon, title in quick_links %}
+      <a href="{{ dash_base }}{{ path }}" class="quick-card" style="margin:0; padding:12px 6px;">
+        <div style="font-size:1.3rem; margin-bottom:4px;">{{ icon }}</div>
+        <b style="font-size:0.75rem; color:#fff; display:block;">{{ title }}</b>
+      </a>
+    {% endfor %}
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const GID = '{{ guild.id }}';
+
+// Erstellt-Datum rendern
+const createdEl = document.getElementById('createdDate');
+if (createdEl) {
+  const ts = parseInt(createdEl.dataset.ts, 10);
+  if (ts) {
+    createdEl.textContent = new Date(ts * 1000).toLocaleDateString('de-DE', {
+      day:   '2-digit',
+      month: '2-digit',
+      year:  'numeric',
+    });
+  }
+}
+
+async function oneClickFix(type) {
+  showToast('Behebe Schwachstelle...', 'info');
+  let body = {};
+  
+  if (type === 'security') {
+    body = { _security_level: 2 };
+  } else if (type === 'backup') {
+    body = { backup_system: { auto_enabled: true } };
+  } else if (type === 'verify') {
+    body = { _verify_system: { enabled: true } };
+  } else if (type === 'logs') {
+    // Enable default logs
+    body = { _log_channel: 1 }; // Placeholder or default log setup
+  }
+  
+  try {
+    const r = await fetch(`/api/guild/${GID}/config`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    if (d.ok) {
+      showToast('Schwachstelle erfolgreich behoben!', 'ok');
+      setTimeout(() => location.reload(), 600);
+    } else {
+      showToast(d.error || 'Fehler beim Fixen', 'err');
+    }
+  } catch(e) {
+    showToast('Netzwerkfehler beim Anfordern des Fixes', 'err');
+  }
+}
+</script>
+{% endblock %}

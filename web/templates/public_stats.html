@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Statistiken – ModForge{% endblock %}
+{% block content %}
+<div class="container" style="max-width:1000px;padding-top:40px;padding-bottom:80px">
+  <div class="sec-head reveal" style="text-align:center;margin-bottom:50px">
+    <div class="sec-badge" style="margin-bottom:12px">📊 Live-Statistiken</div>
+    <h1 style="font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;margin-bottom:12px">ModForge in Zahlen</h1>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-bottom:40px">
+    <div class="stat-card"><div class="stat-value" style="color:var(--vl)">{{ gc }}</div><div class="stat-label">Server</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--cl)">{{ mc }}</div><div class="stat-label">Mitglieder geschützt</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--green)">{{ uptime_pct }}%</div><div class="stat-label">Uptime (Monat)</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--amberl)">{{ lat }}ms</div><div class="stat-label">API-Latenz</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--orange)">{{ cases }}</div><div class="stat-label">Cases bearbeitet</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--p2)">{{ shards }}</div><div class="stat-label">Shards</div></div>
+  </div>
+  <div class="reveal" style="text-align:center"><a href="/status" class="btn-glass btn-glass-ghost">Detaillierter Status →</a></div>
+</div>
+{% endblock %}

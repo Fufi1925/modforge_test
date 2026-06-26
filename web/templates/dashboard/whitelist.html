@@ -1,0 +1,262 @@
+{% extends "dashboard/_base.html" %}
+{% set active = 'whitelist' %}
+{% block title %}Whitelist{% endblock %}
+{% block page_title %}🔐 Whitelist-Manager{% endblock %}
+{% block page_desc %}{{ total_entries }} Einträge · Schützt vor Security-Modulen{% endblock %}
+
+{% block head %}
+<style>
+.wl-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.wl-card {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 12px;
+  transition: border-color .15s;
+}
+.wl-card:hover { border-color: rgba(59,130,246,0.2); }
+
+.wl-entry-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: .72rem;
+  font-weight: 600;
+  margin: 3px;
+  transition: .1s;
+}
+.wl-entry-tag .remove-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: .8rem;
+  font-weight: 800;
+  padding: 0;
+  line-height: 1;
+  opacity: .6;
+  transition: opacity .1s;
+  font-family: inherit;
+}
+.wl-entry-tag .remove-btn:hover { opacity: 1; }
+
+.wl-add-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.wl-id-input { flex: 1; min-width: 160px; }
+
+.info-banner {
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(59,130,246,0.03);
+  border: 1px solid rgba(59,130,246,0.1);
+  font-size: .74rem;
+  color: var(--muted);
+  line-height: 1.65;
+  margin-bottom: 16px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── STATS ── #}
+<div class="wl-stats">
+  <div class="ov-stat">
+    <div class="ov-sv" style="color:var(--vl)">{{ total_entries }}</div>
+    <div class="ov-sl">📋 Gesamt</div>
+  </div>
+  {% for cat in cats %}
+  <div class="ov-stat">
+    <div class="ov-sv" style="color:rgba({{ cat.color }},0.9)">{{ cat.entries | length }}</div>
+    <div class="ov-sl">{{ cat.icon }} {{ cat.label }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+{# ── INFO ── #}
+<div class="info-banner">
+  <strong style="color:var(--fg)">💡 Whitelist</strong> —
+  Einträge werden von <strong>allen</strong> Security-Modulen ignoriert.
+  User/Rollen auf der Whitelist können nicht von Anti-Spam, Anti-Nuke etc. bestraft werden.
+  Ideal für vertrauenswürdige Bots, Admins und Mod-Rollen.
+</div>
+
+{# ── KATEGORIEN ── #}
+{% for cat in cats %}
+<div class="wl-card" id="cat-{{ cat.key }}">
+
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;
+              margin-bottom:12px;gap:10px;flex-wrap:wrap">
+    <div>
+      <div style="font-weight:700;font-size:.86rem;display:flex;align-items:center;gap:7px">
+        {{ cat.icon }} {{ cat.label }}
+        <span style="padding:2px 8px;border-radius:999px;font-size:.55rem;font-weight:800;
+          background:rgba({{ cat.color }},0.08);
+          color:rgba({{ cat.color }},0.9);
+          border:1px solid rgba({{ cat.color }},0.15)">
+          {{ cat.entries | length }}
+        </span>
+      </div>
+      <div class="cfg-desc" style="margin-top:3px">{{ cat.desc }}</div>
+    </div>
+    {% if cat.entries %}
+    <button class="btn-glass btn-glass-ghost btn-sm"
+            onclick="clearCategory('{{ cat.key }}')"
+            style="font-size:.65rem">
+      🗑️ Alle löschen
+    </button>
+    {% endif %}
+  </div>
+
+  {# Einträge #}
+  <div style="display:flex;flex-wrap:wrap;gap:4px;min-height:28px" id="entries-{{ cat.key }}">
+    {% for entry in cat.entries %}
+    <span class="wl-entry-tag"
+          style="background:rgba({{ cat.color }},0.06);
+                 color:rgba({{ cat.color }},0.9);
+                 border:1px solid rgba({{ cat.color }},0.15)"
+          data-id="{{ entry.id }}">
+      {% if entry.name %}<strong>{{ entry.name }}</strong>{% endif %}
+      <span style="font-family:'Geist Mono',monospace;font-size:.65em;
+                   {% if entry.name %}opacity:.6{% endif %}">{{ entry.id }}</span>
+      <button class="remove-btn"
+              style="color:rgba({{ cat.color }},0.8)"
+              onclick="wlRemove('{{ cat.key }}', '{{ entry.id }}')"
+              title="Entfernen">✕</button>
+    </span>
+    {% else %}
+    <span style="font-size:.72rem;color:var(--muted);padding:4px 0"
+          id="empty-{{ cat.key }}">
+      Keine Einträge
+    </span>
+    {% endfor %}
+  </div>
+
+  {# Hinzufügen #}
+  <div class="wl-add-row">
+    {% if cat.key == 'roles' %}
+    {# Rollen-Dropdown #}
+    <select class="cfg-select wl-id-input" id="input-{{ cat.key }}">
+      <option value="">— Rolle wählen —</option>
+      {% for r in guild_roles %}
+      <option value="{{ r.id }}">@{{ r.name }}</option>
+      {% endfor %}
+    </select>
+    {% elif cat.key == 'channels' %}
+    {# Kanal-Dropdown #}
+    <select class="cfg-select wl-id-input" id="input-{{ cat.key }}">
+      <option value="">— Kanal wählen —</option>
+      {% for c in guild_channels %}
+      <option value="{{ c.id }}">#{{ c.name }}</option>
+      {% endfor %}
+    </select>
+    {% else %}
+    {# ID-Input #}
+    <input type="text"
+           class="cfg-input wl-id-input"
+           id="input-{{ cat.key }}"
+           placeholder="{{ cat.placeholder }}"
+           pattern="\d+"
+           style="font-family:'Geist Mono',monospace">
+    {% endif %}
+
+    <button class="btn-glass btn-glass-primary btn-sm"
+            onclick="wlAdd('{{ cat.key }}')">
+      ➕ Hinzufügen
+    </button>
+  </div>
+</div>
+{% endfor %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const GID = "{{ guild.id }}";
+
+async function wlApi(body) {
+  try {
+    const r = await fetch(`/api/guild/${GID}/whitelist`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+async function wlAdd(catKey) {
+  const input = document.getElementById('input-' + catKey);
+  const value = input?.value?.trim();
+
+  if (!value) {
+    showToast('❌ Bitte einen Wert eingeben / auswählen', 'err');
+    return;
+  }
+
+  // Für ID-Felder: nur Zahlen erlaubt
+  const isDropdown = input.tagName === 'SELECT';
+  if (!isDropdown && !/^\d+$/.test(value)) {
+    showToast('❌ Nur Discord-IDs (Zahlen) erlaubt', 'err');
+    return;
+  }
+
+  const d = await wlApi({ action: 'add', category: catKey, id: value });
+  if (d.ok) {
+    showToast('✅ Zur Whitelist hinzugefügt', 'ok');
+    input.value = '';
+    setTimeout(() => location.reload(), 500);
+  } else {
+    showToast('❌ ' + (d.error || 'Fehler'), 'err');
+  }
+}
+
+async function wlRemove(catKey, entryId) {
+  const d = await wlApi({ action: 'del', category: catKey, id: entryId });
+  if (d.ok) {
+    showToast('🗑️ Entfernt', 'ok');
+    setTimeout(() => location.reload(), 400);
+  } else {
+    showToast('❌ ' + (d.error || 'Fehler'), 'err');
+  }
+}
+
+async function clearCategory(catKey) {
+  if (!confirm(`Alle Einträge in dieser Kategorie löschen?`)) return;
+  const d = await wlApi({ action: 'clear', category: catKey });
+  if (d.ok) {
+    showToast('🗑️ Kategorie geleert', 'ok');
+    setTimeout(() => location.reload(), 400);
+  } else {
+    showToast('❌ ' + (d.error || 'Fehler'), 'err');
+  }
+}
+
+// Enter-Taste in Inputs
+document.querySelectorAll('input.wl-id-input').forEach(input => {
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const cat = input.id.replace('input-', '');
+      wlAdd(cat);
+    }
+  });
+});
+</script>
+{% endblock %}

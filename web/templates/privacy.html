@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Privacy Policy – ModForge{% endblock %}
+{% block content %}
+<div class="legal-wrap container">
+  <h1>Privacy Policy</h1>
+  <p class="date">Stand: {{ today }}</p>
+
+  <details open>
+    <summary>1. Verantwortlicher</summary>
+    <div class="detail-body">
+      <p>Verantwortlicher für die Erhebung, Verarbeitung und Nutzung personenbezogener Daten im Sinne der Datenschutz‑Grundverordnung (DSGVO) und anderer nationaler Datenschutzgesetze ist der Betreiber von ModForge, erreichbar über den <a href="https://discord.gg/CYqH8QTmR3" target="_blank" style="color:var(--p)">ModForge Support‑Server</a>. Eine postalische Adresse wird auf Anfrage mitgeteilt. Unseren Datenschutzbeauftragten erreichen Sie auf demselben Wege.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>2. Allgemeines zur Datenverarbeitung</summary>
+    <div class="detail-body">
+      <h3>2.1 Umfang der Verarbeitung</h3>
+      <p>Wir verarbeiten personenbezogene Daten nur, soweit dies für die Bereitstellung eines funktionsfähigen Dienstes erforderlich ist. Die Verarbeitung erfolgt auf Grundlage von Art. 6 Abs. 1 lit. a (Einwilligung), lit. b (Vertragserfüllung) oder lit. f (berechtigtes Interesse) DSGVO.</p>
+
+      <h3>2.2 Datenminimierung und Speicherbegrenzung</h3>
+      <p>Wir erheben und speichern nur die Daten, die für den jeweiligen Zweck unbedingt notwendig sind. Die Speicherdauer richtet sich nach dem Zweck der Datenverarbeitung und den gesetzlichen Aufbewahrungspflichten. Nach Wegfall des Zwecks oder Ablauf der Frist werden die Daten routinemäßig gelöscht oder gesperrt.</p>
+
+      <h3>2.3 Weitergabe an Dritte</h3>
+      <p>Eine Weitergabe personenbezogener Daten an Dritte erfolgt nur, soweit dies für die Vertragserfüllung erforderlich ist (z. B. Discord‑API, Datenbank‑Hosting), eine gesetzliche Verpflichtung besteht oder Sie ausdrücklich eingewilligt haben.</p>
+
+      <h3>2.4 Empfänger außerhalb der EU</h3>
+      <p>Grundsätzlich werden Ihre Daten auf Servern in der Europäischen Union verarbeitet. Sollten wir ausnahmsweise Daten in ein Drittland übermitteln, geschieht dies nur auf Grundlage eines Angemessenheitsbeschlusses der EU‑Kommission oder geeigneter Garantien (z. B. Standardvertragsklauseln).</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>3. Erhobene Daten und Zwecke</summary>
+    <div class="detail-body">
+      <h3>3.1 Daten bei der Bot‑Nutzung</h3>
+      <p>Zur Ausführung der Bot‑Befehle und Sicherheitsfunktionen werden folgende Daten automatisiert verarbeitet:</p>
+      <ul>
+        <li><strong>Server‑Identifikatoren:</strong> Guild‑ID, Kanal‑ID, Rollen‑ID – zur Zuordnung von Konfigurationen und Log‑Meldungen.</li>
+        <li><strong>Nutzer‑Identifikatoren:</strong> Discord‑User‑ID, ggf. Moderator‑ID – für Moderatios‑Aktionen, Warnsystem und Case‑System.</li>
+        <li><strong>Nachrichteninhalte:</strong> Werden nur im Rahmen der konfigurierten Filter (Spam‑Erkennung, AutoMod) analysiert und – sofern der Server‑Administrator die Funktion aktiviert hat – für maximal 48 Stunden in einem Nachrichten‑Archiv gespeichert.</li>
+        <li><strong>Audit‑Logs:</strong> Der Bot kann Audit‑Logs zu Sicherheitsereignissen (z. B. Massen‑Banns) einsehen, um präventive Maßnahmen zu ergreifen. Diese Daten werden nicht dauerhaft gespeichert.</li>
+      </ul>
+      <p>Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung) sowie Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Sicherheit des Servers).</p>
+
+      <h3>3.2 Daten im Web‑Dashboard</h3>
+      <p>Bei der Anmeldung über Discord OAuth2 werden folgende Daten über die Discord‑API bezogen:</p>
+      <ul>
+        <li>Discord‑Benutzername und Diskriminator</li>
+        <li>Discord‑Avatar‑URL</li>
+        <li>Liste der Server, auf denen Sie Mitglied sind und die der Bot betreten hat (zur Anzeige der Dashboard‑fähigen Server)</li>
+      </ul>
+      <p>Diese Daten werden ausschließlich in Ihrer aktuellen Sitzung (Session) gespeichert und nicht dauerhaft auf unseren Servern abgelegt. Mit dem Abmelden oder Ablauf der Sitzung werden sie gelöscht. Rechtsgrundlage: Art. 6 Abs. 1 lit. a DSGVO (Einwilligung durch Login).</p>
+
+      <h3>3.3 Server‑Konfigurationen</h3>
+      <p>Einstellungen, die Sie über das Dashboard vornehmen, werden in der Datenbank gespeichert und enthalten die oben genannten Identifikatoren. Sie sind für die Funktionsfähigkeit des Bots auf Ihrem Server erforderlich. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO.</p>
+
+      <h3>3.4 Log‑Dateien</h3>
+      <p>Der Bot und das Dashboard schreiben technische Log‑Dateien, die unter anderem IP‑Adressen, Zeitstempel und aufgerufene URLs enthalten können. Diese dienen ausschließlich der Fehleranalyse und werden nach spätestens 14 Tagen automatisch gelöscht. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Sicherheit und Stabilität des Dienstes).</p>
+
+      <h3>3.5 Cookies und Tracking</h3>
+      <p>Das Dashboard verwendet ein technisch notwendiges Session‑Cookie, das während der Anmeldung gesetzt wird und nach Schließen des Browsers oder nach 6 Stunden Inaktivität abläuft. Dieses Cookie dient ausschließlich der Aufrechterhaltung Ihrer Sitzung. Es werden keine Tracking‑ oder Analyse‑Cookies eingesetzt. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>4. Rechte der betroffenen Person</summary>
+    <div class="detail-body">
+      <p>Sie haben jederzeit das Recht auf:</p>
+      <ul>
+        <li><strong>Auskunft</strong> (Art. 15 DSGVO) über die zu Ihrer Person gespeicherten Daten, deren Herkunft und Empfänger sowie den Zweck der Verarbeitung.</li>
+        <li><strong>Berichtigung</strong> (Art. 16 DSGVO) unrichtiger personenbezogener Daten.</li>
+        <li><strong>Löschung</strong> (Art. 17 DSGVO) Ihrer personenbezogenen Daten, sofern keine gesetzlichen Aufbewahrungspflichten entgegenstehen.</li>
+        <li><strong>Einschränkung der Verarbeitung</strong> (Art. 18 DSGVO), wenn die Richtigkeit der Daten bestritten wird oder die Verarbeitung unrechtmäßig ist.</li>
+        <li><strong>Datenübertragbarkeit</strong> (Art. 20 DSGVO), d. h. Sie können Ihre maschinenlesbaren Daten in einem gängigen Format erhalten oder an einen anderen Verantwortlichen übertragen lassen.</li>
+        <li><strong>Widerspruch</strong> (Art. 21 DSGVO) gegen die Verarbeitung, die auf berechtigtem Interesse beruht. Nach einem Widerspruch verarbeiten wir die Daten nicht mehr, es sei denn, zwingende schutzwürdige Gründe überwiegen.</li>
+        <li><strong>Beschwerde bei einer Aufsichtsbehörde</strong> (Art. 77 DSGVO), wenn Sie der Ansicht sind, dass die Verarbeitung Ihrer Daten gegen die DSGVO verstößt.</li>
+      </ul>
+      <p>Zur Ausübung Ihrer Rechte kontaktieren Sie uns bitte über den <a href="https://discord.gg/CYqH8QTmR3" target="_blank" style="color:var(--p)">ModForge Support‑Server</a>.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>5. Datensicherheit</summary>
+    <div class="detail-body">
+      <p>Wir setzen technische und organisatorische Sicherheitsmaßnahmen ein, um Ihre Daten gegen zufällige oder vorsätzliche Manipulation, Verlust, Zerstörung oder gegen den Zugriff unberechtigter Personen zu schützen. Insbesondere:</p>
+      <ul>
+        <li>Sämtliche Kommunikation mit Discord und der Datenbank erfolgt verschlüsselt (TLS).</li>
+        <li>Der Zugriff auf die Datenbank ist auf wenige autorisierte Personen beschränkt und zusätzlich durch starke Zugangsdaten gesichert.</li>
+        <li>Das Admin‑Panel ist durch Brute‑Force‑Schutz und Zwei‑Faktor‑Authentifizierung (Admin‑Passwort) abgesichert.</li>
+        <li>Regelmäßige Sicherheitsüberprüfungen und Updates unserer verwendeten Bibliotheken.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details>
+    <summary>6. Einsatz von Cookies und externen Ressourcen</summary>
+    <div class="detail-body">
+      <h3>6.1 Session‑Cookies</h3>
+      <p>Das Dashboard verwendet ein technisch notwendiges Session‑Cookie, das für die Dauer Ihrer Anmeldung gespeichert wird. Es wird nach dem Abmelden oder spätestens nach 6 Stunden gelöscht. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO.</p>
+
+      <h3>6.2 Externe Schriftarten (Google Fonts)</h3>
+      <p>Die Website bindet Google Fonts (Inter) ein, um eine moderne Typografie zu ermöglichen. Hierbei kann Ihre IP‑Adresse an Google übertragen werden. Die Einbindung erfolgt ohne vorherige Einwilligung, da sie für die Darstellung der Website technisch notwendig ist. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO. Sie können die entsprechende Domain in Ihrem Browser blockieren, wenn Sie die Übertragung verhindern möchten. Weitere Informationen finden Sie in der Datenschutzerklärung von Google.</p>
+
+      <h3>6.3 Externe Icons und Bilder</h3>
+      <p>Wir binden keine weiteren externen Ressourcen ein, die Ihre Daten an Dritte übermitteln. Statische Inhalte werden direkt von unserem Server ausgeliefert.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>7. Änderungen dieser Datenschutzerklärung</summary>
+    <div class="detail-body">
+      <p>Wir behalten uns vor, diese Datenschutzerklärung bei Bedarf anzupassen, um sie an geänderte Rechtslagen oder bei Änderungen des Dienstes anzupassen. Die jeweils aktuelle Version ist unter dieser URL abrufbar. Wir empfehlen, diese Seite regelmäßig auf Aktualisierungen zu prüfen.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>8. Kontakt und Beschwerden</summary>
+    <div class="detail-body">
+      <p>Bei Fragen zur Erhebung, Verarbeitung oder Nutzung Ihrer personenbezogenen Daten sowie bei Auskunfts‑, Löschungs‑ oder Berichtigungsersuchen wenden Sie sich bitte an den <a href="https://discord.gg/CYqH8QTmR3" target="_blank" style="color:var(--p)">ModForge Support‑Server</a>. Ihnen steht zudem ein Beschwerderecht bei einer Datenschutz‑Aufsichtsbehörde zu.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>9. Externe Links und eingebettete Inhalte</summary>
+    <div class="detail-body">
+      <p>Unsere Website enthält Links zu externen Websites Dritter (z. B. Discord, GitHub). Auf die Verarbeitung Ihrer Daten durch diese Drittanbieter haben wir keinen Einfluss. Für die Datenverarbeitung der jeweiligen Anbieter gelten deren eigene Datenschutzerklärungen. Wir weisen darauf hin, dass diese Seiten möglicherweise eigene Cookies setzen oder Daten erheben.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>10. Hosting und Datenverarbeitung in Drittländern</summary>
+    <div class="detail-body">
+      <p>Unsere Dienste werden auf Servern in der Europäischen Union gehostet. Die genutzte MongoDB‑Datenbank wird bei einem europäischen Cloud‑Anbieter betrieben. Eine Übermittlung personenbezogener Daten in Drittländer außerhalb der EU findet nicht statt, es sei denn, Sie nutzen die Dienste aus einem Drittland heraus; in diesem Fall erfolgt die Übermittlung auf Grundlage Ihrer Einwilligung oder vertraglicher Notwendigkeit.</p>
+    </div>
+  </details>
+</div>
+{% endblock %}

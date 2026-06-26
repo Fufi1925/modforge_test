@@ -1,0 +1,106 @@
+{% extends "dashboard/_base.html" %}
+{% set active = 'templates' %}
+{% block title %}Community Templates{% endblock %}
+{% block page_title %}🌐 Template Center{% endblock %}
+{% block page_desc %}Preview · Import-Check · Likes · Score · Empfehlungen{% endblock %}
+{% block head %}
+<style>
+.tpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}.tpl-card{position:relative;padding:15px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid var(--border);transition:.18s;display:flex;flex-direction:column;gap:10px}.tpl-card:hover{transform:translateY(-2px);border-color:rgba(96,165,250,.28);background:rgba(255,255,255,.05)}.tpl-icon{width:44px;height:44px;border-radius:14px;background:rgba(59,130,246,.12);display:grid;place-items:center;font-size:1.1rem;overflow:hidden;flex-shrink:0}.tpl-icon img{width:100%;height:100%;object-fit:cover}.tpl-cat{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:.58rem;font-weight:800;background:rgba(34,211,238,.08);color:var(--cl);border:1px solid rgba(34,211,238,.18);text-transform:uppercase}.tpl-rec{display:inline-flex;padding:3px 8px;border-radius:999px;font-size:.56rem;font-weight:900;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.04);color:var(--fg)}.tpl-rec.gaming{color:#c4b5fd;background:rgba(167,139,250,.08);border-color:rgba(167,139,250,.2)}.tpl-rec.community{color:#86efac;background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.2)}.tpl-rec.security{color:#7dd3fc;background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.2)}.tpl-stat{display:inline-flex;gap:3px;align-items:center;padding:2px 8px;border-radius:999px;font-size:.6rem;background:rgba(255,255,255,.035);border:1px solid var(--border)}.tpl-score{width:52px;height:52px;border-radius:999px;display:grid;place-items:center;background:conic-gradient(var(--green) calc(var(--score)*1%),rgba(255,255,255,.07) 0);position:relative;flex-shrink:0}.tpl-score:after{content:'';position:absolute;inset:6px;border-radius:999px;background:#0b0b1a}.tpl-score b{position:relative;z-index:1;font-family:'Geist Mono',monospace;font-size:.78rem}.cat-pill{padding:7px 14px;border-radius:999px;font-size:.72rem;font-weight:800;border:1px solid var(--border);background:rgba(255,255,255,.035);color:var(--muted);cursor:pointer;transition:.15s}.cat-pill:hover,.cat-pill.active{background:rgba(59,130,246,.12);color:var(--vl);border-color:rgba(59,130,246,.32)}.tpl-empty{text-align:center;padding:36px;border-radius:16px;background:rgba(255,255,255,.02);border:1px dashed var(--border)}.tpl-preview-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.tpl-check{padding:10px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid var(--border);font-size:.78rem}.tpl-check.high{border-color:rgba(239,68,68,.28);background:rgba(239,68,68,.08)}.tpl-check.medium{border-color:rgba(245,158,11,.25);background:rgba(245,158,11,.07)}.tpl-stars{display:inline-flex;gap:1px;color:#fbbf24;font-size:.74rem;font-weight:900}.tpl-progress{height:7px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;margin:10px 0}.tpl-progress-bar{height:100%;width:0;background:linear-gradient(90deg,var(--v),var(--cl));transition:width .35s ease}.restore-log{max-height:180px;overflow:auto;display:grid;gap:5px;margin-top:10px}.restore-log div{padding:7px 9px;border-radius:9px;background:rgba(255,255,255,.035);border:1px solid var(--border);font-size:.72rem;color:var(--muted)}@media(max-width:700px){.tpl-preview-grid{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+{% block content %}
+{% set cat_labels = {'general':'📦 Allgemein','gaming':'🎮 Gaming','community':'👥 Community','anime':'🌸 Anime','music':'🎵 Musik','education':'📚 Bildung','support':'🛟 Support','business':'💼 Business','security':'🛡️ Security','other':'✨ Sonstiges'} %}
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:16px">
+  <div class="ov-stat"><div class="ov-sv" style="color:var(--vl)">{{ all_public|length }}</div><div class="ov-sl">Templates</div></div>
+  <div class="ov-stat"><div class="ov-sv" style="color:var(--green)">{{ all_public|sum(attribute='downloads') }}</div><div class="ov-sl">Downloads</div></div>
+  <div class="ov-stat"><div class="ov-sv" style="color:var(--amberl)">{{ all_public|sum(attribute='likes') }}</div><div class="ov-sl">Likes</div></div>
+  <div class="ov-stat"><div class="ov-sv" style="color:#fbbf24">★</div><div class="ov-sl">Sterne-Rating</div></div>
+  <div class="ov-stat"><div class="ov-sv" style="color:var(--cl)">{{ my_shared|length }}</div><div class="ov-sl">Eigene</div></div>
+</div>
+
+{% if popular_templates %}
+<div class="db-card" style="padding:16px;margin-bottom:16px">
+  <div class="db-card-header"><span class="db-card-title">🔥 Beliebteste Templates</span></div>
+  <div class="tpl-grid">
+    {% for t in popular_templates %}
+      <div class="tpl-card" data-cat="{{ t.category }}" data-name="{{ t.name|lower }} {{ t.guild_name|lower }} {{ t.description|lower }}">
+        <div style="display:flex;gap:10px;align-items:center"><div class="tpl-score" style="--score:{{ t.score }}"><b>{{ t.score }}</b></div><div><b>{{ t.name }}</b><div class="cfg-desc">{{ t.guild_name }} · ⬇️ {{ t.downloads }} · ❤️ {{ t.likes }} · ★ {{ t.rating_avg }} ({{ t.rating_count }})</div></div></div>
+        <div>{% for r in t.recommended %}<span class="tpl-rec {{ r }}">{{ r }}</span> {% endfor %}</div>
+        <div style="display:flex;gap:6px"><button class="btn-glass btn-sm btn-glass-primary" onclick="previewTpl('{{ t.id }}')">👁️ Preview</button><button class="btn-glass btn-sm" onclick="likeTpl('{{ t.id }}')">❤️ Like</button><button class="btn-glass btn-sm" onclick="rateTpl('{{ t.id }}')">★ Bewerten</button></div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div class="db-card" style="padding:14px 18px;margin-bottom:14px;background:rgba(59,130,246,.03);border-color:rgba(59,130,246,.12)">
+  <b>🌐 Template Center</b><div class="cfg-desc" style="line-height:1.6;margin-top:4px">Importiere Vorlagen erst nach Preview + Import-Check. Der Restore kann Rollen/Kanäle/Kategorien erstellen. Mache vorher ein Backup.</div>
+</div>
+
+<div style="font-weight:800;margin-bottom:8px">🛡️ Deine veröffentlichten Templates <span class="tag">{{ my_shared|length }}</span></div>
+{% if my_shared %}
+<div class="tpl-grid" style="margin-bottom:18px">
+{% for t in my_shared %}
+  <div class="tpl-card">
+    <div style="display:flex;gap:10px;align-items:center"><div class="tpl-icon">{% if t.guild_icon %}<img src="{{ t.guild_icon }}">{% else %}🛡️{% endif %}</div><div style="flex:1;min-width:0"><b>{{ t.name }}</b><div class="cfg-desc">{{ cat_labels.get(t.category,t.category) }} · Score {{ t.score }} · ❤️ {{ t.likes }} · ★ {{ t.rating_avg }}</div></div></div>
+    <p style="color:var(--muted);font-size:.75rem;line-height:1.5">{{ t.description or 'Keine Beschreibung' }}</p>
+    <div>{% for r in t.recommended %}<span class="tpl-rec {{ r }}">Empfohlen: {{ r }}</span> {% endfor %}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn-glass btn-sm" onclick="previewTpl('{{ t.id }}')">👁️ Preview</button><button class="btn-glass btn-sm" onclick="copyId('{{ t.id }}')">📋 ID</button><button class="btn-glass btn-sm btn-glass-danger" onclick="unshare('{{ t.id }}','{{ t.name|e }}')">Entfernen</button></div>
+  </div>
+{% endfor %}
+</div>
+{% else %}<div class="tpl-empty" style="margin-bottom:18px">📤 Noch nichts geteilt · gehe zu <a href="/dashboard/{{ guild.id }}/backup" style="color:var(--vl)">Backups</a> und klicke Teilen.</div>{% endif %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin:18px 0 10px;gap:10px;flex-wrap:wrap"><div style="font-weight:800">🛍️ Community-Galerie <span class="tag">{{ all_public|length }}</span></div><input type="text" id="tplSearch" placeholder="🔍 Suchen …" class="cfg-input ignore-dirty" oninput="filterTemplates()"></div>
+{% if all_public %}
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px" id="catFilter"><button class="cat-pill active" data-cat="">Alle</button>{% for cat, items in categories.items()|sort %}<button class="cat-pill" data-cat="{{ cat }}">{{ cat_labels.get(cat, cat) }} ({{ items|length }})</button>{% endfor %}</div>
+<div class="tpl-grid" id="tplList">
+{% for t in all_public %}
+  <div class="tpl-card" data-cat="{{ t.category }}" data-name="{{ t.name|lower }} {{ t.guild_name|lower }} {{ t.description|lower }} {{ t.recommended|join(' ') }}">
+    {% if t.is_mine %}<div style="position:absolute;top:8px;right:8px"><span class="tag">DEINS</span></div>{% endif %}
+    <div style="display:flex;gap:10px;align-items:flex-start"><div class="tpl-icon">{% if t.guild_icon %}<img src="{{ t.guild_icon }}">{% else %}🛡️{% endif %}</div><div style="flex:1;min-width:0"><div style="display:flex;gap:8px;align-items:center"><b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.name }}</b><div class="tpl-score" style="--score:{{ t.score }}"><b>{{ t.score }}</b></div></div><div class="cfg-desc">aus {{ t.guild_name }} · ⬇️ {{ t.downloads }} · ❤️ <span id="like-{{ t.id }}">{{ t.likes }}</span> · <span class="tpl-stars" id="rating-{{ t.id }}">★ {{ t.rating_avg }}</span> ({{ t.rating_count }})</div></div></div>
+    <div><span class="tpl-cat">{{ cat_labels.get(t.category,t.category) }}</span> {% for r in t.recommended %}<span class="tpl-rec {{ r }}">{{ r }}</span>{% endfor %} <span class="tpl-rec {{ t.risk }}">Risk: {{ t.risk }}</span></div>
+    <p style="font-size:.74rem;color:var(--muted);line-height:1.55;flex:1">{{ t.description or 'Keine Beschreibung' }}</p>
+    <div style="display:flex;gap:4px;flex-wrap:wrap"><span class="tpl-stat">🏷️ {{ t.roles }}</span><span class="tpl-stat">📁 {{ t.channels }}</span><span class="tpl-stat">📂 {{ t.categories }}</span>{% if t.emojis %}<span class="tpl-stat">😀 {{ t.emojis }}</span>{% endif %}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn-glass btn-sm" onclick="previewTpl('{{ t.id }}')">👁️ Preview</button><button class="btn-glass btn-sm" onclick="likeTpl('{{ t.id }}')">❤️ Like</button><button class="btn-glass btn-sm" onclick="rateTpl('{{ t.id }}')">★ Bewerten</button><button class="btn-glass btn-sm btn-glass-primary" onclick="importTpl('{{ t.id }}','{{ t.name|e }}')" {% if not bot_ready %}disabled style="opacity:.4"{% endif %}>⬇️ Import</button><button class="btn-glass btn-sm" onclick="copyId('{{ t.id }}')">📋</button></div>
+  </div>
+{% endfor %}
+</div><div id="tplEmpty" class="tpl-empty" style="display:none;margin-top:12px">🔍 Keine Templates gefunden.</div>
+{% else %}<div class="tpl-empty">🌐 Noch keine Community-Templates.</div>{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+const GID="{{ guild.id }}";
+async function postJSON(url, body){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});let d={};try{d=await r.json()}catch(e){} if(!r.ok)throw new Error(d.error||('HTTP '+r.status)); return d;}
+function copyId(id){navigator.clipboard.writeText(id);showToast('ID kopiert: '+id,'ok')}
+async function likeTpl(id){try{const d=await postJSON(`/api/guild/${GID}/templates/like/${id}`); const el=document.getElementById('like-'+id); if(el)el.textContent=d.likes; showToast(d.liked?'❤️ Geliked':'💔 Like entfernt','ok')}catch(e){showToast(e.message,'err')}}
+function rateTpl(id){showModal(`<div style="text-align:center"><h3>Template bewerten</h3><p style="color:var(--muted)">Wie gut ist diese Vorlage?</p><div style="display:flex;gap:6px;justify-content:center;margin:14px 0">${[1,2,3,4,5].map(n=>`<button class="btn-glass btn-sm" onclick="doRate('${id}',${n})">${'★'.repeat(n)}</button>`).join('')}</div></div>`)}
+async function doRate(id,stars){try{const d=await postJSON(`/api/guild/${GID}/templates/rate/${id}`,{stars}); const el=document.getElementById('rating-'+id); if(el)el.textContent='★ '+d.rating_avg; closeModal(); showToast(`Bewertet: ${stars}★`,'ok')}catch(e){showToast(e.message,'err')}}
+async function previewTpl(id){
+  try{const d=await fetch(`/api/guild/${GID}/templates/preview/${id}`).then(r=>r.json()); if(!d.ok)throw new Error(d.error); const t=d.template; showModal(`<div style="font-weight:900;font-size:1.15rem;margin-bottom:8px">👁️ ${t.name}</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"><span class="tpl-cat">${t.category}</span><span class="tpl-rec">Score ${t.score}</span><span class="tpl-rec ${t.risk.level}">Risk ${t.risk.level}</span><span class="tpl-rec">❤️ ${t.likes}</span><span class="tpl-rec">★ ${t.rating_avg} (${t.rating_count})</span><span class="tpl-rec">⬇️ ${t.downloads}</span></div><p style="color:var(--muted);font-size:.82rem;line-height:1.5">${t.description||'Keine Beschreibung'}</p><div class="tpl-preview-grid"><div class="tpl-check"><b>Rollen (${t.roles.length}+)</b><br>${t.roles.slice(0,10).map(x=>'@'+x.name).join('<br>')||'Keine'}</div><div class="tpl-check"><b>Kanäle (${t.channels.length}+)</b><br>${t.channels.slice(0,12).map(x=>'#'+x.name).join('<br>')||'Keine'}</div></div><div style="display:flex;gap:8px;margin-top:12px"><button class="btn-glass" onclick="closeModal();checkTpl('${id}')">🩺 Import-Check</button><button class="btn-glass btn-glass-primary" onclick="closeModal();importTpl('${id}','${t.name.replace(/'/g,'')}')">Import starten</button></div>`)}catch(e){showToast('Preview: '+e.message,'err')}}
+async function checkTpl(id){try{const d=await fetch(`/api/guild/${GID}/templates/check/${id}`).then(r=>r.json()); if(!d.ok)throw new Error(d.error); const s=d.summary; showModal(`<div style="font-weight:900;font-size:1.1rem;margin-bottom:8px">🩺 Import-Check</div><div class="tpl-check ${d.risk}"><b>Risiko: ${d.risk.toUpperCase()}</b><br>${(d.warnings||[]).join('<br>')||'Keine Warnungen'}</div><div class="tpl-preview-grid" style="margin-top:10px"><div class="tpl-check">Rollen: ${s.roles_new} neu / ${s.roles_existing} vorhanden</div><div class="tpl-check">Kanäle: ${s.channels_new} neu / ${s.channels_existing} vorhanden</div><div class="tpl-check">Kategorien: ${s.categories_total}</div></div><div style="display:flex;gap:8px;margin-top:12px"><button class="btn-glass" onclick="closeModal()">Abbrechen</button><button class="btn-glass btn-glass-danger" onclick="closeModal();importTpl('${id}','Template')">Import-Dialog öffnen</button></div>`)}catch(e){showToast('Check: '+e.message,'err')}}
+function importTpl(id,name){showModal(`<div style="text-align:center"><div style="font-size:2.5rem">⚠️</div><h3>Risiko-Warnung vor Restore</h3><p style="color:var(--muted);line-height:1.6">Template <b>${name}</b> kann Rollen, Kanäle und Kategorien auf deinem Server erstellen.<br><b style="color:#86efac">Vor dem Import wird automatisch ein Sicherheits-Backup erstellt.</b></p><label class="tag" style="cursor:pointer;margin:8px 0 12px;display:inline-flex"><input id="importConfirm" type="checkbox" onchange="document.getElementById('importStartBtn').disabled=!this.checked"> Ich verstehe das Risiko und möchte importieren</label><div style="display:flex;gap:8px;justify-content:center"><button class="btn-glass" onclick="closeModal();checkTpl('${id}')">Import-Check</button><button id="importStartBtn" disabled class="btn-glass btn-glass-danger" onclick="doImport('${id}')">Import starten</button></div><div id="importProgress" style="display:none;text-align:left;margin-top:14px"><div class="tpl-progress"><div class="tpl-progress-bar" id="importBar"></div></div><div id="importStatus" style="font-size:.8rem;color:var(--muted)">Bereite Import vor…</div><div class="restore-log" id="restoreLog"></div></div></div>`)}
+function setImportProgress(pct,msg){const box=document.getElementById('importProgress'),bar=document.getElementById('importBar'),st=document.getElementById('importStatus'); if(box)box.style.display='block'; if(bar)bar.style.width=pct+'%'; if(st)st.textContent=msg;}
+function addRestoreLog(msg){const log=document.getElementById('restoreLog'); if(log){const d=document.createElement('div');d.textContent=msg;log.appendChild(d);}}
+async function doImport(id){
+  if(!document.getElementById('importConfirm')?.checked) return showToast('Bitte Import bestätigen','err');
+  const btn=document.getElementById('importStartBtn'); if(btn)btn.disabled=true;
+  setImportProgress(10,'Erstelle Sicherheits-Backup…'); addRestoreLog('Sicherheits-Backup wird erstellt.');
+  try{
+    setTimeout(()=>setImportProgress(35,'Prüfe Template und aktuellen Server…'),350);
+    setTimeout(()=>setImportProgress(60,'Restore läuft…'),900);
+    const d=await postJSON(`/api/guild/${GID}/templates/import/${id}`, {confirmed:true});
+    setImportProgress(100,'Import abgeschlossen.');
+    (d.restore_log||[]).forEach(addRestoreLog);
+    if(d.pre_backup_id) addRestoreLog('Auto-Backup vor Import: '+d.pre_backup_id);
+    const r=d.report||{};
+    showToast(`Import fertig · Backup ${d.pre_backup_id||'erstellt'} · Rollen ${r.roles_created||0} · Kanäle ${r.channels_created||0}`,'ok');
+  }catch(e){setImportProgress(100,'Import fehlgeschlagen.'); addRestoreLog('Fehler: '+e.message); showToast(e.message,'err'); if(btn)btn.disabled=false;}
+}
+function unshare(id,name){if(!confirm(`Template "${name}" entfernen?`))return;postJSON(`/api/guild/${GID}/templates/unshare/${id}`).then(()=>{showToast('Entfernt','ok');setTimeout(()=>location.reload(),600)}).catch(e=>showToast(e.message,'err'))}
+function filterTemplates(){const q=(tplSearch.value||'').toLowerCase().trim();const cat=document.querySelector('#catFilter .cat-pill.active')?.dataset.cat||'';let v=0;document.querySelectorAll('#tplList .tpl-card').forEach(c=>{const show=(!cat||c.dataset.cat===cat)&&(!q||(c.dataset.name||'').includes(q));c.style.display=show?'':'none';if(show)v++});tplEmpty.style.display=v?'none':''}
+document.querySelectorAll('#catFilter .cat-pill').forEach(b=>b.onclick=()=>{document.querySelectorAll('#catFilter .cat-pill').forEach(x=>x.classList.remove('active'));b.classList.add('active');filterTemplates()});
+</script>
+{% endblock %}

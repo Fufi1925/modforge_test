@@ -1,0 +1,505 @@
+{% extends "dashboard/_base.html" %}
+{% set active = 'tempvoice' %}
+{% set tv = cfg.get('temp_voice', {}) or {} %}
+{% block title %}TempVoice Command Center{% endblock %}
+{% block page_title %}🎤 TempVoice Command Center{% endblock %}
+{% block page_desc %}Richte ein hochmodernes Join-to-Create-System für temporäre Sprachkanäle ein, verwalte aktive Kanäle und führe Systemprüfungen durch.{% endblock %}
+
+{% block head %}
+<style>
+  .tv-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media(max-width: 1024px) {
+    .tv-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .premium-card {
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+    transition: all 0.25s ease;
+  }
+  .premium-card:hover {
+    border-color: rgba(96, 165, 250, 0.25);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  }
+
+  .tv-stats-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .tv-stat-card {
+    padding: 16px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.02);
+    text-align: center;
+  }
+  .tv-stat-num {
+    font-size: 1.5rem;
+    font-weight: 800;
+    font-family: 'Geist Mono', monospace;
+    line-height: 1.2;
+  }
+  .tv-stat-lbl {
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 4px;
+  }
+
+  /* Discord Mockup Style */
+  .discord-mockup {
+    background: #36393f;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  }
+  .discord-embed {
+    background: #2f3136;
+    border-left: 4px solid var(--cl, #22d3ee);
+    border-radius: 4px;
+    padding: 12px 14px;
+  }
+  .discord-title {
+    font-weight: 700;
+    color: #fff;
+    font-size: 0.95rem;
+    margin-bottom: 6px;
+  }
+  .discord-desc {
+    color: #dcddde;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    white-space: pre-wrap;
+  }
+  .discord-btn-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .discord-btn-tv {
+    background: #4f545c;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    padding: 6px 10px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    cursor: default;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Health checker style */
+  .tv-health-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.015);
+    font-size: 0.78rem;
+    margin-bottom: 6px;
+  }
+  .tv-health-row.ok {
+    border-color: rgba(34, 197, 94, 0.18);
+    background: rgba(34, 197, 94, 0.035);
+  }
+  .tv-health-row.bad {
+    border-color: rgba(239, 68, 68, 0.18);
+    background: rgba(239, 68, 68, 0.035);
+  }
+
+  /* Owner tools card grid */
+  .owner-tools-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .owner-tool-card {
+    background: rgba(255, 255, 255, 0.01);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .owner-tool-icon {
+    font-size: 1.1rem;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.03);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .owner-tool-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #fff;
+  }
+  .owner-tool-desc {
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* Active channels */
+  .active-ch-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.015);
+    margin-bottom: 8px;
+    transition: all 0.2s ease;
+  }
+  .active-ch-card:hover {
+    border-color: rgba(96,165,250,0.25);
+    background: rgba(255,255,255,0.03);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="tv-stats-bar">
+  <div class="tv-stat-card">
+    <div class="tv-stat-num" style="color: {% if tv.get('enabled') %}var(--green){% else %}var(--muted){% endif %}">
+      {% if tv.get('enabled') %}AKTIV{% else %}INAKTIV{% endif %}
+    </div>
+    <div class="tv-stat-lbl">System-Status</div>
+  </div>
+  <div class="tv-stat-card">
+    <div class="tv-stat-num" style="color: var(--cl)">{{ active_channels|length }}</div>
+    <div class="tv-stat-lbl">Aktive Sprachkanäle</div>
+  </div>
+  <div class="tv-stat-card">
+    <div class="tv-stat-num" style="color: var(--vl)">
+      {% if tv.get('hub_channel_id') %}EINGERICHTET{% else %}NICHT GESETZT{% endif %}
+    </div>
+    <div class="tv-stat-lbl">Hub-Kanal</div>
+  </div>
+  <div class="tv-stat-card">
+    <div class="tv-stat-num" style="color: var(--amberl)">
+      {% if tv.get('panel_message_id') %}BEREIT{% else %}INAKTIV{% endif %}
+    </div>
+    <div class="tv-stat-lbl">Panel-Schnittstelle</div>
+  </div>
+</div>
+
+<div class="tv-grid">
+  <!-- Linke Spalte: Setup, Active Channels -->
+  <section>
+    <!-- TempVoice Setup -->
+    <div class="premium-card">
+      <div class="db-card-header">
+        <span class="db-card-title">⚙️ TempVoice Setup</span>
+        <button class="btn-glass btn-sm btn-glass-primary" onclick="saveConfig()">💾 Speichern</button>
+      </div>
+
+      <div class="cfg-row">
+        <div>
+          <span class="cfg-label">TempVoice System aktiv</span>
+          <div class="cfg-desc">Aktiviert das "Join-to-Create"-Sprachkanalsystem.</div>
+        </div>
+        <label class="toggle">
+          <input id="tv_enabled" type="checkbox" {% if tv.get('enabled') %}checked{% endif %} onchange="showSaveBar()">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="cfg-row">
+        <div>
+          <span class="cfg-label">Ziel-Kategorie</span>
+          <div class="cfg-desc">Kategorie, in der die neuen temporären Kanäle erstellt werden.</div>
+        </div>
+        <select id="tv_cat" class="cfg-select" onchange="showSaveBar()">
+          <option value="">— Keine (In keinem Ordner erstellen) —</option>
+          {% for cat in categories %}
+            <option value="{{ cat.id }}" {% if tv.get('category_id')|string == cat.id|string %}selected{% endif %}>📁 {{ cat.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="cfg-row">
+        <div>
+          <span class="cfg-label">Hub-Sprachkanal (Join to Create)</span>
+          <div class="cfg-desc">User treten diesem Kanal bei, um sofort einen eigenen Kanal zu erhalten.</div>
+        </div>
+        <select id="tv_hub" class="cfg-select" onchange="showSaveBar()">
+          <option value="">— Nicht gesetzt —</option>
+          {% for ch in voice_channels %}
+            <option value="{{ ch.id }}" {% if tv.get('hub_channel_id')|string == ch.id|string %}selected{% endif %}>🔊 {{ ch.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="cfg-row">
+        <div>
+          <span class="cfg-label">Panel-Kanal (Textkanal)</span>
+          <div class="cfg-desc">Textkanal für das TempVoice Steuerungs-Panel.</div>
+        </div>
+        <select id="tv_panel" class="cfg-select" onchange="showSaveBar()">
+          <option value="">— Nicht gesetzt —</option>
+          {% for ch in text_channels %}
+            <option value="{{ ch.id }}" {% if tv.get('panel_channel_id')|string == ch.id|string %}selected{% endif %}>#{{ ch.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="cfg-row">
+        <div>
+          <span class="cfg-label">Namensvorlage</span>
+          <div class="cfg-desc">Muster für den erstellten Sprachkanal. Nutze {user} als Platzhalter.</div>
+        </div>
+        <input id="tv_name" class="cfg-input" value="{{ tv.get('name_template', '🔊 {user}\'s Kanal') }}" oninput="updatePreview(); showSaveBar()" style="min-width: 200px;">
+      </div>
+    </div>
+
+    <!-- Active channels list -->
+    <div class="premium-card">
+      <div class="db-card-header">
+        <span class="db-card-title">🎙️ Live aktive TempChannels</span>
+        <span class="tag">{{ active_channels|length }}</span>
+      </div>
+      <p class="cfg-desc" style="margin-bottom:12px">Aktuell offene und von Benutzern besetzte TempVoice-Sprachkanäle:</p>
+      
+      <div style="max-height: 400px; overflow-y: auto; padding-right: 4px;">
+        {% for c in active_channels %}
+          <div class="active-ch-card">
+            <div>
+              <b style="color: #fff; font-size: 0.9rem;">{{ c.channel_name }}</b>
+              <div class="cfg-desc">
+                Owner: <b>{{ c.owner_name }}</b> (ID: <span style="font-family:'Geist Mono',monospace">{{ c.user_id }}</span>)
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span class="tag" style="background:rgba(34,211,238,0.15); color:var(--cl); font-weight:700;">
+                👥 {{ c.members }} Member
+              </span>
+              <span style="font-size: 0.65rem; color: var(--muted); font-family:'Geist Mono',monospace">ID: {{ c.channel_id }}</span>
+            </div>
+          </div>
+        {% else %}
+          <div style="text-align: center; padding: 24px; color: var(--muted); font-size:0.8rem;">
+            💤 Aktuell sind keine temporären Sprachkanäle aktiv.
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <!-- Rechte Spalte: Live Preview, Owner Tools, Health -->
+  <aside>
+    <!-- Namensvorschau -->
+    <div class="premium-card">
+      <div class="db-card-header">
+        <span class="db-card-title">👁️ Live Namensvorschau</span>
+      </div>
+      <div style="font-size: 1.15rem; font-weight: 800; color: #fff;" id="namePreview"></div>
+      <div class="cfg-desc" style="margin-top: 4px;">Gerendertes Beispiel für das Mitglied „Alex“</div>
+    </div>
+
+    <!-- Live Panel Preview -->
+    <div class="premium-card">
+      <div class="db-card-header">
+        <span class="db-card-title">📨 Live Panel Preview</span>
+      </div>
+      <p class="cfg-desc" style="margin-bottom:12px">Dieses Panel wird in den gewählten Textkanal gesendet.</p>
+      
+      <div class="discord-mockup">
+        <div class="discord-embed">
+          <div class="discord-title">🎤 TempVoice Steuerung</div>
+          <div class="discord-desc">Bist du der Besitzer deines Temp-Sprachkanals? Verwalte deinen Sprachkanal bequem über die Buttons unten.</div>
+          
+          <div class="discord-btn-grid">
+            <div class="discord-btn-tv">🔒 Lock</div>
+            <div class="discord-btn-tv">🔓 Unlock</div>
+            <div class="discord-btn-tv">👑 Claim</div>
+            <div class="discord-btn-tv">👥 Limit</div>
+            <div class="discord-btn-tv">✏️ Rename</div>
+            <div class="discord-btn-tv">🔄 Transfer</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-glass btn-glass-primary" onclick="sendPanel()" style="width:100%; justify-content:center; padding:12px; margin-top:14px;">
+        📨 TempVoice Panel jetzt senden
+      </button>
+    </div>
+
+    <!-- Owner Tools Information -->
+    <div class="premium-card">
+      <div class="db-card-header">
+        <span class="db-card-title">👑 Owner Tools</span>
+      </div>
+      <p class="cfg-desc">Funktionen, die Kanal-Erstellern am Panel oder über Slash-Commands zur Verfügung stehen:</p>
+      
+      <div class="owner-tools-grid">
+        <div class="owner-tool-card">
+          <div class="owner-tool-icon">👑</div>
+          <div>
+            <span class="owner-tool-title">Claim</span>
+            <div class="owner-tool-desc">Übernimm verwaiste Kanäle.</div>
+          </div>
+        </div>
+        <div class="owner-tool-card">
+          <div class="owner-tool-icon">🔄</div>
+          <div>
+            <span class="owner-tool-title">Transfer</span>
+            <div class="owner-tool-desc">Gib die Rechte ab.</div>
+          </div>
+        </div>
+        <div class="owner-tool-card">
+          <div class="owner-tool-icon">🔒</div>
+          <div>
+            <span class="owner-tool-title">Lock</span>
+            <div class="owner-tool-desc">Kanal für alle sperren.</div>
+          </div>
+        </div>
+        <div class="owner-tool-card">
+          <div class="owner-tool-icon">🔓</div>
+          <div>
+            <span class="owner-tool-title">Unlock</span>
+            <div class="owner-tool-desc">Kanalsperre aufheben.</div>
+          </div>
+        </div>
+        <div class="owner-tool-card">
+          <div class="owner-tool-icon">👥</div>
+          <div>
+            <span class="owner-tool-title">Limit</span>
+            <div class="owner-tool-desc">Begrenze Mitglieder (1-99).</div>
+          </div>
+        </div>
+        <div class="owner-tool-card">
+          <div class="owner-tool-icon">✏️</div>
+          <div>
+            <span class="owner-tool-title">Rename</span>
+            <div class="owner-tool-desc">Namen frei anpassen.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TempVoice System Health -->
+    <div class="premium-card">
+      <div class="db-card-header">
+        <span class="db-card-title">🩺 Health Checks</span>
+        <button class="btn-glass btn-sm" onclick="runHealth()">🩺 Prüfen</button>
+      </div>
+      <p class="cfg-desc" style="margin-bottom: 12px;">Echtzeitüberprüfung der Bot-Rechte und Kanalkonfigurationen:</p>
+      <div id="healthBox">
+        <div style="padding: 10px; text-align: center; color: var(--muted); font-size:0.78rem;">
+          Klicke auf "Prüfen", um Echtzeit-Schnittstellenchecks auszuführen.
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const GID = '{{ guild.id }}';
+
+function updatePreview() {
+  const nameInput = document.getElementById('tv_name');
+  const previewDiv = document.getElementById('namePreview');
+  previewDiv.textContent = (nameInput.value || '🔊 {user}\'s Kanal').replace('{user}', 'Alex');
+}
+
+async function saveConfig() {
+  const body = {
+    _temp_voice: {
+      enabled: document.getElementById('tv_enabled').checked,
+      category_id: document.getElementById('tv_cat').value ? Number(document.getElementById('tv_cat').value) : null,
+      hub_channel_id: document.getElementById('tv_hub').value ? Number(document.getElementById('tv_hub').value) : null,
+      panel_channel_id: document.getElementById('tv_panel').value ? Number(document.getElementById('tv_panel').value) : null,
+      name_template: document.getElementById('tv_name').value
+    }
+  };
+  
+  const r = await fetch(`/api/guild/${GID}/config`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  });
+  const d = await r.json();
+  if (d.ok) {
+    markSaved();
+  } else {
+    markError(d.error);
+  }
+}
+
+async function sendPanel() {
+  await saveConfig();
+  const panelChVal = document.getElementById('tv_panel').value;
+  if (!panelChVal) return showToast('Bitte wähle zuerst einen Panel-Kanal aus!', 'err');
+  
+  const r = await fetch(`/api/guild/${GID}/tempvoice/panel`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      panel_channel_id: panelChVal
+    })
+  });
+  const d = await r.json();
+  if (d.ok) {
+    showToast('TempVoice-Panel erfolgreich gesendet!', 'ok');
+    setTimeout(() => location.reload(), 700);
+  } else {
+    showToast(d.error || 'Fehler beim Senden', 'err');
+  }
+}
+
+async function runHealth() {
+  const healthBox = document.getElementById('healthBox');
+  healthBox.innerHTML = `
+    <div style="text-align: center; padding: 15px 0;">
+      <div style="width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.1); border-top-color: var(--vl); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 8px;"></div>
+      <span style="font-size:0.75rem; color:var(--muted);">Führe Health Check aus...</span>
+    </div>
+  `;
+  const r = await fetch(`/api/guild/${GID}/tempvoice/health`);
+  const d = await r.json();
+  if (!d.ok) return showToast(d.error || 'Fehler', 'err');
+  
+  healthBox.innerHTML = d.checks.map(c => `
+    <div class="tv-health-row ${c.ok ? 'ok' : 'bad'}">
+      <span>${c.ok ? '✅' : '❌'} ${c.label}</span>
+      <span>${c.reason}</span>
+    </div>
+  `).join('');
+}
+
+updatePreview();
+window._dirty = false;
+</script>
+<style>
+@keyframes spin { 100% { transform: rotate(360deg); } }
+</style>
+{% endblock %}
