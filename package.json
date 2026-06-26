@@ -1,0 +1,24 @@
+{
+  "name": "modforge",
+  "version": "3.0.0-node",
+  "description": "ModForge Discord Security & Moderation Bot - Node.js Migration",
+  "main": "run.js",
+  "scripts": {
+    "start": "node run.js",
+    "bot": "node run.js",
+    "check": "find . -path './web' -prune -o -name '*.js' -print | sort | xargs -n1 node --check",
+    "test": "node -e \"const {ModForge}=require('./bot/bot');(async()=>{const b=new ModForge();await b.loadCogs();for(const c of b.commands.values())c.data.toJSON();console.log('OK commands='+b.commands.size);await b.destroy();process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})\""
+  },
+  "dependencies": {
+    "@discordjs/rest": "^2.4.2",
+    "discord-api-types": "^0.37.115",
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.7",
+    "mongodb": "^6.12.0",
+    "express": "^4.19.2",
+    "nunjucks": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
